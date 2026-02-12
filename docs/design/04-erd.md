@@ -167,7 +167,7 @@ datetime updated_at
 
 product_images }o--|| products : "belongs to"
 product_option_groups }o--|| products : "belongs to"
-product_option_values }|--|| product_option_groups : "belongs to"
+product_option_values }o--|| product_option_groups : "belongs to"
 product_skus }o--|| products : "belongs to"
 product_sku_option_values }o--|| product_skus : "SKU"
 product_sku_option_values }o--|| product_option_groups : "Option Group"
