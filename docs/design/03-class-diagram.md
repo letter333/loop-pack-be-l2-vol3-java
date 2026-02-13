@@ -96,8 +96,10 @@ classDiagram
         -String name
         -LocalDate birthday
         -String email
+        -String role
         +encryptPassword(encodedPassword) void
         +changePassword(newRawPassword, newEncodedPassword) void
+        +isAdmin() boolean
         -validateBirthday(birthday) void
         -validatePasswordNotContainsBirthday(password, birthday) void
     }
@@ -131,6 +133,7 @@ classDiagram
         -String name
         -LocalDate birthday
         -String email
+        -String role
         -LocalDateTime createdAt
         -LocalDateTime updatedAt
         +toDomain() Member

@@ -9,6 +9,7 @@ varchar(255) password "NOT NULL"
 varchar(30) name "NOT NULL"
 char(10) birthday "NOT NULL"
 varchar(50) email UK "NOT NULL"
+enum role "회원 권한 (USER, ADMIN) | 기본값: USER"
 datetime created_at
 datetime updated_at
 }
