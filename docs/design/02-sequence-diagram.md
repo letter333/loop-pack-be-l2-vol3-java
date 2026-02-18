@@ -27,15 +27,6 @@ sequenceDiagram
     end
 
     Repository-->>BrandService: Brand
-    BrandService->>BrandService: 사용 상태 검증
-
-    alt 미사용 브랜드
-        BrandService-->>Facade: BAD_REQUEST Exception
-        Note over Facade: "해당 브랜드는 현재 이용할 수 없습니다"
-        Facade-->>Controller: throw Exception
-        Controller-->>Client: 400 Bad Request
-    end
-
     BrandService-->>Facade: Brand
     Facade->>ProductService: getProductsByBrandId(brandId, pageable)
     ProductService->>Repository: findByBrandId(brandId, pageable)
@@ -72,9 +63,9 @@ sequenceDiagram
         end
     end
 
-    Facade->>ProductService: searchProducts(categoryId, keyword, sort, pageable)
+    Facade->>ProductService: getProducts(categoryId, keyword, sort, pageable)
     ProductService->>Repository: findProducts(조건)
-    Note over Repository: 삭제/비공개 상품 제외
+    Note over Repository: 삭제된 상품 제외
     Repository-->>ProductService: Page<Product>
     ProductService-->>Facade: Page<Product>
     Facade-->>Controller: ProductListResponse
@@ -94,7 +85,7 @@ sequenceDiagram
     participant Repository
 
     Client->>Controller: GET /api/v1/products/{productId}
-    Controller->>Facade: getProductInfo(productId)
+    Controller->>Facade: getProductDetail(productId)
     Facade->>ProductService: getProduct(productId)
     ProductService->>Repository: findById(productId)
 
@@ -106,18 +97,17 @@ sequenceDiagram
     end
 
     Repository-->>ProductService: Product
-    ProductService->>ProductService: 삭제/비공개 상태 검증
+    ProductService->>ProductService: 삭제 상태 검증
 
-    alt 삭제 또는 비공개 상품
-        ProductService-->>Facade: BAD_REQUEST Exception
-        Note over Facade: "해당 상품은 현재 이용할 수 없습니다"
+    alt 삭제된 상품
+        ProductService-->>Facade: NOT_FOUND Exception
         Facade-->>Controller: throw Exception
-        Controller-->>Client: 400 Bad Request
+        Controller-->>Client: 404 Not Found
     end
 
     ProductService-->>Facade: Product
-    Facade->>ProductOptionService: getProductOptions(productId)
-    ProductOptionService->>Repository: findOptionsByProductId(productId)
+    Facade->>ProductOptionService: getOptions(productId)
+    ProductOptionService->>Repository: findByProductId(productId)
     Repository-->>ProductOptionService: List<ProductOption>
     ProductOptionService-->>Facade: List<ProductOption>
     Facade-->>Controller: ProductDetailResponse
@@ -146,7 +136,7 @@ sequenceDiagram
     end
 
     Controller->>Service: getBrands(pageable)
-    Service->>Repository: findAllActive(pageable)
+    Service->>Repository: findAll(pageable)
     Repository-->>Service: Page<Brand>
     Service-->>Controller: BrandListResponse
     Controller-->>Admin: 200 OK
@@ -171,7 +161,7 @@ sequenceDiagram
         Controller-->>Admin: 403 Forbidden
     end
 
-    Controller->>Facade: getBrandDetail(brandId)
+    Controller->>Facade: getBrandDetail(brandId, pageable)
     Facade->>BrandService: getBrand(brandId)
     BrandService->>Repository: findById(brandId)
 
@@ -215,7 +205,7 @@ sequenceDiagram
         Controller-->>Admin: 400 Bad Request
     end
 
-    Controller->>BrandService: createBrand(name, description, logoImage, status)
+    Controller->>BrandService: createBrand(name, description, logoImageUrl)
 
     BrandService->>Repository: save(brand)
     Repository-->>BrandService: Brand
@@ -246,7 +236,7 @@ sequenceDiagram
         Controller-->>Admin: 400 Bad Request
     end
 
-    Controller->>BrandService: updateBrand(brandId, name, description, logoImage, status)
+    Controller->>BrandService: updateBrand(brandId, name, description, logoImageUrl)
     BrandService->>Repository: findById(brandId)
 
     alt 브랜드 미존재
@@ -283,36 +273,37 @@ sequenceDiagram
     end
 
     Controller->>Facade: deleteBrand(brandId)
-    Facade->>BrandService: validationBrand(brandId)
+    Facade->>BrandService: validateBrand(brandId)
     BrandService->>Repository: findById(brandId)
 
     alt 브랜드 미존재
         Repository-->>BrandService: Empty
-        BrandService-->>Controller: NOT_FOUND Exception
+        BrandService-->>Facade: NOT_FOUND Exception
+        Facade-->>Controller: throw Exception
         Controller-->>Admin: 404 Not Found
     end
 
     Repository-->>BrandService: Brand
     BrandService-->>Facade: Brand
 
-    Facade->>ProductService: deleteProducts(brandId)
-    ProductService->>Repository: findProductsByBrandId(brandId)
+    Facade->>ProductService: deleteProductsByBrandId(brandId)
+    ProductService->>Repository: findByBrandId(brandId)
     Repository-->>ProductService: List<Product>
 
     loop 브랜드 상품들
         ProductService->>ProductService: Product 삭제 상태로 변경
     end
 
-    ProductService->>Repository: save(List<Product>)
+    ProductService->>Repository: saveAll(List<Product>)
     Repository-->>ProductService: List<Product>
-    ProductService-->>Facade: List<Product>
+    ProductService-->>Facade: 완료
 
     Facade->>BrandService: deleteBrand(brandId)
     BrandService->>BrandService: Brand 삭제 상태로 변경 (Soft Delete)
     BrandService->>Repository: save(Brand)
     Repository-->>BrandService: Brand
-    BrandService-->>Facade: Brand
-    Facade-->>Controller: Brand
+    BrandService-->>Facade: 완료
+    Facade-->>Controller: 완료
     Controller-->>Admin: 200 OK
 ```
 
@@ -347,14 +338,14 @@ sequenceDiagram
     end
 
     Repository-->>ProductService: Product
-    Note over ProductService: 비공개/품절 상품도 조회 가능
+    Note over ProductService: 품절/판매중지 상품도 조회 가능
     ProductService-->>Facade: Product
-    Facade->>ProductOptionService: getProductOptions(productId)
-    ProductOptionService->>Repository: findOptionsByProductId(productId)
+    Facade->>ProductOptionService: getOptions(productId)
+    ProductOptionService->>Repository: findByProductId(productId)
     Repository-->>ProductOptionService: List<ProductOption>
     ProductOptionService-->>Facade: List<ProductOption>
     Facade-->>Controller: ProductAdminDetailResponse
-    Note over Controller: 재고, 노출 여부, 등록/수정일시 포함
+    Note over Controller: 재고, 상태, 등록/수정일시 포함
     Controller-->>Admin: 200 OK
 ```
 
@@ -385,7 +376,7 @@ sequenceDiagram
     end
 
     Controller->>Facade: createProduct(brandId, categoryId, name, options, ...)
-    Facade->>BrandService: validationBrand(brandId)
+    Facade->>BrandService: validateBrand(brandId)
 
     alt 브랜드 미존재 또는 삭제 상태
         BrandService-->>Facade: NOT_FOUND Exception
@@ -395,12 +386,12 @@ sequenceDiagram
 
     BrandService-->>Facade: Brand
 
-    Facade->>CategoryService: validationCategory(categoryId)
+    Facade->>CategoryService: validateCategory(categoryId)
 
 
     alt 카테고리 미존재 또는 삭제 상태
-        CategoryService-->>Facade: throw CoreException(NOT_FOUND)
-        Facade-->>Controller: throw CoreException
+        CategoryService-->>Facade: NOT_FOUND Exception
+        Facade-->>Controller: throw Exception
         Controller-->>Admin: 404 Not Found
     end
 
@@ -443,7 +434,7 @@ sequenceDiagram
 
     Controller->>Facade: updateProduct(productId, categoryId, name, options, ...)
 
-    Facade->>CategoryService: validationCategory
+    Facade->>CategoryService: validateCategory(categoryId)
 
     alt 카테고리 미존재
         CategoryService-->>Facade: NOT_FOUND Exception
@@ -481,7 +472,6 @@ sequenceDiagram
     autonumber
     participant Admin as 관리자
     participant Controller
-    participant Facade
     participant ProductService as 상품 서비스
     participant Repository
 
@@ -492,26 +482,20 @@ sequenceDiagram
         Controller-->>Admin: 403 Forbidden
     end
 
-    Controller->>Facade: deleteProduct(productId)
-    Facade->>ProductService: validationProduct(productId)
+    Controller->>ProductService: deleteProduct(productId)
     ProductService->>Repository: findById(productId)
 
     alt 상품 미존재
         Repository-->>ProductService: Empty
-        ProductService-->>Facade: NOT_FOUND Exception
-        Facade-->>Controller: throw Exception
+        ProductService-->>Controller: NOT_FOUND Exception
         Controller-->>Admin: 404 Not Found
     end
 
     Repository-->>ProductService: Product
-    ProductService-->>Facade: Product
-
-    Facade->>ProductService: deleteProduct(productId)
-    ProductService->>ProductService: Product 삭제 상태로 변경
+    ProductService->>ProductService: Product 삭제 상태로 변경 (Soft Delete)
     ProductService->>Repository: save(product)
     Repository-->>ProductService: Product
-    ProductService-->>Facade: Product
-    Facade-->>Controller: ProductResponse
+    ProductService-->>Controller: 완료
     Controller-->>Admin: 200 OK
 ```
 
@@ -526,6 +510,8 @@ sequenceDiagram
     autonumber
     participant Client as 사용자
     participant Controller
+    participant Facade as LikeFacade
+    participant ProductService as 상품 서비스
     participant LikeService as 좋아요 서비스
     participant Repository
 
@@ -536,32 +522,35 @@ sequenceDiagram
         Controller-->>Client: 401 Unauthorized
     end
 
-    Controller->>LikeService: toggleLike(memberId, productId)
-    LikeService->>Repository: findProductById(productId)
+    Controller->>Facade: toggleLike(memberId, productId)
+    Facade->>ProductService: getProduct(productId)
+    ProductService->>Repository: findById(productId)
 
     alt 상품 미존재 또는 삭제됨
-        Repository-->>LikeService: Empty
-        LikeService-->>Controller: NOT_FOUND Exception
+        Repository-->>ProductService: Empty
+        ProductService-->>Facade: NOT_FOUND Exception
+        Facade-->>Controller: throw Exception
         Controller-->>Client: 404 Not Found
     end
 
-    Repository-->>LikeService: Product
-    LikeService->>Repository: findLike(memberId, productId)
+    Repository-->>ProductService: Product
+    ProductService-->>Facade: Product
+
+    Facade->>LikeService: toggleLike(memberId, productId)
+    LikeService->>Repository: findByMemberIdAndProductId(memberId, productId)
 
     alt 이미 좋아요한 경우 (취소)
         Repository-->>LikeService: Like
-        LikeService->>Repository: deleteLike(like)
-        LikeService->>Repository: decrementLikeCount(productId)
-        Repository-->>LikeService: void
-        LikeService-->>Controller: LikeResult(cancelled)
+        LikeService->>Repository: delete(like)
+        LikeService-->>Facade: LikeResult(cancelled)
+        Facade-->>Controller: LikeInfo(cancelled)
         Controller-->>Client: 200 OK (좋아요 취소)
     else 좋아요하지 않은 경우 (등록)
-        Repository-->>LikeService: null
+        Repository-->>LikeService: Empty
         LikeService->>LikeService: Like 생성
-        LikeService->>Repository: saveLike(like)
-        LikeService->>Repository: incrementLikeCount(productId)
-        Repository-->>LikeService: void
-        LikeService-->>Controller: LikeResult(liked)
+        LikeService->>Repository: save(like)
+        LikeService-->>Facade: LikeResult(liked)
+        Facade-->>Controller: LikeInfo(liked)
         Controller-->>Client: 200 OK (좋아요 등록)
     end
 ```
@@ -580,6 +569,7 @@ sequenceDiagram
     participant Facade
     participant OrderService as 주문 서비스
     participant ProductService as 상품 서비스
+    participant MemberAddressService as 배송지 서비스
     participant Repository
 
     Client->>Controller: POST /api/v1/orders
@@ -595,11 +585,25 @@ sequenceDiagram
         Controller-->>Client: 400 Bad Request
     end
 
-    Controller->>Facade: createOrder(memberId, orderItems, shippingInfo)
-    Facade->>ProductService: validationProduct(List<Product>)
+    Controller->>Facade: createOrder(memberId, orderItems, addressId, shippingMemo)
+
+    Facade->>MemberAddressService: getAddress(memberId, addressId)
+    MemberAddressService->>Repository: findByMemberIdAndId(memberId, addressId)
+
+    alt 배송지 미존재
+        Repository-->>MemberAddressService: Empty
+        MemberAddressService-->>Facade: NOT_FOUND Exception
+        Facade-->>Controller: throw Exception
+        Controller-->>Client: 404 Not Found
+    end
+
+    Repository-->>MemberAddressService: MemberAddress
+    MemberAddressService-->>Facade: MemberAddress
+
+    Facade->>ProductService: validateProducts(List<Product>)
     ProductService->>Repository: findAllByIdInWithOptions(List<Product>)
 
-    alt [일부, 전체] 상품 미존재 또는 비공개/삭제
+    alt [일부, 전체] 상품 미존재 또는 삭제
         Repository-->>ProductService: List<Product> 또는 Empty
         ProductService-->>Facade: BAD_REQUEST Exception
         Facade-->>Controller: throw Exception
@@ -617,6 +621,10 @@ sequenceDiagram
             Facade-->>Controller: throw Exception
             Controller-->>Client: 400 Bad Request
         end
+    end
+
+    loop 주문 상품별
+        ProductService->>ProductService: 재고 차감 (decreaseStock)
     end
 
     ProductService-->>Facade: List<Product>
@@ -701,9 +709,9 @@ sequenceDiagram
         Controller-->>Client: 403 Forbidden
     end
 
-    OrderService->>Repository: findOrderItemsByOrderId(orderId)
-    Repository-->>OrderService: List<OrderItem>
-    OrderService-->>Facade: Order + OrderItems
+    OrderService->>Repository: findByOrderId(orderId)
+    Repository-->>OrderService: List<OrderProduct>
+    OrderService-->>Facade: Order + OrderProducts
     Facade-->>Controller: OrderDetailResponse
     Note over Controller: 주문정보, 상품정보, 배송지, 결제내역
     Controller-->>Client: 200 OK

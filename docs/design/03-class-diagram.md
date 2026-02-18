@@ -191,14 +191,12 @@ classDiagram
         +String name
         +String description
         +String logoImageUrl
-        +Boolean active
     }
 
     class UpdateBrandRequest {
         +String name
         +String description
         +String logoImageUrl
-        +Boolean active
     }
 
     class BrandInfoResponse {
@@ -214,7 +212,6 @@ classDiagram
         +String name
         +String description
         +String logoImageUrl
-        +Boolean active
         +Page~ProductSummary~ products
     }
 
@@ -232,7 +229,6 @@ classDiagram
         +String name
         +String description
         +String logoImageUrl
-        +Boolean active
     }
 
     %% Domain Layer
@@ -241,13 +237,11 @@ classDiagram
         -String name
         -String description
         -String logoImageUrl
-        -Boolean active
         -LocalDateTime createdAt
         -LocalDateTime updatedAt
         -LocalDateTime deletedAt
-        +update(name, description, logoImageUrl, active) void
+        +update(name, description, logoImageUrl) void
         +delete() void
-        +isActive() boolean
         +isDeleted() boolean
     }
 
@@ -255,8 +249,8 @@ classDiagram
         -BrandRepository brandRepository
         +getBrand(brandId) Brand
         +getBrands(pageable) Page~Brand~
-        +createBrand(name, description, logoImageUrl, active) Brand
-        +updateBrand(brandId, name, description, logoImageUrl, active) Brand
+        +createBrand(name, description, logoImageUrl) Brand
+        +updateBrand(brandId, name, description, logoImageUrl) Brand
         +deleteBrand(brandId) void
         +validateBrand(brandId) Brand
     }
@@ -265,7 +259,7 @@ classDiagram
     class BrandRepository {
         <<interface>>
         +findById(brandId) Optional~Brand~
-        +findAllActive(pageable) Page~Brand~
+        +findAll(pageable) Page~Brand~
         +save(brand) Brand
         +existsById(brandId) boolean
     }
@@ -279,7 +273,6 @@ classDiagram
         -String name
         -String description
         -String logoImageUrl
-        -Boolean active
         -LocalDateTime createdAt
         -LocalDateTime updatedAt
         -LocalDateTime deletedAt
@@ -332,6 +325,11 @@ classDiagram
     direction TB
 
     %% Interfaces Layer
+    class CategoryController {
+        -CategoryService categoryService
+        +getCategories() ApiResponse~List~CategoryResponse~~
+    }
+
     class CategoryAdminController {
         -CategoryService categoryService
         -CategoryFacade categoryFacade
@@ -345,12 +343,10 @@ classDiagram
     class CreateCategoryRequest {
         +Long parentId
         +String name
-        +Boolean active
     }
 
     class UpdateCategoryRequest {
         +String name
-        +Boolean active
     }
 
     class CategoryResponse {
@@ -359,7 +355,6 @@ classDiagram
         +String name
         +String path
         +Integer depth
-        +Boolean active
     }
 
     %% Application Layer
@@ -376,13 +371,11 @@ classDiagram
         -String name
         -String path
         -Integer depth
-        -Boolean active
         -LocalDateTime createdAt
         -LocalDateTime updatedAt
         -LocalDateTime deletedAt
-        +update(name, active) void
+        +update(name) void
         +delete() void
-        +isActive() boolean
         +isDeleted() boolean
         +hasParent() boolean
     }
@@ -390,9 +383,10 @@ classDiagram
     class CategoryService {
         -CategoryRepository categoryRepository
         +getCategory(categoryId) Category
+        +getCategories() List~Category~
         +getCategories(pageable) Page~Category~
-        +createCategory(parentId, name, active) Category
-        +updateCategory(categoryId, name, active) Category
+        +createCategory(parentId, name) Category
+        +updateCategory(categoryId, name) Category
         +deleteCategory(categoryId) void
         +validateCategory(categoryId) Category
         +existsById(categoryId) boolean
@@ -419,7 +413,6 @@ classDiagram
         -String name
         -String path
         -Integer depth
-        -Boolean active
         -LocalDateTime createdAt
         -LocalDateTime updatedAt
         -LocalDateTime deletedAt
@@ -428,6 +421,7 @@ classDiagram
     }
 
     %% Relationships
+    CategoryController --> CategoryService : 목록 조회
     CategoryAdminController --> CategoryService : 단순 CRUD
     CategoryAdminController --> CategoryFacade : 복합 로직
     CategoryFacade --> CategoryService
@@ -440,7 +434,7 @@ classDiagram
 
 ### 핵심 포인트
 
-1. **Admin 전용**: 일반 사용자 Controller 없음, 관리자만 카테고리 CRUD 가능
+1. **사용자/Admin 분리**: `CategoryController`는 삭제되지 않은 카테고리 목록 조회만 제공, CRUD는 `CategoryAdminController`에서 관리자 전용으로 처리
 2. **계층 구조**: `parentId`로 부모-자식 관계, `path`로 전체 경로, `depth`로 깊이 관리
 3. **삭제 시 Facade 경유**: 하위 카테고리/상품 존재 여부 검증을 위해 `CategoryFacade.deleteCategory()` 사용
 
@@ -461,7 +455,7 @@ classDiagram
 상품 도메인의 클래스 다이어그램으로 다음을 검증한다:
 - **Facade 사용 기준**: 다른 도메인 서비스 호출이 필요한 경우에만 Facade를 사용하는가?
 - **도메인 경계 유지**: ProductService가 다른 도메인의 Repository를 직접 참조하지 않는가?
-- **조회 시 검증 정책**: 존재하지 않는 카테고리 필터 시 빈 목록 반환 (404 아님)
+- **조회 시 검증 정책**: 존재하지 않는 카테고리 필터 시 404 Not Found 반환
 
 ### 클래스 다이어그램
 
@@ -471,7 +465,6 @@ classDiagram
 
     %% Interfaces Layer
     class ProductController {
-        -ProductService productService
         -ProductFacade productFacade
         +getProducts(categoryId, keyword, sort, pageable) ApiResponse~Page~
         +getProductInfo(productId) ApiResponse~ProductDetailResponse~
@@ -497,7 +490,7 @@ classDiagram
         +BrandSummary brand
         +CategorySummary category
         +List~ProductImageInfo~ images
-        +List~ProductOptionGroupInfo~ optionGroups
+        +List~ProductOptionInfo~ options
     }
 
     %% Application Layer
@@ -506,6 +499,7 @@ classDiagram
         -ProductOptionService productOptionService
         -BrandService brandService
         -CategoryService categoryService
+        +getProducts(categoryId, keyword, sort, pageable) Page~ProductInfo~
         +getProductDetail(productId) ProductDetailInfo
         +createProduct(...) ProductInfo
         +updateProduct(...) ProductInfo
@@ -519,12 +513,11 @@ classDiagram
         +Long basePrice
         +Long discountedPrice
         +ProductStatus status
-        +Boolean active
     }
 
     class ProductDetailInfo {
         +ProductInfo product
-        +List~ProductOptionGroupInfo~ optionGroups
+        +List~ProductOptionInfo~ options
         +List~ProductImageInfo~ images
     }
 
@@ -539,7 +532,6 @@ classDiagram
         -Long categoryId
         -Long discount
         -DiscountType discountType
-        -Boolean active
         -LocalDateTime createdAt
         -LocalDateTime updatedAt
         -LocalDateTime deletedAt
@@ -564,6 +556,7 @@ classDiagram
 
     class ProductService {
         -ProductRepository productRepository
+        -ProductOptionRepository productOptionRepository
         +getProduct(productId) Product
         +getProducts(categoryId, keyword, sort, pageable) Page~Product~
         +getProductsByBrandId(brandId, pageable) Page~Product~
@@ -571,16 +564,21 @@ classDiagram
         +updateProduct(product) Product
         +deleteProduct(productId) void
         +deleteProductsByBrandId(brandId) void
+        +validateProducts(products) List~Product~
+        +decreaseStock(optionId, quantity) void
+        +increaseStock(optionId, quantity) void
     }
 
     %% Infrastructure Layer
     class ProductRepository {
         <<interface>>
         +findById(productId) Optional~Product~
+        +findByBrandId(brandId) List~Product~
         +findByBrandId(brandId, pageable) Page~Product~
         +findProducts(categoryId, keyword, sort, pageable) Page~Product~
-        +findAllByIdIn(productIds) List~Product~
+        +findAllByIdInWithOptions(productIds) List~Product~
         +save(product) Product
+        +saveAll(products) List~Product~
     }
 
     class ProductEntity {
@@ -593,7 +591,6 @@ classDiagram
         -Long categoryId
         -Long discount
         -DiscountType discountType
-        -Boolean active
         -LocalDateTime createdAt
         -LocalDateTime updatedAt
         -LocalDateTime deletedAt
@@ -602,8 +599,7 @@ classDiagram
     }
 
     %% Relationships
-    ProductController --> ProductService : 목록 조회
-    ProductController --> ProductFacade : 상세 조회 (옵션 포함)
+    ProductController --> ProductFacade : 목록 조회, 상세 조회
     ProductAdminController --> ProductService : 목록 조회, 삭제
     ProductAdminController --> ProductFacade : 상세, 등록, 수정
     ProductFacade --> ProductService
@@ -611,6 +607,7 @@ classDiagram
     ProductFacade --> BrandService : 등록 시 검증
     ProductFacade --> CategoryService : 등록/수정 시 검증
     ProductService --> ProductRepository
+    ProductService --> ProductOptionRepository : 재고 검증/차감
     ProductService --> Product
     Product --> ProductStatus
     Product --> DiscountType
@@ -619,15 +616,15 @@ classDiagram
 ### 핵심 포인트
 
 1. **Facade 사용 기준 명확화**
-   - `getProducts()` → **Service** (카테고리 없으면 빈 목록 반환, 검증 불필요)
+   - `getProducts()` → **Facade** (카테고리 존재 검증 포함)
    - `getProductDetail()` → **Facade** (Product + Option 조합)
    - `createProduct()` → **Facade** (Brand/Category 존재 검증)
    - `updateProduct()` → **Facade** (Category 변경 시 검증)
    - `deleteProduct()` → **Service** (Soft Delete, 단일 도메인)
 
-2. **도메인 경계 유지**: ProductService는 ProductRepository만 의존, 다른 도메인 검증은 Facade에서 수행
+2. **도메인 경계 유지**: ProductService는 ProductRepository와 ProductOptionRepository를 의존하여 상품 CRUD 및 재고 검증/차감을 담당하고, ProductOptionService는 조회 전용으로 Facade에서 상세 조회 시 옵션/이미지 조합에 사용. 다른 도메인(Brand, Category) 검증은 Facade에서 수행
 
-3. **조회 정책**: 존재하지 않는 categoryId로 필터 시 404가 아닌 빈 목록 반환
+3. **조회 정책**: 존재하지 않는 categoryId로 필터 시 404 Not Found 반환
 
 ### 잠재 리스크
 
@@ -644,9 +641,8 @@ classDiagram
 ### 왜 필요한가?
 
 상품 옵션 도메인의 클래스 다이어그램으로 다음을 검증한다:
-- **옵션 계층 구조**: OptionGroup → OptionValue → SKU → SkuOptionValue 관계가 적절한가?
-- **재고 관리 책임**: SKU 단위 재고 관리가 명확한가?
-- **옵션-SKU 매핑**: 옵션 조합과 SKU가 어떻게 연결되는가?
+- **단순한 옵션 구조**: 옵션별로 추가 금액과 재고를 직접 관리하는가?
+- **재고 관리 책임**: 옵션 단위 재고 관리가 명확한가?
 
 ### 클래스 다이어그램
 
@@ -655,69 +651,22 @@ classDiagram
     direction TB
 
     %% Domain Layer - Option
-    class ProductOptionGroup {
+    class ProductOption {
         -Long id
         -Long productId
-        -String name
-        -Boolean active
-        -LocalDateTime createdAt
-        -LocalDateTime updatedAt
-        -LocalDateTime deletedAt
-        +isActive() boolean
-        +delete() void
-    }
-
-    class ProductOptionValue {
-        -Long id
-        -Long optionGroupId
-        -String value
+        -String optionValue
         -String displayName
-        -Boolean active
+        -Long extraPrice
+        -Integer stockQuantity
         -LocalDateTime createdAt
         -LocalDateTime updatedAt
         -LocalDateTime deletedAt
         +getDisplayValue() String
-        +isActive() boolean
-    }
-
-    %% Domain Layer - SKU
-    class ProductSku {
-        -Long id
-        -Long productId
-        -String name
-        -Long price
-        -Long extraPrice
-        -Integer minOrderQuantity
-        -Integer maxOrderQuantity
-        -Boolean unlimited
-        -Integer stockQuantity
-        -SkuStatus status
-        -LocalDateTime createdAt
-        -LocalDateTime updatedAt
-        -LocalDateTime deletedAt
+        +isDeleted() boolean
         +hasStock(quantity) boolean
         +decreaseStock(quantity) void
         +increaseStock(quantity) void
-        +isAvailable() boolean
-        +validateOrderQuantity(quantity) void
-    }
-
-    class SkuStatus {
-        <<enumeration>>
-        ACTIVE
-        INACTIVE
-        PRE_ORDER
-        DISCONTINUED
-        HIDDEN
-    }
-
-    class ProductSkuOptionValue {
-        -Long id
-        -Long skuId
-        -Long optionGroupId
-        -Long optionValueId
-        -LocalDateTime createdAt
-        -LocalDateTime updatedAt
+        +delete() void
     }
 
     %% Domain Layer - Image
@@ -741,33 +690,19 @@ classDiagram
     %% Service Layer
     class ProductOptionService {
         -ProductOptionRepository optionRepository
-        -ProductSkuRepository skuRepository
         -ProductImageRepository imageRepository
-        +getOptionGroups(productId) List~ProductOptionGroup~
-        +getOptionValues(optionGroupId) List~ProductOptionValue~
-        +getSkus(productId) List~ProductSku~
-        +getSku(skuId) ProductSku
+        +getOptions(productId) List~ProductOption~
+        +getOption(optionId) ProductOption
         +getImages(productId) List~ProductImage~
-        +decreaseStock(skuId, quantity) void
-        +increaseStock(skuId, quantity) void
-        +validateSkuAvailable(skuId, quantity) void
     }
 
     %% Infrastructure Layer
     class ProductOptionRepository {
         <<interface>>
-        +findByProductId(productId) List~ProductOptionGroup~
-        +findOptionValuesByGroupId(groupId) List~ProductOptionValue~
-        +save(optionGroup) ProductOptionGroup
-    }
-
-    class ProductSkuRepository {
-        <<interface>>
-        +findById(skuId) Optional~ProductSku~
-        +findByProductId(productId) List~ProductSku~
-        +findByProductIdIn(productIds) List~ProductSku~
-        +save(sku) ProductSku
-        +updateStock(skuId, quantity) void
+        +findByProductId(productId) List~ProductOption~
+        +findById(optionId) Optional~ProductOption~
+        +findAllByIdIn(optionIds) List~ProductOption~
+        +save(option) ProductOption
     }
 
     class ProductImageRepository {
@@ -777,31 +712,24 @@ classDiagram
     }
 
     %% Relationships
-    ProductOptionGroup "1" --> "*" ProductOptionValue : contains
-    ProductSku "1" --> "*" ProductSkuOptionValue : maps to options
-    ProductSkuOptionValue "*" --> "1" ProductOptionGroup : references
-    ProductSkuOptionValue "*" --> "1" ProductOptionValue : references
-    ProductSku --> SkuStatus
     ProductImage --> ImageType
     ProductOptionService --> ProductOptionRepository
-    ProductOptionService --> ProductSkuRepository
     ProductOptionService --> ProductImageRepository
 ```
 
 ### 핵심 포인트
 
-1. **SKU = 옵션 조합의 판매 단위**: 색상(빨강) + 사이즈(L) 조합이 하나의 SKU, 재고/가격은 SKU 단위로 관리
-2. **ProductSkuOptionValue 매핑 테이블**: SKU와 옵션값의 다대다 관계를 해소, 어떤 옵션 조합인지 추적
-3. **ProductFacade에서 조합 조회**: 상품 상세 조회 시 Product + Option + SKU + Image를 ProductFacade에서 조합
+1. **옵션 = 판매 단위**: 각 옵션(예: RED, L)이 독립적인 추가 금액과 재고를 관리
+2. **단순한 구조**: 옵션 그룹/SKU/매핑 테이블 없이 단일 `product_options` 테이블로 관리
+3. **ProductFacade에서 조합 조회**: 상품 상세 조회 시 Product + Option + Image를 ProductFacade에서 조합
 
 ### 잠재 리스크
 
 | 리스크 | 영향 | 대안 |
 |--------|------|------|
-| **옵션 조합 폭발** | 색상 10 × 사이즈 5 × 소재 3 = 150 SKU | SKU 자동 생성 제한 또는 필요한 조합만 수동 등록 |
 | **재고 동시성 이슈** | 동시 주문 시 재고 차감 경합 | 비관적 락 또는 Redis 분산 락 적용 |
-| **SKU 삭제 시 주문 데이터 정합성** | 삭제된 SKU를 참조하는 주문 존재 | Soft Delete + 주문에 스냅샷 데이터 저장 (현재 ERD에 반영됨) |
-| **옵션 변경 시 기존 SKU 처리** | 옵션 그룹/값 변경 시 SKU와 불일치 | 옵션 변경 불가 정책 또는 SKU 재생성 필요 |
+| **옵션 삭제 시 주문 데이터 정합성** | 삭제된 옵션을 참조하는 주문 존재 | Soft Delete + 주문에 스냅샷 데이터 저장 (현재 ERD에 반영됨) |
+| **옵션 조합 미지원** | 색상+사이즈 조합별 재고 관리 불가 | 현재는 학습 프로젝트이므로 단일 옵션으로 충분 |
 
 ---
 
@@ -882,6 +810,10 @@ classDiagram
         +save(like) Like
         +delete(like) void
         +countByProductId(productId) Long
+    }
+
+    class LikeRepositoryImpl {
+        -LikeJpaRepository jpaRepository
     }
 
     class LikeEntity {
@@ -1033,7 +965,7 @@ classDiagram
 ### 왜 필요한가?
 
 주문 도메인의 클래스 다이어그램으로 다음을 검증한다:
-- **다중 도메인 협력**: 주문 생성 시 Product, SKU 검증 및 재고 차감이 올바르게 조합되는가?
+- **다중 도메인 협력**: 주문 생성 시 Product, 옵션 검증 및 재고 차감이 올바르게 조합되는가?
 - **스냅샷 저장**: 주문 시점의 상품명/가격/배송정보가 스냅샷으로 저장되어 원본 변경에 영향받지 않는가?
 - **상태 전이 규칙**: 주문 상태 변경 시 유효한 전이만 허용되는가?
 
@@ -1067,7 +999,8 @@ classDiagram
     }
 
     class OrderItemRequest {
-        +Long skuId
+        +Long productId
+        +Long productOptionId
         +Integer quantity
     }
 
@@ -1106,7 +1039,7 @@ classDiagram
     %% Application Layer
     class OrderFacade {
         -OrderService orderService
-        -ProductOptionService productOptionService
+        -ProductService productService
         -MemberAddressService memberAddressService
         +createOrder(memberId, items, addressId, shippingMemo) OrderInfo
         +getMyOrders(memberId, pageable) Page~OrderInfo~
@@ -1171,10 +1104,10 @@ classDiagram
     class OrderProduct {
         -Long id
         -Long orderId
-        -Long skuId
         -Long productId
+        -Long productOptionId
         -String productName
-        -String skuName
+        -String optionValue
         -Long price
         -Long extraPrice
         -Integer quantity
@@ -1227,7 +1160,7 @@ classDiagram
     OrderAdminController --> OrderFacade
     OrderAdminController --> OrderService : 목록 조회
     OrderFacade --> OrderService
-    OrderFacade --> ProductOptionService : SKU 검증, 재고 차감
+    OrderFacade --> ProductService : 상품/옵션 검증, 재고 차감
     OrderFacade --> MemberAddressService : 배송지 조회
     OrderService --> OrderRepository
     OrderService --> OrderProductRepository
@@ -1239,7 +1172,7 @@ classDiagram
 
 ### 핵심 포인트
 
-1. **Facade 필수**: 주문 생성은 반드시 `OrderFacade` 경유 (배송지 조회 → SKU 검증/재고 차감 → 주문 생성)
+1. **Facade 필수**: 주문 생성은 반드시 `OrderFacade` 경유 (배송지 조회 → 옵션 검증/재고 차감 → 주문 생성)
 2. **배송 정보 스냅샷**: `Order`에 `recipientName`, `recipientPhone`, `recipientAddress` 등이 직접 저장 (배송지 수정에 영향 없음)
 3. **addressId로 배송지 선택**: 주문 시 `MemberAddressService`에서 배송지 조회 후 스냅샷 복사
 4. **상태 전이 검증**: `OrderStatus.canTransitionTo()`로 유효한 상태 변경만 허용
@@ -1248,8 +1181,8 @@ classDiagram
 
 | 리스크 | 영향 | 대안 |
 |--------|------|------|
-| **재고 차감 동시성** | 동시 주문 시 재고 초과 판매 가능 | ProductOptionService에서 비관적 락 또는 분산 락 적용 |
-| **트랜잭션 범위 비대화** | SKU 재고 차감 + 주문 생성이 하나의 트랜잭션 | 현재는 허용, 규모 커지면 Saga 패턴 검토 |
+| **재고 차감 동시성** | 동시 주문 시 재고 초과 판매 가능 | ProductService에서 비관적 락 또는 분산 락 적용 |
+| **트랜잭션 범위 비대화** | 옵션 재고 차감 + 주문 생성이 하나의 트랜잭션 | 현재는 허용, 규모 커지면 Saga 패턴 검토 |
 | **취소 시 재고 복구 누락** | 주문 취소 후 재고 증가 처리 필요 | OrderFacade.cancelOrder()에서 재고 복구 로직 포함 |
 | **부분 취소 복잡성** | 여러 상품 중 일부만 취소 시 금액 재계산 | 현재는 전체 취소만 지원, 부분 취소는 추후 설계 |
 
@@ -1390,7 +1323,7 @@ classDiagram
         +Long categoryId
     }
 
-    class ProductSku {
+    class ProductOption {
         +Long id
         +Long productId
     }
@@ -1410,7 +1343,7 @@ classDiagram
     class OrderProduct {
         +Long orderId
         +Long productId
-        +Long skuId
+        +Long productOptionId
     }
 
     Member "1" --> "*" MemberAddress : has
@@ -1419,11 +1352,11 @@ classDiagram
     Brand "1" --> "*" Product : has
     Category "1" --> "*" Product : contains
     Category "1" --> "*" Category : parent
-    Product "1" --> "*" ProductSku : has
+    Product "1" --> "*" ProductOption : has
     Product "1" --> "*" Like : liked by
     Order "1" --> "*" OrderProduct : contains
     OrderProduct "*" --> "1" Product : references
-    OrderProduct "*" --> "1" ProductSku : references
+    OrderProduct "*" --> "1" ProductOption : references
 ```
 
 ### 핵심 포인트
@@ -1437,5 +1370,5 @@ classDiagram
 | 리스크 | 영향 | 대안 |
 |--------|------|------|
 | **Product 도메인 비대화** | Product 변경 시 여러 도메인에 영향 | 이벤트 기반 느슨한 결합 또는 인터페이스 분리 |
-| **OrderProduct 스냅샷 의존** | Product/SKU 삭제 시 참조 무결성 | Soft Delete 강제 + FK 제약조건 완화 |
+| **OrderProduct 스냅샷 의존** | Product/Option 삭제 시 참조 무결성 | Soft Delete 강제 + FK 제약조건 완화 |
 | **Category 자기 참조 깊이** | 무한 깊이 허용 시 조회 성능 저하 | depth 제한 (예: 최대 3단계) 정책 |
