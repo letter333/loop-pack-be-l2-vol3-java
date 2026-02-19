@@ -352,6 +352,8 @@
 | ADM-072 | 필수 항목(name, brandId, categoryId, basePrice, images) 누락 불가 | 400 Bad Request |
 | ADM-073 | basePrice는 0 이상이어야 함 | 400 Bad Request |
 | ADM-074 | discountType이 `RATE`인 경우 discount는 0~100 사이 | 400 Bad Request |
+| ADM-075 | product_code는 등록일 기반으로 자동 생성 ({YYYYMMDD}-{5자리 순번}, 예: 20240101-00001) | - |
+| ADM-076 | discountType이 `PRICE`인 경우 discount는 basePrice 이하이어야 함 | 400 Bad Request |
 
 ---
 
@@ -372,6 +374,7 @@
 | ADM-083 | **브랜드는 수정 불가** | 400 Bad Request |
 | ADM-084 | basePrice는 0 이상이어야 함 | 400 Bad Request |
 | ADM-085 | discountType이 `RATE`인 경우 discount는 0~100 사이 | 400 Bad Request |
+| ADM-086 | discountType이 `PRICE`인 경우 discount는 basePrice 이하이어야 함 | 400 Bad Request |
 
 ---
 
@@ -408,6 +411,23 @@
 | LIK-001 | 로그인 필수 | 401 Unauthorized |
 | LIK-002 | 존재하지 않거나 삭제된 상품은 좋아요 불가 | 404 Not Found |
 | LIK-003 | 이미 좋아요한 상품은 좋아요 취소 | - |
+
+---
+
+### 7.2 브랜드 좋아요 토글
+
+| 항목 | 내용 |
+|------|------|
+| **Actor** | 로그인 사용자 |
+| **목적** | 관심 브랜드를 좋아요 등록/취소한다 |
+
+**비즈니스 규칙**
+
+| 규칙 ID | 설명 | 위반 시 |
+|---------|------|---------|
+| LIK-010 | 로그인 필수 | 401 Unauthorized |
+| LIK-011 | 존재하지 않거나 삭제된 브랜드는 좋아요 불가 | 404 Not Found |
+| LIK-012 | 이미 좋아요한 브랜드는 좋아요 취소 | - |
 
 ---
 
@@ -466,6 +486,27 @@
 
 ---
 
+### 8.4 주문 취소
+
+| 항목 | 내용 |
+|------|------|
+| **Actor** | 로그인 사용자 |
+| **목적** | 주문을 취소하고 재고를 복구한다 |
+
+**비즈니스 규칙**
+
+| 규칙 ID | 설명 | 위반 시 |
+|---------|------|---------|
+| ORD-030 | 로그인 필수 | 401 Unauthorized |
+| ORD-031 | 본인의 주문이 아니면 취소 불가 | 403 Forbidden |
+| ORD-032 | 존재하지 않는 주문은 취소 불가 | 404 Not Found |
+| ORD-033 | PENDING, PAID 상태에서만 취소 가능 | 400 Bad Request |
+| ORD-034 | 취소 시 주문 상품의 옵션 재고 복구 (stock_quantity 증가) | - |
+| ORD-035 | 취소 완료 시 주문 상태를 CANCELLED로 변경 | - |
+| ORD-036 | 취소 시 주문 상품(order_products)의 상태도 CANCELLED로 변경 | - |
+
+---
+
 ## 9. 주문 관리 (Order Admin)
 
 ### 9.1 주문 목록 조회 (Admin)
@@ -498,6 +539,7 @@
 | OAD-010 | 관리자 권한 필수 | 403 Forbidden |
 | OAD-011 | 존재하지 않는 주문은 조회 불가 | 404 Not Found |
 | OAD-012 | 상태 변경 및 취소/환불 처리 가능 | - |
+| OAD-013 | 주문 취소(CANCELLED) 시 주문 상품의 옵션 재고 복구 (stock_quantity 증가) | - |
 
 ---
 

@@ -76,7 +76,7 @@ classDiagram
         -MemberService memberService
         +signUp(loginId, password, name, birthday, email) MemberInfo
         +getMyInfo(loginId, password) MemberInfo
-        +updatePassword(loginId, currentPassword, newPassword) void
+        +updatePassword(loginId, password, currentPassword, newPassword) void
     }
 
     class MemberInfo {
@@ -96,10 +96,8 @@ classDiagram
         -String name
         -LocalDate birthday
         -String email
-        -String role
         +encryptPassword(encodedPassword) void
         +changePassword(newRawPassword, newEncodedPassword) void
-        +isAdmin() boolean
         -validateBirthday(birthday) void
         -validatePasswordNotContainsBirthday(password, birthday) void
     }
@@ -133,7 +131,6 @@ classDiagram
         -String name
         -LocalDate birthday
         -String email
-        -String role
         -LocalDateTime createdAt
         -LocalDateTime updatedAt
         +toDomain() Member
@@ -174,14 +171,14 @@ classDiagram
     %% Interfaces Layer
     class BrandController {
         -BrandFacade brandFacade
-        +getBrandInfo(brandId) ApiResponse~BrandInfoResponse~
+        +getBrandInfo(brandId, pageable) ApiResponse~BrandInfoResponse~
     }
 
     class BrandAdminController {
         -BrandFacade brandFacade
         -BrandService brandService
         +getBrands(pageable) ApiResponse~Page~
-        +getBrandDetail(brandId) ApiResponse~BrandDetailResponse~
+        +getBrandDetail(brandId, pageable) ApiResponse~BrandDetailResponse~
         +createBrand(CreateBrandRequest) ApiResponse~BrandResponse~
         +updateBrand(brandId, UpdateBrandRequest) ApiResponse~BrandResponse~
         +deleteBrand(brandId) ApiResponse~Void~
@@ -204,7 +201,16 @@ classDiagram
         +String name
         +String description
         +String logoImageUrl
-        +List~ProductSummary~ products
+        +Page~ProductInfo~ products
+    }
+
+    class BrandResponse {
+        +Long id
+        +String name
+        +String description
+        +String logoImageUrl
+        +LocalDateTime createdAt
+        +LocalDateTime updatedAt
     }
 
     class BrandDetailResponse {
@@ -212,14 +218,17 @@ classDiagram
         +String name
         +String description
         +String logoImageUrl
-        +Page~ProductSummary~ products
+        +LocalDateTime createdAt
+        +LocalDateTime updatedAt
+        +LocalDateTime deletedAt
+        +Page~ProductInfo~ products
     }
 
     %% Application Layer
     class BrandFacade {
         -BrandService brandService
         -ProductService productService
-        +getBrandInfo(brandId) BrandInfo
+        +getBrandInfo(brandId, pageable) BrandInfo
         +getBrandDetail(brandId, pageable) BrandDetailInfo
         +deleteBrand(brandId) void
     }
@@ -229,6 +238,18 @@ classDiagram
         +String name
         +String description
         +String logoImageUrl
+        +Page~ProductInfo~ products
+    }
+
+    class BrandDetailInfo {
+        +Long id
+        +String name
+        +String description
+        +String logoImageUrl
+        +LocalDateTime createdAt
+        +LocalDateTime updatedAt
+        +LocalDateTime deletedAt
+        +Page~ProductInfo~ products
     }
 
     %% Domain Layer
@@ -248,6 +269,7 @@ classDiagram
     class BrandService {
         -BrandRepository brandRepository
         +getBrand(brandId) Brand
+        +getActiveBrand(brandId) Brand
         +getBrands(pageable) Page~Brand~
         +createBrand(name, description, logoImageUrl) Brand
         +updateBrand(brandId, name, description, logoImageUrl) Brand
@@ -355,6 +377,17 @@ classDiagram
         +String name
         +String path
         +Integer depth
+    }
+
+    class CategoryDetailResponse {
+        +Long id
+        +Long parentId
+        +String name
+        +String path
+        +Integer depth
+        +LocalDateTime createdAt
+        +LocalDateTime updatedAt
+        +LocalDateTime deletedAt
     }
 
     %% Application Layer
@@ -487,10 +520,62 @@ classDiagram
         +Long basePrice
         +Long discountedPrice
         +ProductStatus status
-        +BrandSummary brand
-        +CategorySummary category
+        +Brand brand
+        +Category category
         +List~ProductImageInfo~ images
         +List~ProductOptionInfo~ options
+    }
+
+    class ProductResponse {
+        +Long id
+        +String name
+        +String productCode
+        +Long basePrice
+        +Long discountedPrice
+        +ProductStatus status
+        +Long brandId
+        +Long categoryId
+        +LocalDateTime createdAt
+        +LocalDateTime updatedAt
+    }
+
+    class ProductAdminDetailResponse {
+        +Long id
+        +String name
+        +String productCode
+        +Long basePrice
+        +Long discountedPrice
+        +ProductStatus status
+        +Brand brand
+        +Category category
+        +List~ProductImageInfo~ images
+        +List~ProductOptionInfo~ options
+        +LocalDateTime createdAt
+        +LocalDateTime updatedAt
+        +LocalDateTime deletedAt
+    }
+
+    class CreateProductRequest {
+        +String name
+        +Long brandId
+        +Long categoryId
+        +Long basePrice
+        +ProductStatus status
+        +Long discount
+        +DiscountType discountType
+        +List~CreateProductOptionRequest~ options
+        +List~CreateProductImageRequest~ images
+    }
+
+    class UpdateProductRequest {
+        +String name
+        +Long categoryId
+        +Long basePrice
+        +ProductStatus status
+        +Long discount
+        +DiscountType discountType
+        +List~CreateProductOptionRequest~ options
+        +List~CreateProductImageRequest~ images
     }
 
     %% Application Layer
@@ -557,7 +642,9 @@ classDiagram
     class ProductService {
         -ProductRepository productRepository
         -ProductOptionRepository productOptionRepository
+        -ProductImageRepository productImageRepository
         +getProduct(productId) Product
+        +getActiveProduct(productId) Product
         +getProducts(categoryId, keyword, sort, pageable) Page~Product~
         +getProductsByBrandId(brandId, pageable) Page~Product~
         +createProduct(product) Product
@@ -600,14 +687,18 @@ classDiagram
 
     %% Relationships
     ProductController --> ProductFacade : 목록 조회, 상세 조회
+    ProductController ..> ProductDetailResponse
     ProductAdminController --> ProductService : 목록 조회, 삭제
     ProductAdminController --> ProductFacade : 상세, 등록, 수정
+    ProductAdminController ..> ProductResponse
+    ProductAdminController ..> ProductAdminDetailResponse
     ProductFacade --> ProductService
     ProductFacade --> ProductOptionService
     ProductFacade --> BrandService : 등록 시 검증
     ProductFacade --> CategoryService : 등록/수정 시 검증
     ProductService --> ProductRepository
-    ProductService --> ProductOptionRepository : 재고 검증/차감
+    ProductService --> ProductOptionRepository : 재고 관리, 옵션 CUD
+    ProductService --> ProductImageRepository : 이미지 CUD
     ProductService --> Product
     Product --> ProductStatus
     Product --> DiscountType
@@ -740,7 +831,8 @@ classDiagram
 좋아요 도메인의 클래스 다이어그램으로 다음을 검증한다:
 - **토글 동작**: 좋아요 추가/취소가 단일 API로 처리되는가?
 - **도메인 경계**: LikeService가 다른 도메인 Repository를 직접 참조하지 않는가?
-- **상품 존재 검증**: 좋아요 시 상품 존재 여부를 어디서 검증하는가?
+- **다형성 지원**: 상품과 브랜드 좋아요가 동일한 도메인 로직으로 처리되는가?
+- **대상 존재 검증**: 좋아요 대상의 존재 여부를 어디서, 어떻게 검증하는가?
 
 ### 클래스 다이어그램
 
@@ -751,8 +843,8 @@ classDiagram
     %% Interfaces Layer
     class LikeController {
         -LikeFacade likeFacade
-        +toggleLike(memberId, productId) ApiResponse~LikeResponse~
-        +getMyLikes(memberId, pageable) ApiResponse~Page~
+        +toggleProductLike(loginId, password, productId) ApiResponse~LikeResponse~
+        +toggleBrandLike(loginId, password, brandId) ApiResponse~LikeResponse~
     }
 
     class LikeResponse {
@@ -760,20 +852,12 @@ classDiagram
         +Long likeCount
     }
 
-    class LikedProductResponse {
-        +Long productId
-        +String productName
-        +Long price
-        +String imageUrl
-        +LocalDateTime likedAt
-    }
-
     %% Application Layer
     class LikeFacade {
+        -MemberService memberService
         -LikeService likeService
-        -ProductService productService
-        +toggleLike(memberId, productId) LikeInfo
-        +getMyLikedProducts(memberId, pageable) Page~LikedProductInfo~
+        -List~LikeTargetValidator~ validators
+        +toggleLike(loginId, password, targetId, targetType) LikeInfo
     }
 
     class LikeInfo {
@@ -781,20 +865,44 @@ classDiagram
         +Long likeCount
     }
 
+    class ProductLikeTargetValidator {
+        -ProductService productService
+        +supportedType() TargetType
+        +validate(targetId) void
+    }
+
+    class BrandLikeTargetValidator {
+        -BrandService brandService
+        +supportedType() TargetType
+        +validate(targetId) void
+    }
+
     %% Domain Layer
+    class LikeTargetValidator {
+        <<interface>>
+        +supportedType() TargetType
+        +validate(targetId) void
+    }
+
+    class TargetType {
+        <<enumeration>>
+        PRODUCT
+        BRAND
+    }
+
     class Like {
         -Long id
         -Long memberId
-        -Long productId
+        -Long targetId
+        -TargetType targetType
         -LocalDateTime createdAt
     }
 
     class LikeService {
         -LikeRepository likeRepository
-        +toggleLike(memberId, productId) LikeResult
-        +getLikeCount(productId) Long
-        +isLiked(memberId, productId) boolean
-        +getLikedProductIds(memberId, pageable) Page~Long~
+        +toggleLike(memberId, targetId, targetType) LikeResult
+        +getLikeCount(targetId, targetType) Long
+        +isLiked(memberId, targetId, targetType) boolean
     }
 
     class LikeResult {
@@ -805,11 +913,10 @@ classDiagram
     %% Infrastructure Layer
     class LikeRepository {
         <<interface>>
-        +findByMemberIdAndProductId(memberId, productId) Optional~Like~
-        +findProductIdsByMemberId(memberId, pageable) Page~Long~
+        +findByMemberIdAndTargetIdAndTargetType(memberId, targetId, targetType) Optional~Like~
         +save(like) Like
         +delete(like) void
-        +countByProductId(productId) Long
+        +countByTargetIdAndTargetType(targetId, targetType) Long
     }
 
     class LikeRepositoryImpl {
@@ -819,7 +926,8 @@ classDiagram
     class LikeEntity {
         -Long id
         -Long memberId
-        -Long productId
+        -Long targetId
+        -TargetType targetType
         -LocalDateTime createdAt
         +toDomain() Like
         +from(like)$ LikeEntity
@@ -828,30 +936,35 @@ classDiagram
     %% Relationships
     LikeController --> LikeFacade
     LikeController ..> LikeResponse
-    LikeController ..> LikedProductResponse
+    LikeFacade --> MemberService : 인증
     LikeFacade --> LikeService
-    LikeFacade --> ProductService : 상품 존재 검증
+    LikeFacade --> LikeTargetValidator : List 주입
     LikeFacade ..> LikeInfo
+    ProductLikeTargetValidator ..|> LikeTargetValidator
+    BrandLikeTargetValidator ..|> LikeTargetValidator
     LikeService --> LikeRepository
     LikeService --> Like
     LikeService ..> LikeResult
+    Like --> TargetType
     LikeRepositoryImpl ..|> LikeRepository
     LikeRepositoryImpl --> LikeEntity
+    LikeEntity --> TargetType
 ```
 
 ### 핵심 포인트
 
-1. **Facade 도입**: 상품 존재 여부 검증을 위해 `LikeFacade`에서 `ProductService` 호출 (도메인 경계 유지)
-2. **토글 로직은 LikeService**: 좋아요 존재 여부 확인 → 있으면 삭제, 없으면 생성
-3. **내 좋아요 목록 조회**: `LikeFacade`에서 좋아요 ID 목록 조회 후 `ProductService`로 상품 정보 조합
+1. **LikeTargetValidator 전략 패턴**: 대상 존재 검증을 인터페이스로 추상화하여 OCP 준수. 새로운 좋아요 대상 추가 시 Validator 구현체만 추가하면 됨
+2. **다형성 구조**: `target_id` + `target_type`으로 상품/브랜드 좋아요를 단일 테이블에서 관리
+3. **토글 로직은 LikeService**: 좋아요 존재 여부 확인 → 있으면 삭제(하드 삭제), 없으면 생성
+4. **RESTful 엔드포인트 분리**: `/products/{id}/likes`, `/brands/{id}/likes`로 리소스별 분리, 내부 로직은 통합
 
 ### 잠재 리스크
 
 | 리스크 | 영향 | 대안 |
 |--------|------|------|
-| **동시 토글 요청** | 같은 사용자가 빠르게 중복 클릭 시 중복 좋아요 생성 가능 | UNIQUE 제약조건 (member_id, product_id) + 예외 처리 |
-| **삭제된 상품 좋아요** | 상품 삭제 후 좋아요 데이터 잔존 | 상품 삭제 시 좋아요 연쇄 삭제 또는 조회 시 필터링 |
-| **좋아요 카운트 성능** | 상품별 좋아요 수 매번 COUNT 쿼리 | 상품 테이블에 like_count 컬럼 추가 (비정규화) 또는 캐시 |
+| **동시 토글 요청** | 같은 사용자가 빠르게 중복 클릭 시 중복 좋아요 생성 가능 | UNIQUE 제약조건 (member_id, target_id, target_type) + 예외 처리 |
+| **삭제된 대상 좋아요** | 대상 삭제 후 좋아요 데이터 잔존 | 대상 삭제 시 좋아요 연쇄 삭제 또는 조회 시 필터링 |
+| **좋아요 카운트 성능** | 대상별 좋아요 수 매번 COUNT 쿼리 | 대상 테이블에 like_count 컬럼 추가 (비정규화) 또는 캐시 |
 
 ---
 
@@ -872,12 +985,12 @@ classDiagram
 
     %% Interfaces Layer
     class MemberAddressController {
-        -MemberAddressService memberAddressService
-        +getMyAddresses(memberId) ApiResponse~List~
-        +createAddress(memberId, CreateAddressRequest) ApiResponse~AddressResponse~
-        +updateAddress(memberId, addressId, UpdateAddressRequest) ApiResponse~AddressResponse~
-        +deleteAddress(memberId, addressId) ApiResponse~Void~
-        +setDefaultAddress(memberId, addressId) ApiResponse~AddressResponse~
+        -MemberAddressFacade memberAddressFacade
+        +getMyAddresses(loginId, password) ApiResponse~List~
+        +createAddress(loginId, password, CreateAddressRequest) ApiResponse~AddressResponse~
+        +updateAddress(loginId, password, addressId, UpdateAddressRequest) ApiResponse~AddressResponse~
+        +deleteAddress(loginId, password, addressId) ApiResponse~Void~
+        +setDefaultAddress(loginId, password, addressId) ApiResponse~AddressResponse~
     }
 
     class CreateAddressRequest {
@@ -889,7 +1002,36 @@ classDiagram
         +Boolean isDefault
     }
 
+    class UpdateAddressRequest {
+        +String recipientName
+        +String phone
+        +String zipCode
+        +String address
+        +String addressDetail
+    }
+
     class AddressResponse {
+        +Long id
+        +String recipientName
+        +String phone
+        +String zipCode
+        +String address
+        +String addressDetail
+        +Boolean isDefault
+    }
+
+    %% Application Layer
+    class MemberAddressFacade {
+        -MemberService memberService
+        -MemberAddressService memberAddressService
+        +getMyAddresses(loginId, password) List~MemberAddressInfo~
+        +createAddress(loginId, password, address) MemberAddressInfo
+        +updateAddress(loginId, password, addressId, address) MemberAddressInfo
+        +deleteAddress(loginId, password, addressId) void
+        +setDefaultAddress(loginId, password, addressId) MemberAddressInfo
+    }
+
+    class MemberAddressInfo {
         +Long id
         +String recipientName
         +String phone
@@ -940,7 +1082,10 @@ classDiagram
     }
 
     %% Relationships
-    MemberAddressController --> MemberAddressService
+    MemberAddressController --> MemberAddressFacade
+    MemberAddressFacade --> MemberService : 인증
+    MemberAddressFacade --> MemberAddressService
+    MemberAddressFacade ..> MemberAddressInfo
     MemberAddressService --> MemberAddressRepository
     MemberAddressService --> MemberAddress
 ```
@@ -978,10 +1123,10 @@ classDiagram
     %% Interfaces Layer
     class OrderController {
         -OrderFacade orderFacade
-        +createOrder(memberId, CreateOrderRequest) ApiResponse~OrderResponse~
-        +getMyOrders(memberId, pageable) ApiResponse~Page~
-        +getOrderDetail(memberId, orderId) ApiResponse~OrderDetailResponse~
-        +cancelOrder(memberId, orderId) ApiResponse~OrderResponse~
+        +createOrder(loginId, password, CreateOrderRequest) ApiResponse~OrderResponse~
+        +getMyOrders(loginId, password, period, pageable) ApiResponse~Page~
+        +getOrderDetail(loginId, password, orderId) ApiResponse~OrderDetailResponse~
+        +cancelOrder(loginId, password, orderId) ApiResponse~OrderResponse~
     }
 
     class OrderAdminController {
@@ -1002,6 +1147,10 @@ classDiagram
         +Long productId
         +Long productOptionId
         +Integer quantity
+    }
+
+    class UpdateOrderStatusRequest {
+        +OrderStatus status
     }
 
     class OrderResponse {
@@ -1036,15 +1185,32 @@ classDiagram
         +String memo
     }
 
+    class OrderAdminDetailResponse {
+        +Long id
+        +String orderNumber
+        +String orderName
+        +Long totalAmount
+        +Long shippingFee
+        +Long discountAmount
+        +Long paymentAmount
+        +OrderStatus status
+        +List~OrderProductInfo~ products
+        +ShippingInfoResponse shippingInfo
+        +Long memberId
+        +LocalDateTime createdAt
+        +LocalDateTime updatedAt
+    }
+
     %% Application Layer
     class OrderFacade {
+        -MemberService memberService
         -OrderService orderService
         -ProductService productService
         -MemberAddressService memberAddressService
-        +createOrder(memberId, items, addressId, shippingMemo) OrderInfo
-        +getMyOrders(memberId, pageable) Page~OrderInfo~
-        +getOrderDetail(memberId, orderId) OrderDetailInfo
-        +cancelOrder(memberId, orderId) OrderInfo
+        +createOrder(loginId, password, items, addressId, shippingMemo) OrderInfo
+        +getMyOrders(loginId, password, period, pageable) Page~OrderInfo~
+        +getOrderDetail(loginId, password, orderId) OrderDetailInfo
+        +cancelOrder(loginId, password, orderId) OrderInfo
         +updateOrderStatus(orderId, status) OrderInfo
     }
 
@@ -1060,7 +1226,16 @@ classDiagram
     class OrderDetailInfo {
         +OrderInfo order
         +List~OrderProductInfo~ products
-        +ShippingInfoDto shippingInfo
+        +ShippingInfo shippingInfo
+    }
+
+    class ShippingInfo {
+        +String recipientName
+        +String phone
+        +String zipCode
+        +String address
+        +String addressDetail
+        +String memo
     }
 
     %% Domain Layer
@@ -1127,12 +1302,20 @@ classDiagram
         RETURNED
     }
 
+    class OrderPeriod {
+        <<enumeration>>
+        THREE_MONTHS
+        SIX_MONTHS
+        ONE_YEAR
+        ALL
+    }
+
     class OrderService {
         -OrderRepository orderRepository
         -OrderProductRepository orderProductRepository
         +createOrder(memberId, orderProducts, shippingSnapshot) Order
         +getOrder(orderId) Order
-        +getOrdersByMemberId(memberId, pageable) Page~Order~
+        +getOrdersByMemberId(memberId, period, pageable) Page~Order~
         +getOrders(filters, pageable) Page~Order~
         +getOrderProducts(orderId) List~OrderProduct~
         +updateOrderStatus(orderId, status) Order
@@ -1144,7 +1327,7 @@ classDiagram
     class OrderRepository {
         <<interface>>
         +findById(orderId) Optional~Order~
-        +findByMemberId(memberId, pageable) Page~Order~
+        +findByMemberId(memberId, period, pageable) Page~Order~
         +findAll(filters, pageable) Page~Order~
         +save(order) Order
     }
@@ -1159,8 +1342,9 @@ classDiagram
     OrderController --> OrderFacade
     OrderAdminController --> OrderFacade
     OrderAdminController --> OrderService : 목록 조회
+    OrderFacade --> MemberService : 인증
     OrderFacade --> OrderService
-    OrderFacade --> ProductService : 상품/옵션 검증, 재고 차감
+    OrderFacade --> ProductService : 상품/옵션 검증, 재고 차감/복구
     OrderFacade --> MemberAddressService : 배송지 조회
     OrderService --> OrderRepository
     OrderService --> OrderProductRepository
@@ -1176,6 +1360,7 @@ classDiagram
 2. **배송 정보 스냅샷**: `Order`에 `recipientName`, `recipientPhone`, `recipientAddress` 등이 직접 저장 (배송지 수정에 영향 없음)
 3. **addressId로 배송지 선택**: 주문 시 `MemberAddressService`에서 배송지 조회 후 스냅샷 복사
 4. **상태 전이 검증**: `OrderStatus.canTransitionTo()`로 유효한 상태 변경만 허용
+5. **취소 시 재고 복구 통합**: 사용자 `cancelOrder()`와 관리자 `updateOrderStatus(CANCELLED)` 모두 `ProductService.increaseStock()`으로 재고 복구 처리
 
 ### 잠재 리스크
 
@@ -1183,7 +1368,6 @@ classDiagram
 |--------|------|------|
 | **재고 차감 동시성** | 동시 주문 시 재고 초과 판매 가능 | ProductService에서 비관적 락 또는 분산 락 적용 |
 | **트랜잭션 범위 비대화** | 옵션 재고 차감 + 주문 생성이 하나의 트랜잭션 | 현재는 허용, 규모 커지면 Saga 패턴 검토 |
-| **취소 시 재고 복구 누락** | 주문 취소 후 재고 증가 처리 필요 | OrderFacade.cancelOrder()에서 재고 복구 로직 포함 |
 | **부분 취소 복잡성** | 여러 상품 중 일부만 취소 시 금액 재계산 | 현재는 전체 취소만 지원, 부분 취소는 추후 설계 |
 
 ---
@@ -1330,7 +1514,8 @@ classDiagram
 
     class Like {
         +Long memberId
-        +Long productId
+        +Long targetId
+        +TargetType targetType
     }
 
     class Order {
@@ -1353,7 +1538,6 @@ classDiagram
     Category "1" --> "*" Product : contains
     Category "1" --> "*" Category : parent
     Product "1" --> "*" ProductOption : has
-    Product "1" --> "*" Like : liked by
     Order "1" --> "*" OrderProduct : contains
     OrderProduct "*" --> "1" Product : references
     OrderProduct "*" --> "1" ProductOption : references
@@ -1361,9 +1545,10 @@ classDiagram
 
 ### 핵심 포인트
 
-1. **Product가 중심 도메인**: Brand, Category, Like, OrderProduct 등 가장 많은 참조를 받음 → 변경 시 영향 범위 큼
-2. **순환 의존 없음**: 모든 화살표가 단방향, Category 자기 참조(parent)만 존재
-3. **배송지 주소록 + 스냅샷**: `MemberAddress`는 회원의 배송지 목록, `Order`에는 주문 시점의 배송 정보가 스냅샷으로 저장
+1. **Product가 중심 도메인**: Brand, Category, OrderProduct 등 가장 많은 참조를 받음 → 변경 시 영향 범위 큼
+2. **Like 다형성 구조**: Like는 `targetId` + `targetType`으로 Product 또는 Brand를 참조하므로 직접 FK 없음
+3. **순환 의존 없음**: 모든 화살표가 단방향, Category 자기 참조(parent)만 존재
+4. **배송지 주소록 + 스냅샷**: `MemberAddress`는 회원의 배송지 목록, `Order`에는 주문 시점의 배송 정보가 스냅샷으로 저장
 
 ### 잠재 리스크
 

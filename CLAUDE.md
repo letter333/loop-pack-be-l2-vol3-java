@@ -131,6 +131,8 @@ interfaces → application → domain ← infrastructure
 - 유저 정보가 필요한 모든 요청은 아래 헤더를 통해 요청
 * X-Loopers-LoginId : 로그인 ID
 * X-Loopers-LoginPw : 비밀번호
+- Admin 기능은 아래 헤더를 통해 Admin 식별 후 제공
+* X-Loopers-Ldap : loopers.admin
 
 ### 개발 Workflow - TDD (Red > Green > Refactor)
 - 모든 테스트는 3A 원칙으로 작성할 것 (Arrange - Act - Assert)

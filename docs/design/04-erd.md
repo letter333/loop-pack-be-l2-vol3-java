@@ -9,7 +9,6 @@ varchar(255) password "NOT NULL"
 varchar(30) name "NOT NULL"
 date birthday "NOT NULL | YYYY-MM-DD"
 varchar(50) email UK "NOT NULL"
-enum role "회원 권한 (USER, ADMIN) | 기본값: USER"
 datetime created_at
 datetime updated_at
 }
@@ -31,7 +30,7 @@ datetime deleted_at
 products {
 bigint id PK
 varchar(100) name "NOT NULL | 상품명"
-varchar(25) product_code UK "NOT NULL | 상품 코드 ({카테고리 3자리}-{5자리 순번}, 예: ELC-00001)"
+varchar(20) product_code UK "NOT NULL | 상품 코드 ({YYYYMMDD}-{5자리 순번}, 예: 20240101-00001)"
 bigint base_price "NOT NULL | 기본 판매가격"
 enum status "NOT NULL | 상품 상태(SALE, STOP, SOLDOUT)"
 bigint brand_id FK "NOT NULL | 브랜드 ID"
@@ -89,8 +88,9 @@ datetime deleted_at
 
 likes {
 bigint id PK
-bigint member_id FK "NOT NULL | 회원 ID | UNIQUE(member_id, product_id)"
-bigint product_id FK "NOT NULL | 상품 ID | UNIQUE(member_id, product_id)"
+bigint member_id FK "NOT NULL | 회원 ID | UNIQUE(member_id, target_id, target_type)"
+bigint target_id "NOT NULL | 대상 ID (products.id 또는 brands.id) | UNIQUE(member_id, target_id, target_type)"
+enum target_type "NOT NULL | 대상 타입 (PRODUCT, BRAND) | UNIQUE(member_id, target_id, target_type)"
 datetime created_at
 }
 
@@ -135,7 +135,6 @@ products }o--|| brands : "brand"
 products }o--|| categories : "category"
 categories }o--|| categories : "parent"
 members ||--o{ likes: "좋아요"
-likes }o--|| products: "상품"
 members ||--o{ orders: "주문"
 orders ||--|{ order_products: "주문 상품"
 order_products }o--|| products: "상품 참조"

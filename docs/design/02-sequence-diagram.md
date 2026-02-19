@@ -14,9 +14,9 @@ sequenceDiagram
     participant ProductService as 상품 서비스
     participant Repository
 
-    Client->>Controller: GET /api/v1/brands/{brandId}
-    Controller->>Facade: getBrandInfo(brandId)
-    Facade->>BrandService: getBrand(brandId)
+    Client->>Controller: GET /api/v1/brands/{brandId}?page=&size=
+    Controller->>Facade: getBrandInfo(brandId, pageable)
+    Facade->>BrandService: getActiveBrand(brandId)
     BrandService->>Repository: findById(brandId)
 
     alt 브랜드 미존재
@@ -27,12 +27,20 @@ sequenceDiagram
     end
 
     Repository-->>BrandService: Brand
+    BrandService->>BrandService: 삭제 상태 검증
+
+    alt 삭제된 브랜드
+        BrandService-->>Facade: NOT_FOUND Exception
+        Facade-->>Controller: throw Exception
+        Controller-->>Client: 404 Not Found
+    end
+
     BrandService-->>Facade: Brand
     Facade->>ProductService: getProductsByBrandId(brandId, pageable)
     ProductService->>Repository: findByBrandId(brandId, pageable)
     Repository-->>ProductService: Page<Product>
     ProductService-->>Facade: Page<Product>
-    Facade-->>Controller: BrandInfo + Products
+    Facade-->>Controller: BrandInfo
     Controller-->>Client: 200 OK
 ```
 
@@ -68,7 +76,7 @@ sequenceDiagram
     Note over Repository: 삭제된 상품 제외
     Repository-->>ProductService: Page<Product>
     ProductService-->>Facade: Page<Product>
-    Facade-->>Controller: ProductListResponse
+    Facade-->>Controller: Page<ProductInfo>
     Controller-->>Client: 200 OK
 ```
 
@@ -86,7 +94,7 @@ sequenceDiagram
 
     Client->>Controller: GET /api/v1/products/{productId}
     Controller->>Facade: getProductDetail(productId)
-    Facade->>ProductService: getProduct(productId)
+    Facade->>ProductService: getActiveProduct(productId)
     ProductService->>Repository: findById(productId)
 
     alt 상품 미존재
@@ -110,7 +118,7 @@ sequenceDiagram
     ProductOptionService->>Repository: findByProductId(productId)
     Repository-->>ProductOptionService: List<ProductOption>
     ProductOptionService-->>Facade: List<ProductOption>
-    Facade-->>Controller: ProductDetailResponse
+    Facade-->>Controller: ProductDetailInfo
     Controller-->>Client: 200 OK
 ```
 
@@ -129,16 +137,16 @@ sequenceDiagram
     participant Repository
 
     Admin->>Controller: GET /api/v1/admin/brands?page=&size=
-    Note over Controller: 관리자 권한 검증
+    Note over Controller: X-Loopers-Ldap: loopers.admin 헤더 검증
 
-    alt 권한 없음
+    alt 관리자 인증 실패
         Controller-->>Admin: 403 Forbidden
     end
 
     Controller->>Service: getBrands(pageable)
     Service->>Repository: findAll(pageable)
     Repository-->>Service: Page<Brand>
-    Service-->>Controller: BrandListResponse
+    Service-->>Controller: Page<Brand>
     Controller-->>Admin: 200 OK
 ```
 
@@ -154,10 +162,10 @@ sequenceDiagram
     participant ProductService as 상품 서비스
     participant Repository
 
-    Admin->>Controller: GET /api/v1/admin/brands/{brandId}
-    Note over Controller: 관리자 권한 검증
+    Admin->>Controller: GET /api/v1/admin/brands/{brandId}?page=&size=
+    Note over Controller: X-Loopers-Ldap: loopers.admin 헤더 검증
 
-    alt 권한 없음
+    alt 관리자 인증 실패
         Controller-->>Admin: 403 Forbidden
     end
 
@@ -178,7 +186,7 @@ sequenceDiagram
     ProductService->>Repository: findByBrandId(brandId, pageable)
     Repository-->>ProductService: Page<Product>
     ProductService-->>Facade: Page<Product>
-    Facade-->>Controller: BrandDetailResponse
+    Facade-->>Controller: BrandDetailInfo
     Controller-->>Admin: 200 OK
 ```
 
@@ -193,9 +201,9 @@ sequenceDiagram
     participant Repository
 
     Admin->>Controller: POST /api/v1/admin/brands
-    Note over Controller: 관리자 권한 검증
+    Note over Controller: X-Loopers-Ldap: loopers.admin 헤더 검증
 
-    alt 권한 없음
+    alt 관리자 인증 실패
         Controller-->>Admin: 403 Forbidden
     end
 
@@ -209,7 +217,7 @@ sequenceDiagram
 
     BrandService->>Repository: save(brand)
     Repository-->>BrandService: Brand
-    BrandService-->>Controller: BrandResponse
+    BrandService-->>Controller: Brand
     Controller-->>Admin: 201 Created
 ```
 
@@ -224,9 +232,9 @@ sequenceDiagram
     participant Repository
 
     Admin->>Controller: PUT /api/v1/admin/brands/{brandId}
-    Note over Controller: 관리자 권한 검증
+    Note over Controller: X-Loopers-Ldap: loopers.admin 헤더 검증
 
-    alt 권한 없음
+    alt 관리자 인증 실패
         Controller-->>Admin: 403 Forbidden
     end
 
@@ -249,7 +257,7 @@ sequenceDiagram
     BrandService->>BrandService: Brand 정보 수정
     BrandService->>Repository: save(brand)
     Repository-->>BrandService: Brand
-    BrandService-->>Controller: BrandResponse
+    BrandService-->>Controller: Brand
     Controller-->>Admin: 200 OK
 ```
 
@@ -266,9 +274,9 @@ sequenceDiagram
     participant Repository
 
     Admin->>Controller: DELETE /api/v1/admin/brands/{brandId}
-    Note over Controller: 관리자 권한 검증
+    Note over Controller: X-Loopers-Ldap: loopers.admin 헤더 검증
 
-    alt 권한 없음
+    alt 관리자 인증 실패
         Controller-->>Admin: 403 Forbidden
     end
 
@@ -320,9 +328,9 @@ sequenceDiagram
     participant Repository
 
     Admin->>Controller: GET /api/v1/admin/products/{productId}
-    Note over Controller: 관리자 권한 검증
+    Note over Controller: X-Loopers-Ldap: loopers.admin 헤더 검증
 
-    alt 권한 없음
+    alt 관리자 인증 실패
         Controller-->>Admin: 403 Forbidden
     end
 
@@ -344,7 +352,7 @@ sequenceDiagram
     ProductOptionService->>Repository: findByProductId(productId)
     Repository-->>ProductOptionService: List<ProductOption>
     ProductOptionService-->>Facade: List<ProductOption>
-    Facade-->>Controller: ProductAdminDetailResponse
+    Facade-->>Controller: ProductDetailInfo
     Note over Controller: 재고, 상태, 등록/수정일시 포함
     Controller-->>Admin: 200 OK
 ```
@@ -363,9 +371,9 @@ sequenceDiagram
     participant Repository
 
     Admin->>Controller: POST /api/v1/admin/products
-    Note over Controller: 관리자 권한 검증
+    Note over Controller: X-Loopers-Ldap: loopers.admin 헤더 검증
 
-    alt 권한 없음
+    alt 관리자 인증 실패
         Controller-->>Admin: 403 Forbidden
     end
 
@@ -403,7 +411,7 @@ sequenceDiagram
     Repository-->>ProductService: Product
     ProductService-->>Facade: Product
 
-    Facade-->>Controller: ProductResponse
+    Facade-->>Controller: ProductInfo
     Controller-->>Admin: 201 Created
 ```
 
@@ -420,9 +428,9 @@ sequenceDiagram
     participant Repository
 
     Admin->>Controller: PUT /api/v1/admin/products/{productId}
-    Note over Controller: 관리자 권한 검증
+    Note over Controller: X-Loopers-Ldap: loopers.admin 헤더 검증
 
-    alt 권한 없음
+    alt 관리자 인증 실패
         Controller-->>Admin: 403 Forbidden
     end
 
@@ -461,7 +469,7 @@ sequenceDiagram
     Repository-->>ProductService: Product
     ProductService-->>Facade: Product
 
-    Facade-->>Controller: ProductResponse
+    Facade-->>Controller: ProductInfo
     Controller-->>Admin: 200 OK
 ```
 
@@ -476,9 +484,9 @@ sequenceDiagram
     participant Repository
 
     Admin->>Controller: DELETE /api/v1/admin/products/{productId}
-    Note over Controller: 관리자 권한 검증
+    Note over Controller: X-Loopers-Ldap: loopers.admin 헤더 검증
 
-    alt 권한 없음
+    alt 관리자 인증 실패
         Controller-->>Admin: 403 Forbidden
     end
 
@@ -511,33 +519,42 @@ sequenceDiagram
     participant Client as 사용자
     participant Controller
     participant Facade as LikeFacade
-    participant ProductService as 상품 서비스
+    participant MemberService as 회원 서비스
+    participant Validator as ProductLikeTargetValidator
     participant LikeService as 좋아요 서비스
     participant Repository
 
     Client->>Controller: POST /api/v1/products/{productId}/likes
-    Note over Controller: 로그인 검증
+    Note over Controller: X-Loopers-LoginId, X-Loopers-LoginPw 헤더
 
-    alt 비로그인 사용자
+    alt 인증 헤더 누락
+        Controller-->>Client: 400 Bad Request
+    end
+
+    Controller->>Facade: toggleLike(loginId, password, productId, PRODUCT)
+    Facade->>MemberService: authenticate(loginId, password)
+
+    alt 인증 실패
+        MemberService-->>Facade: UNAUTHORIZED Exception
+        Facade-->>Controller: throw Exception
         Controller-->>Client: 401 Unauthorized
     end
 
-    Controller->>Facade: toggleLike(memberId, productId)
-    Facade->>ProductService: getProduct(productId)
-    ProductService->>Repository: findById(productId)
+    MemberService-->>Facade: Member
+
+    Facade->>Facade: validators에서 supportedType == PRODUCT 조회
+    Facade->>Validator: validate(productId)
 
     alt 상품 미존재 또는 삭제됨
-        Repository-->>ProductService: Empty
-        ProductService-->>Facade: NOT_FOUND Exception
+        Validator-->>Facade: NOT_FOUND Exception
         Facade-->>Controller: throw Exception
         Controller-->>Client: 404 Not Found
     end
 
-    Repository-->>ProductService: Product
-    ProductService-->>Facade: Product
+    Validator-->>Facade: 검증 통과
 
-    Facade->>LikeService: toggleLike(memberId, productId)
-    LikeService->>Repository: findByMemberIdAndProductId(memberId, productId)
+    Facade->>LikeService: toggleLike(memberId, productId, PRODUCT)
+    LikeService->>Repository: findByMemberIdAndTargetIdAndTargetType(memberId, productId, PRODUCT)
 
     alt 이미 좋아요한 경우 (취소)
         Repository-->>LikeService: Like
@@ -547,7 +564,68 @@ sequenceDiagram
         Controller-->>Client: 200 OK (좋아요 취소)
     else 좋아요하지 않은 경우 (등록)
         Repository-->>LikeService: Empty
-        LikeService->>LikeService: Like 생성
+        LikeService->>LikeService: Like 생성 (targetType=PRODUCT)
+        LikeService->>Repository: save(like)
+        LikeService-->>Facade: LikeResult(liked)
+        Facade-->>Controller: LikeInfo(liked)
+        Controller-->>Client: 200 OK (좋아요 등록)
+    end
+```
+
+### [브랜드 좋아요 등록/취소]
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant Client as 사용자
+    participant Controller
+    participant Facade as LikeFacade
+    participant MemberService as 회원 서비스
+    participant Validator as BrandLikeTargetValidator
+    participant LikeService as 좋아요 서비스
+    participant Repository
+
+    Client->>Controller: POST /api/v1/brands/{brandId}/likes
+    Note over Controller: X-Loopers-LoginId, X-Loopers-LoginPw 헤더
+
+    alt 인증 헤더 누락
+        Controller-->>Client: 400 Bad Request
+    end
+
+    Controller->>Facade: toggleLike(loginId, password, brandId, BRAND)
+    Facade->>MemberService: authenticate(loginId, password)
+
+    alt 인증 실패
+        MemberService-->>Facade: UNAUTHORIZED Exception
+        Facade-->>Controller: throw Exception
+        Controller-->>Client: 401 Unauthorized
+    end
+
+    MemberService-->>Facade: Member
+
+    Facade->>Facade: validators에서 supportedType == BRAND 조회
+    Facade->>Validator: validate(brandId)
+
+    alt 브랜드 미존재 또는 삭제됨
+        Validator-->>Facade: NOT_FOUND Exception
+        Facade-->>Controller: throw Exception
+        Controller-->>Client: 404 Not Found
+    end
+
+    Validator-->>Facade: 검증 통과
+
+    Facade->>LikeService: toggleLike(memberId, brandId, BRAND)
+    LikeService->>Repository: findByMemberIdAndTargetIdAndTargetType(memberId, brandId, BRAND)
+
+    alt 이미 좋아요한 경우 (취소)
+        Repository-->>LikeService: Like
+        LikeService->>Repository: delete(like)
+        LikeService-->>Facade: LikeResult(cancelled)
+        Facade-->>Controller: LikeInfo(cancelled)
+        Controller-->>Client: 200 OK (좋아요 취소)
+    else 좋아요하지 않은 경우 (등록)
+        Repository-->>LikeService: Empty
+        LikeService->>LikeService: Like 생성 (targetType=BRAND)
         LikeService->>Repository: save(like)
         LikeService-->>Facade: LikeResult(liked)
         Facade-->>Controller: LikeInfo(liked)
@@ -566,17 +644,18 @@ sequenceDiagram
     autonumber
     participant Client as 사용자
     participant Controller
-    participant Facade
+    participant Facade as OrderFacade
+    participant MemberService as 회원 서비스
     participant OrderService as 주문 서비스
     participant ProductService as 상품 서비스
     participant MemberAddressService as 배송지 서비스
     participant Repository
 
     Client->>Controller: POST /api/v1/orders
-    Note over Controller: 로그인 검증
+    Note over Controller: X-Loopers-LoginId, X-Loopers-LoginPw 헤더
 
-    alt 비로그인 사용자
-        Controller-->>Client: 401 Unauthorized
+    alt 인증 헤더 누락
+        Controller-->>Client: 400 Bad Request
     end
 
     Note over Controller: 입력값 검증
@@ -585,7 +664,16 @@ sequenceDiagram
         Controller-->>Client: 400 Bad Request
     end
 
-    Controller->>Facade: createOrder(memberId, orderItems, addressId, shippingMemo)
+    Controller->>Facade: createOrder(loginId, password, orderItems, addressId, shippingMemo)
+    Facade->>MemberService: authenticate(loginId, password)
+
+    alt 인증 실패
+        MemberService-->>Facade: UNAUTHORIZED Exception
+        Facade-->>Controller: throw Exception
+        Controller-->>Client: 401 Unauthorized
+    end
+
+    MemberService-->>Facade: Member
 
     Facade->>MemberAddressService: getAddress(memberId, addressId)
     MemberAddressService->>Repository: findByMemberIdAndId(memberId, addressId)
@@ -638,7 +726,7 @@ sequenceDiagram
     Repository-->>OrderService: Order
 
     OrderService-->>Facade: Order
-    Facade-->>Controller: OrderResponse
+    Facade-->>Controller: OrderInfo
     Controller-->>Client: 201 Created
 ```
 
@@ -649,24 +737,36 @@ sequenceDiagram
     autonumber
     participant Client as 사용자
     participant Controller
-    participant Facade
+    participant Facade as OrderFacade
+    participant MemberService as 회원 서비스
     participant OrderService as 주문 서비스
     participant Repository
 
-    Client->>Controller: GET /api/v1/orders?page=&size=
-    Note over Controller: 로그인 검증
+    Client->>Controller: GET /api/v1/orders?period=&page=&size=
+    Note over Controller: X-Loopers-LoginId, X-Loopers-LoginPw 헤더
+    Note over Controller: period: 3M(기본), 6M, 1Y, ALL
 
-    alt 비로그인 사용자
+    alt 인증 헤더 누락
+        Controller-->>Client: 400 Bad Request
+    end
+
+    Controller->>Facade: getMyOrders(loginId, password, period, pageable)
+    Facade->>MemberService: authenticate(loginId, password)
+
+    alt 인증 실패
+        MemberService-->>Facade: UNAUTHORIZED Exception
+        Facade-->>Controller: throw Exception
         Controller-->>Client: 401 Unauthorized
     end
 
-    Controller->>Facade: getMyOrders(memberId, pageable)
-    Facade->>OrderService: getOrdersByMemberId(memberId, pageable)
-    OrderService->>Repository: findByMemberId(memberId, pageable)
-    Note over Repository: 최신 주문순 정렬
+    MemberService-->>Facade: Member
+
+    Facade->>OrderService: getOrdersByMemberId(memberId, period, pageable)
+    OrderService->>Repository: findByMemberId(memberId, period, pageable)
+    Note over Repository: 기간 필터 적용, 최신 주문순 정렬
     Repository-->>OrderService: Page<Order>
     OrderService-->>Facade: Page<Order>
-    Facade-->>Controller: OrderListResponse
+    Facade-->>Controller: Page<OrderInfo>
     Note over Controller: 주문번호, 일자, 대표상품명, 총금액, 상태
     Controller-->>Client: 200 OK
 ```
@@ -678,18 +778,29 @@ sequenceDiagram
     autonumber
     participant Client as 사용자
     participant Controller
-    participant Facade
+    participant Facade as OrderFacade
+    participant MemberService as 회원 서비스
     participant OrderService as 주문 서비스
     participant Repository
 
     Client->>Controller: GET /api/v1/orders/{orderId}
-    Note over Controller: 로그인 검증
+    Note over Controller: X-Loopers-LoginId, X-Loopers-LoginPw 헤더
 
-    alt 비로그인 사용자
+    alt 인증 헤더 누락
+        Controller-->>Client: 400 Bad Request
+    end
+
+    Controller->>Facade: getOrderDetail(loginId, password, orderId)
+    Facade->>MemberService: authenticate(loginId, password)
+
+    alt 인증 실패
+        MemberService-->>Facade: UNAUTHORIZED Exception
+        Facade-->>Controller: throw Exception
         Controller-->>Client: 401 Unauthorized
     end
 
-    Controller->>Facade: getOrderDetail(memberId, orderId)
+    MemberService-->>Facade: Member
+
     Facade->>OrderService: getOrder(orderId)
     OrderService->>Repository: findById(orderId)
 
@@ -701,7 +812,9 @@ sequenceDiagram
     end
 
     Repository-->>OrderService: Order
-    OrderService->>OrderService: 주문자 검증
+    OrderService-->>Facade: Order
+
+    Facade->>OrderService: validateOrderOwner(orderId, memberId)
 
     alt 본인 주문 아님
         OrderService-->>Facade: FORBIDDEN Exception
@@ -709,10 +822,95 @@ sequenceDiagram
         Controller-->>Client: 403 Forbidden
     end
 
+    Facade->>OrderService: getOrderProducts(orderId)
     OrderService->>Repository: findByOrderId(orderId)
     Repository-->>OrderService: List<OrderProduct>
-    OrderService-->>Facade: Order + OrderProducts
-    Facade-->>Controller: OrderDetailResponse
+    OrderService-->>Facade: List<OrderProduct>
+    Facade-->>Controller: OrderDetailInfo
     Note over Controller: 주문정보, 상품정보, 배송지, 결제내역
+    Controller-->>Client: 200 OK
+```
+
+### [주문 취소]
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant Client as 사용자
+    participant Controller
+    participant Facade as OrderFacade
+    participant MemberService as 회원 서비스
+    participant OrderService as 주문 서비스
+    participant ProductService as 상품 서비스
+    participant Repository
+
+    Client->>Controller: PATCH /api/v1/orders/{orderId}/cancel
+    Note over Controller: X-Loopers-LoginId, X-Loopers-LoginPw 헤더
+
+    alt 인증 헤더 누락
+        Controller-->>Client: 400 Bad Request
+    end
+
+    Controller->>Facade: cancelOrder(loginId, password, orderId)
+    Facade->>MemberService: authenticate(loginId, password)
+
+    alt 인증 실패
+        MemberService-->>Facade: UNAUTHORIZED Exception
+        Facade-->>Controller: throw Exception
+        Controller-->>Client: 401 Unauthorized
+    end
+
+    MemberService-->>Facade: Member
+
+    Facade->>OrderService: getOrder(orderId)
+    OrderService->>Repository: findById(orderId)
+
+    alt 주문 미존재
+        Repository-->>OrderService: Empty
+        OrderService-->>Facade: NOT_FOUND Exception
+        Facade-->>Controller: throw Exception
+        Controller-->>Client: 404 Not Found
+    end
+
+    Repository-->>OrderService: Order
+    OrderService-->>Facade: Order
+
+    Facade->>OrderService: validateOrderOwner(orderId, memberId)
+
+    alt 본인 주문 아님
+        OrderService-->>Facade: FORBIDDEN Exception
+        Facade-->>Controller: throw Exception
+        Controller-->>Client: 403 Forbidden
+    end
+
+    Facade->>OrderService: getOrderProducts(orderId)
+    OrderService->>Repository: findByOrderId(orderId)
+    Repository-->>OrderService: List<OrderProduct>
+    OrderService-->>Facade: List<OrderProduct>
+
+    Facade->>OrderService: cancelOrder(orderId)
+    OrderService->>OrderService: canCancel() 검증
+
+    alt PENDING/PAID 상태가 아님
+        OrderService-->>Facade: BAD_REQUEST Exception
+        Facade-->>Controller: throw Exception
+        Controller-->>Client: 400 Bad Request
+    end
+
+    OrderService->>OrderService: Order 상태 CANCELLED 변경
+
+    loop 주문 상품별
+        OrderService->>OrderService: OrderProduct 상태 CANCELLED 변경
+    end
+
+    OrderService->>Repository: save(Order)
+    Repository-->>OrderService: Order
+    OrderService-->>Facade: Order
+
+    loop 주문 상품별 재고 복구
+        Facade->>ProductService: increaseStock(productOptionId, quantity)
+    end
+
+    Facade-->>Controller: OrderInfo
     Controller-->>Client: 200 OK
 ```
