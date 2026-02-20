@@ -1,5 +1,6 @@
 package com.loopers.interfaces.api.brand;
 
+import com.loopers.application.brand.BrandCommand;
 import com.loopers.application.brand.BrandDetailInfo;
 import com.loopers.application.brand.BrandFacade;
 import com.loopers.interfaces.api.ApiResponse;
@@ -55,7 +56,8 @@ public class BrandAdminV1Controller implements BrandAdminV1ApiSpec {
         @RequestHeader("X-Loopers-Ldap") String ldap,
         @Valid @RequestBody BrandAdminV1Dto.CreateBrandRequest request
     ) {
-        BrandDetailInfo info = brandFacade.createBrand(ldap, request.name(), request.description(), request.logoImageUrl());
+        BrandCommand.Create command = new BrandCommand.Create(request.name(), request.description(), request.logoImageUrl());
+        BrandDetailInfo info = brandFacade.createBrand(ldap, command);
         BrandAdminV1Dto.BrandDetailResponse response = BrandAdminV1Dto.BrandDetailResponse.from(info);
         return ApiResponse.success(response);
     }
@@ -67,7 +69,8 @@ public class BrandAdminV1Controller implements BrandAdminV1ApiSpec {
         @PathVariable Long brandId,
         @Valid @RequestBody BrandAdminV1Dto.UpdateBrandRequest request
     ) {
-        BrandDetailInfo info = brandFacade.updateBrand(ldap, brandId, request.name(), request.description(), request.logoImageUrl());
+        BrandCommand.Update command = new BrandCommand.Update(request.name(), request.description(), request.logoImageUrl());
+        BrandDetailInfo info = brandFacade.updateBrand(ldap, brandId, command);
         BrandAdminV1Dto.BrandDetailResponse response = BrandAdminV1Dto.BrandDetailResponse.from(info);
         return ApiResponse.success(response);
     }

@@ -37,15 +37,15 @@ public class BrandFacade {
             .map(BrandDetailInfo::from);
     }
 
-    public BrandDetailInfo createBrand(String ldap, String name, String description, String logoImageUrl) {
+    public BrandDetailInfo createBrand(String ldap, BrandCommand.Create command) {
         adminValidator.validate(ldap);
-        Brand brand = brandService.createBrand(name, description, logoImageUrl);
+        Brand brand = brandService.createBrand(command.name(), command.description(), command.logoImageUrl());
         return BrandDetailInfo.from(brand);
     }
 
-    public BrandDetailInfo updateBrand(String ldap, Long brandId, String name, String description, String logoImageUrl) {
+    public BrandDetailInfo updateBrand(String ldap, Long brandId, BrandCommand.Update command) {
         adminValidator.validate(ldap);
-        Brand brand = brandService.updateBrand(brandId, name, description, logoImageUrl);
+        Brand brand = brandService.updateBrand(brandId, command.name(), command.description(), command.logoImageUrl());
         return BrandDetailInfo.from(brand);
     }
 

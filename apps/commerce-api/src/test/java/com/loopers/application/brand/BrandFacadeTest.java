@@ -172,8 +172,11 @@ class BrandFacadeTest {
         @Test
         @DisplayName("Admin이 브랜드를 등록하면 BrandDetailInfo를 반환한다")
         void returnsBrandDetailInfo_whenAdminCreates() {
+            // Arrange
+            BrandCommand.Create command = new BrandCommand.Create("Nike", "스포츠 브랜드", "https://logo.png");
+
             // Act
-            BrandDetailInfo result = brandFacade.createBrand(VALID_ADMIN_LDAP, "Nike", "스포츠 브랜드", "https://logo.png");
+            BrandDetailInfo result = brandFacade.createBrand(VALID_ADMIN_LDAP, command);
 
             // Assert
             assertAll(
@@ -186,8 +189,11 @@ class BrandFacadeTest {
         @Test
         @DisplayName("Admin이 아닌 사용자가 브랜드를 등록하면 FORBIDDEN 예외가 발생한다")
         void throwsForbidden_whenNonAdminCreates() {
+            // Arrange
+            BrandCommand.Create command = new BrandCommand.Create("Nike", "설명", "https://logo.png");
+
             // Act & Assert
-            assertThatThrownBy(() -> brandFacade.createBrand(INVALID_ADMIN_LDAP, "Nike", "설명", "https://logo.png"))
+            assertThatThrownBy(() -> brandFacade.createBrand(INVALID_ADMIN_LDAP, command))
                 .isInstanceOf(CoreException.class)
                 .satisfies(ex -> assertThat(((CoreException) ex).getErrorType()).isEqualTo(ErrorType.FORBIDDEN));
         }
@@ -202,9 +208,10 @@ class BrandFacadeTest {
         void returnsBrandDetailInfo_whenAdminUpdates() {
             // Arrange
             Brand saved = brandService.createBrand("Nike", "스포츠 브랜드", "https://logo.png");
+            BrandCommand.Update command = new BrandCommand.Update("Adidas", "독일 브랜드", "https://adidas.png");
 
             // Act
-            BrandDetailInfo result = brandFacade.updateBrand(VALID_ADMIN_LDAP, saved.getId(), "Adidas", "독일 브랜드", "https://adidas.png");
+            BrandDetailInfo result = brandFacade.updateBrand(VALID_ADMIN_LDAP, saved.getId(), command);
 
             // Assert
             assertAll(
@@ -219,9 +226,10 @@ class BrandFacadeTest {
         void throwsForbidden_whenNonAdminUpdates() {
             // Arrange
             Brand saved = brandService.createBrand("Nike", "스포츠 브랜드", "https://logo.png");
+            BrandCommand.Update command = new BrandCommand.Update("Adidas", "설명", "https://logo.png");
 
             // Act & Assert
-            assertThatThrownBy(() -> brandFacade.updateBrand(INVALID_ADMIN_LDAP, saved.getId(), "Adidas", "설명", "https://logo.png"))
+            assertThatThrownBy(() -> brandFacade.updateBrand(INVALID_ADMIN_LDAP, saved.getId(), command))
                 .isInstanceOf(CoreException.class)
                 .satisfies(ex -> assertThat(((CoreException) ex).getErrorType()).isEqualTo(ErrorType.FORBIDDEN));
         }
