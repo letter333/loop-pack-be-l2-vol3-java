@@ -6,6 +6,8 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
+import java.time.LocalDateTime;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertAll;
@@ -331,6 +333,57 @@ class ProductTest {
 
             // Act & Assert (멱등성)
             product.delete();
+            assertThat(product.isDeleted()).isTrue();
+        }
+    }
+
+    @Nested
+    @DisplayName("DB 조회 데이터 복원 (toDomain)")
+    class RestoreFromDatabase {
+
+        @Test
+        @DisplayName("DB에서 조회한 데이터로 Product 도메인 객체를 복원한다")
+        void restoresProductFromDatabaseRecord() {
+            // Arrange
+            LocalDateTime createdAt = LocalDateTime.of(2024, 1, 1, 10, 0);
+            LocalDateTime updatedAt = LocalDateTime.of(2024, 1, 2, 10, 0);
+
+            // Act
+            Product product = new Product(
+                1L, "아이폰 15", "20240101-00001", 1L, 1L, 1500000L,
+                ProductStatus.SALE, 100000L, DiscountType.PRICE,
+                createdAt, updatedAt, null
+            );
+
+            // Assert
+            assertAll(
+                () -> assertThat(product.getId()).isEqualTo(1L),
+                () -> assertThat(product.getName()).isEqualTo("아이폰 15"),
+                () -> assertThat(product.getProductCode()).isEqualTo("20240101-00001"),
+                () -> assertThat(product.getBrandId()).isEqualTo(1L),
+                () -> assertThat(product.getCategoryId()).isEqualTo(1L),
+                () -> assertThat(product.getBasePrice()).isEqualTo(1500000L),
+                () -> assertThat(product.getStatus()).isEqualTo(ProductStatus.SALE),
+                () -> assertThat(product.getDiscount()).isEqualTo(100000L),
+                () -> assertThat(product.getDiscountType()).isEqualTo(DiscountType.PRICE),
+                () -> assertThat(product.isDeleted()).isFalse()
+            );
+        }
+
+        @Test
+        @DisplayName("삭제된 상품 데이터를 복원하면 isDeleted가 true를 반환한다")
+        void returnsTrue_whenRestoredProductWasDeleted() {
+            // Arrange
+            LocalDateTime now = LocalDateTime.now();
+
+            // Act
+            Product product = new Product(
+                1L, "아이폰 15", "20240101-00001", 1L, 1L, 1500000L,
+                ProductStatus.SALE, null, null,
+                now, now, now
+            );
+
+            // Assert
             assertThat(product.isDeleted()).isTrue();
         }
     }

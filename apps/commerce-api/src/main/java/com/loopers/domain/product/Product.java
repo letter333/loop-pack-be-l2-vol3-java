@@ -37,6 +37,23 @@ public class Product {
         this.productCode = generateProductCode();
     }
 
+    public Product(Long id, String name, String productCode, Long brandId, Long categoryId, Long basePrice,
+                   ProductStatus status, Long discount, DiscountType discountType,
+                   LocalDateTime createdAt, LocalDateTime updatedAt, LocalDateTime deletedAt) {
+        this.id = id;
+        this.name = name;
+        this.productCode = productCode;
+        this.brandId = brandId;
+        this.categoryId = categoryId;
+        this.basePrice = basePrice;
+        this.status = status;
+        this.discount = discount;
+        this.discountType = discountType;
+        this.createdAt = createdAt;
+        this.updatedAt = updatedAt;
+        this.deletedAt = deletedAt;
+    }
+
     public boolean isDeleted() {
         return deletedAt != null;
     }

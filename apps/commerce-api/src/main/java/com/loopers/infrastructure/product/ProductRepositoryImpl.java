@@ -1,0 +1,69 @@
+package com.loopers.infrastructure.product;
+
+import com.loopers.domain.product.Product;
+import com.loopers.domain.product.ProductRepository;
+import com.loopers.support.error.CoreException;
+import com.loopers.support.error.ErrorType;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Component;
+
+import java.util.List;
+import java.util.Optional;
+
+@Component
+@RequiredArgsConstructor
+public class ProductRepositoryImpl implements ProductRepository {
+
+    private final ProductJpaRepository productJpaRepository;
+
+    @Override
+    public Optional<Product> findById(Long id) {
+        return productJpaRepository.findById(id)
+            .map(ProductEntity::toDomain);
+    }
+
+    @Override
+    public List<Product> findAllActive() {
+        return productJpaRepository.findAllByDeletedAtIsNull().stream()
+            .map(ProductEntity::toDomain)
+            .toList();
+    }
+
+    @Override
+    public List<Product> findAllActiveByCategoryId(Long categoryId) {
+        return productJpaRepository.findAllByCategoryIdAndDeletedAtIsNull(categoryId).stream()
+            .map(ProductEntity::toDomain)
+            .toList();
+    }
+
+    @Override
+    public Product save(Product product) {
+        ProductEntity entity;
+        if (product.getId() != null) {
+            entity = productJpaRepository.findById(product.getId())
+                .orElseThrow(() -> new CoreException(ErrorType.NOT_FOUND, "상품을 찾을 수 없습니다."));
+            entity.update(
+                product.getName(),
+                product.getCategoryId(),
+                product.getBasePrice(),
+                product.getDiscount(),
+                product.getDiscountType(),
+                product.getStatus()
+            );
+        } else {
+            entity = ProductEntity.from(product);
+        }
+        ProductEntity saved = productJpaRepository.save(entity);
+        return saved.toDomain();
+    }
+
+    @Override
+    public void delete(Long id) {
+        productJpaRepository.deleteById(id);
+    }
+
+    @Override
+    public boolean existsById(Long id) {
+        return productJpaRepository.existsByIdAndDeletedAtIsNull(id);
+    }
+}
