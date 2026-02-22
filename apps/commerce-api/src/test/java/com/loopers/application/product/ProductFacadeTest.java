@@ -20,8 +20,6 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 
-import java.util.List;
-
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertAll;
@@ -55,8 +53,8 @@ class ProductFacadeTest {
     }
 
     @Nested
-    @DisplayName("getProductInfo")
-    class GetProductInfo {
+    @DisplayName("getProduct")
+    class GetProduct {
 
         @Test
         @DisplayName("상품 정보를 브랜드 정보와 함께 조회한다")
@@ -67,7 +65,7 @@ class ProductFacadeTest {
             );
 
             // Act
-            ProductInfo result = productFacade.getProductInfo(product.getId());
+            ProductInfo result = productFacade.getProduct(product.getId());
 
             // Assert
             assertAll(
@@ -83,28 +81,9 @@ class ProductFacadeTest {
         @DisplayName("존재하지 않는 상품을 조회하면 NOT_FOUND 예외가 발생한다")
         void throwsNotFound_whenProductNotExists() {
             // Act & Assert
-            assertThatThrownBy(() -> productFacade.getProductInfo(999L))
+            assertThatThrownBy(() -> productFacade.getProduct(999L))
                 .isInstanceOf(CoreException.class)
                 .satisfies(ex -> assertThat(((CoreException) ex).getErrorType()).isEqualTo(ErrorType.NOT_FOUND));
-        }
-    }
-
-    @Nested
-    @DisplayName("getProductInfos")
-    class GetProductInfos {
-
-        @Test
-        @DisplayName("활성 상품 목록을 조회한다")
-        void returnsActiveProducts() {
-            // Arrange
-            productRepository.save(new Product("아이폰 15", savedBrand.getId(), 1L, 1500000L));
-            productRepository.save(new Product("아이폰 14", savedBrand.getId(), 1L, 1200000L));
-
-            // Act
-            List<ProductInfo> result = productFacade.getProductInfos();
-
-            // Assert
-            assertThat(result).hasSize(2);
         }
     }
 
@@ -210,7 +189,7 @@ class ProductFacadeTest {
             productFacade.deleteProduct("loopers.admin", product.getId());
 
             // Assert
-            assertThatThrownBy(() -> productFacade.getProductInfo(product.getId()))
+            assertThatThrownBy(() -> productFacade.getProduct(product.getId()))
                 .isInstanceOf(CoreException.class)
                 .satisfies(ex -> assertThat(((CoreException) ex).getErrorType()).isEqualTo(ErrorType.NOT_FOUND));
         }

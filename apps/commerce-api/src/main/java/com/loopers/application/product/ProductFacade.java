@@ -12,8 +12,6 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Component;
 
-import java.util.List;
-
 @Component
 @RequiredArgsConstructor
 public class ProductFacade {
@@ -22,21 +20,11 @@ public class ProductFacade {
     private final BrandService brandService;
     private final AdminValidator adminValidator;
 
-    public ProductInfo getProductInfo(Long productId) {
+    public ProductInfo getProduct(Long productId) {
         Product product = productService.getActiveProduct(productId);
         Brand brand = brandService.getActiveBrand(product.getBrandId());
         Long likeCount = 0L; // TODO: Like 도메인 구현 후 연동
         return ProductInfo.from(product, BrandInfo.from(brand), likeCount);
-    }
-
-    public List<ProductInfo> getProductInfos() {
-        return productService.getAllActiveProducts().stream()
-            .map(product -> {
-                Brand brand = brandService.getActiveBrand(product.getBrandId());
-                Long likeCount = 0L; // TODO: Like 도메인 구현 후 연동
-                return ProductInfo.from(product, BrandInfo.from(brand), likeCount);
-            })
-            .toList();
     }
 
     public Page<ProductInfo> getProducts(Long categoryId, String keyword, ProductSortType sort, Pageable pageable) {
