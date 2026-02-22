@@ -164,6 +164,8 @@ interfaces → application → domain ← infrastructure
 - 필요한 의존성은 적절히 관리하여 최소화
 - 통합 테스트는 테스트 컨테이너를 이용해 진행
 - 테스트 코드 작성 시 MIN, MAX, EDGE 케이스를 고려하여 작성
+- Lombok 활용이 가능한 부분은 Lombok을 활용하여 코드를 간결하게 작성
+- VO (Value Object) 활용이 가능한 부분은 VO를 활용하여 코드를 간결하게 작성하되 남발하지 말것
 
 ### 3. Priority
 1. 실제 동작하는 해결책만 고려
@@ -180,3 +182,19 @@ interfaces → application → domain ← infrastructure
 - test: 테스트 코드 추가/수정
 - chore: 빌드/패키지 설정 등 기능과 직접 관련 없는 작업
 - 커밋 메세지는 한국어로 작성할 것
+
+## 도메인 & 객체 설계 전략
+- 도메인 객체는 비즈니스 규칙을 캡슐화해야 합니다.
+- 애플리케이션 서비스는 서로 다른 도메인을 조립해, 도메인 로직을 조정하여 기능을 제공해야 합니다.
+- 규칙이 여러 서비스에 나타나면 도메인 객체에 속할 가능성이 높습니다.
+- 각 기능에 대한 책임과 결합도에 대해 개발자의 의도를 확인하고 개발을 진행합니다.
+
+## 아키텍처, 패키지 구성 전략
+- 본 프로젝트는 레이어드 아키텍처를 따르며, DIP (의존성 역전 원칙) 을 준수합니다.
+- API request, response DTO와 응용 레이어의 DTO는 분리해 작성하도록 합니다.
+- 패키징 전략은 4개 레이어 패키지를 두고, 하위에 도메인 별로 패키징하는 형태로 작성합니다.
+    - 예시
+      > /interfaces/api (presentation 레이어 - API)
+      /application/.. (application 레이어 - 도메인 레이어를 조합해 사용 가능한 기능을 제공)
+      /domain/.. (domain 레이어 - 도메인 객체 및 엔티티, Repository 인터페이스가 위치)
+      /infrastructure/.. (infrastructure 레이어 - JPA, Redis 등을 활용해 Repository 구현체를 제공)

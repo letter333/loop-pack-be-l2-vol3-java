@@ -2,9 +2,12 @@ package com.loopers.infrastructure.product;
 
 import com.loopers.domain.product.Product;
 import com.loopers.domain.product.ProductRepository;
+import com.loopers.domain.product.ProductSortType;
 import com.loopers.support.error.CoreException;
 import com.loopers.support.error.ErrorType;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -34,6 +37,12 @@ public class ProductRepositoryImpl implements ProductRepository {
         return productJpaRepository.findAllByCategoryIdAndDeletedAtIsNull(categoryId).stream()
             .map(ProductEntity::toDomain)
             .toList();
+    }
+
+    @Override
+    public Page<Product> findProducts(Long categoryId, String keyword, ProductSortType sort, Pageable pageable) {
+        return productJpaRepository.findProducts(categoryId, keyword, sort, pageable)
+            .map(ProductEntity::toDomain);
     }
 
     @Override

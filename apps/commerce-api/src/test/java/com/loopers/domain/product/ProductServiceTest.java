@@ -9,6 +9,9 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -190,6 +193,150 @@ class ProductServiceTest {
             assertThatThrownBy(() -> productService.deleteProduct(999L))
                 .isInstanceOf(CoreException.class)
                 .satisfies(ex -> assertThat(((CoreException) ex).getErrorType()).isEqualTo(ErrorType.NOT_FOUND));
+        }
+    }
+
+    @Nested
+    @DisplayName("getProducts")
+    class GetProducts {
+
+        @Test
+        @DisplayName("전체 상품 목록을 페이지로 조회한다")
+        void returnsPagedProducts_whenNoFilter() {
+            // Arrange
+            productRepository.save(new Product("아이폰 15", 1L, 1L, 1500000L));
+            productRepository.save(new Product("갤럭시 S24", 2L, 1L, 1400000L));
+            productRepository.save(new Product("맥북 프로", 1L, 2L, 3000000L));
+            Pageable pageable = PageRequest.of(0, 10);
+
+            // Act
+            Page<Product> result = productService.getProducts(null, null, ProductSortType.LATEST, pageable);
+
+            // Assert
+            assertAll(
+                () -> assertThat(result.getContent()).hasSize(3),
+                () -> assertThat(result.getTotalElements()).isEqualTo(3),
+                () -> assertThat(result.getTotalPages()).isEqualTo(1)
+            );
+        }
+
+        @Test
+        @DisplayName("카테고리 ID로 필터링하여 상품 목록을 조회한다")
+        void returnsFilteredProducts_whenCategoryIdProvided() {
+            // Arrange
+            productRepository.save(new Product("아이폰 15", 1L, 1L, 1500000L));
+            productRepository.save(new Product("갤럭시 S24", 2L, 1L, 1400000L));
+            productRepository.save(new Product("맥북 프로", 1L, 2L, 3000000L));
+            Pageable pageable = PageRequest.of(0, 10);
+
+            // Act
+            Page<Product> result = productService.getProducts(1L, null, ProductSortType.LATEST, pageable);
+
+            // Assert
+            assertAll(
+                () -> assertThat(result.getContent()).hasSize(2),
+                () -> assertThat(result.getContent()).allMatch(p -> p.getCategoryId().equals(1L))
+            );
+        }
+
+        @Test
+        @DisplayName("키워드로 검색하여 상품 목록을 조회한다")
+        void returnsFilteredProducts_whenKeywordProvided() {
+            // Arrange
+            productRepository.save(new Product("아이폰 15", 1L, 1L, 1500000L));
+            productRepository.save(new Product("갤럭시 S24", 2L, 1L, 1400000L));
+            productRepository.save(new Product("아이폰 15 Pro", 1L, 1L, 1800000L));
+            Pageable pageable = PageRequest.of(0, 10);
+
+            // Act
+            Page<Product> result = productService.getProducts(null, "아이폰", ProductSortType.LATEST, pageable);
+
+            // Assert
+            assertAll(
+                () -> assertThat(result.getContent()).hasSize(2),
+                () -> assertThat(result.getContent()).allMatch(p -> p.getName().contains("아이폰"))
+            );
+        }
+
+        @Test
+        @DisplayName("최신순으로 정렬하여 조회한다")
+        void returnsProducts_sortedByLatest() {
+            // Arrange
+            Product product1 = productRepository.save(new Product("아이폰 15", 1L, 1L, 1500000L));
+            Product product2 = productRepository.save(new Product("갤럭시 S24", 2L, 1L, 1400000L));
+            Product product3 = productRepository.save(new Product("맥북 프로", 1L, 2L, 3000000L));
+            Pageable pageable = PageRequest.of(0, 10);
+
+            // Act
+            Page<Product> result = productService.getProducts(null, null, ProductSortType.LATEST, pageable);
+
+            // Assert
+            assertThat(result.getContent().get(0).getId()).isEqualTo(product3.getId());
+        }
+
+        @Test
+        @DisplayName("가격 낮은순으로 정렬하여 조회한다")
+        void returnsProducts_sortedByPriceAsc() {
+            // Arrange
+            productRepository.save(new Product("아이폰 15", 1L, 1L, 1500000L));
+            productRepository.save(new Product("갤럭시 S24", 2L, 1L, 1400000L));
+            productRepository.save(new Product("맥북 프로", 1L, 2L, 3000000L));
+            Pageable pageable = PageRequest.of(0, 10);
+
+            // Act
+            Page<Product> result = productService.getProducts(null, null, ProductSortType.PRICE_ASC, pageable);
+
+            // Assert
+            assertAll(
+                () -> assertThat(result.getContent().get(0).getBasePrice()).isEqualTo(1400000L),
+                () -> assertThat(result.getContent().get(1).getBasePrice()).isEqualTo(1500000L),
+                () -> assertThat(result.getContent().get(2).getBasePrice()).isEqualTo(3000000L)
+            );
+        }
+
+        @Test
+        @DisplayName("페이징이 정상적으로 동작한다")
+        void returnsPagedProducts_withPagination() {
+            // Arrange
+            for (int i = 0; i < 25; i++) {
+                productRepository.save(new Product("상품" + i, 1L, 1L, 1000000L + i));
+            }
+            Pageable firstPage = PageRequest.of(0, 10);
+            Pageable secondPage = PageRequest.of(1, 10);
+            Pageable thirdPage = PageRequest.of(2, 10);
+
+            // Act
+            Page<Product> firstResult = productService.getProducts(null, null, ProductSortType.LATEST, firstPage);
+            Page<Product> secondResult = productService.getProducts(null, null, ProductSortType.LATEST, secondPage);
+            Page<Product> thirdResult = productService.getProducts(null, null, ProductSortType.LATEST, thirdPage);
+
+            // Assert
+            assertAll(
+                () -> assertThat(firstResult.getContent()).hasSize(10),
+                () -> assertThat(secondResult.getContent()).hasSize(10),
+                () -> assertThat(thirdResult.getContent()).hasSize(5),
+                () -> assertThat(firstResult.getTotalElements()).isEqualTo(25),
+                () -> assertThat(firstResult.getTotalPages()).isEqualTo(3)
+            );
+        }
+
+        @Test
+        @DisplayName("삭제된 상품은 조회되지 않는다")
+        void excludesDeletedProducts() {
+            // Arrange
+            Product activeProduct = productRepository.save(new Product("아이폰 15", 1L, 1L, 1500000L));
+            Product toDelete = productRepository.save(new Product("갤럭시 S24", 2L, 1L, 1400000L));
+            productService.deleteProduct(toDelete.getId());
+            Pageable pageable = PageRequest.of(0, 10);
+
+            // Act
+            Page<Product> result = productService.getProducts(null, null, ProductSortType.LATEST, pageable);
+
+            // Assert
+            assertAll(
+                () -> assertThat(result.getContent()).hasSize(1),
+                () -> assertThat(result.getContent().get(0).getId()).isEqualTo(activeProduct.getId())
+            );
         }
     }
 }

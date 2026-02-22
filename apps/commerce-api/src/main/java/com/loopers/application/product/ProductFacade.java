@@ -5,8 +5,11 @@ import com.loopers.domain.brand.Brand;
 import com.loopers.domain.brand.BrandService;
 import com.loopers.domain.product.Product;
 import com.loopers.domain.product.ProductService;
+import com.loopers.domain.product.ProductSortType;
 import com.loopers.support.auth.AdminValidator;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -34,6 +37,15 @@ public class ProductFacade {
                 return ProductInfo.from(product, BrandInfo.from(brand), likeCount);
             })
             .toList();
+    }
+
+    public Page<ProductInfo> getProducts(Long categoryId, String keyword, ProductSortType sort, Pageable pageable) {
+        Page<Product> products = productService.getProducts(categoryId, keyword, sort, pageable);
+        return products.map(product -> {
+            Brand brand = brandService.getActiveBrand(product.getBrandId());
+            Long likeCount = 0L; // TODO: Like 도메인 구현 후 연동
+            return ProductInfo.from(product, BrandInfo.from(brand), likeCount);
+        });
     }
 
     public ProductDetailInfo getProductDetail(String ldap, Long productId) {

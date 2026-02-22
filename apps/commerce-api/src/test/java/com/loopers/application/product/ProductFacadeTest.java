@@ -4,6 +4,7 @@ import com.loopers.domain.brand.Brand;
 import com.loopers.domain.brand.BrandRepository;
 import com.loopers.domain.product.Product;
 import com.loopers.domain.product.ProductRepository;
+import com.loopers.domain.product.ProductSortType;
 import com.loopers.domain.product.ProductStatus;
 import com.loopers.support.error.CoreException;
 import com.loopers.support.error.ErrorType;
@@ -15,6 +16,9 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 
 import java.util.List;
 
@@ -101,6 +105,53 @@ class ProductFacadeTest {
 
             // Assert
             assertThat(result).hasSize(2);
+        }
+    }
+
+    @Nested
+    @DisplayName("getProducts")
+    class GetProducts {
+
+        @Test
+        @DisplayName("페이지로 상품 목록을 조회하고 브랜드 정보를 포함한다")
+        void returnsPagedProductsWithBrandInfo() {
+            // Arrange
+            productRepository.save(new Product("아이폰 15", savedBrand.getId(), 1L, 1500000L));
+            productRepository.save(new Product("아이폰 14", savedBrand.getId(), 1L, 1200000L));
+            Pageable pageable = PageRequest.of(0, 10);
+
+            // Act
+            Page<ProductInfo> result = productFacade.getProducts(null, null, ProductSortType.LATEST, pageable);
+
+            // Assert
+            assertAll(
+                () -> assertThat(result.getContent()).hasSize(2),
+                () -> assertThat(result.getTotalElements()).isEqualTo(2),
+                () -> assertThat(result.getContent()).allMatch(info -> info.brand() != null),
+                () -> assertThat(result.getContent()).allMatch(info -> info.brand().name().equals("Apple"))
+            );
+        }
+
+        @Test
+        @DisplayName("페이징 정보가 정상적으로 반환된다")
+        void returnsCorrectPagingInfo() {
+            // Arrange
+            for (int i = 0; i < 25; i++) {
+                productRepository.save(new Product("상품" + i, savedBrand.getId(), 1L, 1000000L + i));
+            }
+            Pageable pageable = PageRequest.of(0, 20);
+
+            // Act
+            Page<ProductInfo> result = productFacade.getProducts(null, null, ProductSortType.LATEST, pageable);
+
+            // Assert
+            assertAll(
+                () -> assertThat(result.getContent()).hasSize(20),
+                () -> assertThat(result.getTotalElements()).isEqualTo(25),
+                () -> assertThat(result.getTotalPages()).isEqualTo(2),
+                () -> assertThat(result.isFirst()).isTrue(),
+                () -> assertThat(result.hasNext()).isTrue()
+            );
         }
     }
 
