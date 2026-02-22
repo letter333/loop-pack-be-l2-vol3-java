@@ -109,4 +109,99 @@ class ProductTest {
             assertThat(product.getBasePrice()).isEqualTo(0L);
         }
     }
+
+    @Nested
+    @DisplayName("calculateDiscountedPrice - 할인가 계산")
+    class CalculateDiscountedPrice {
+
+        @Test
+        @DisplayName("할인이 없으면 기본가를 반환한다")
+        void returnsBasePrice_whenNoDiscount() {
+            // Arrange
+            Product product = new Product("아이폰 15", 1L, 1L, 1500000L);
+
+            // Act
+            Long discountedPrice = product.calculateDiscountedPrice();
+
+            // Assert
+            assertThat(discountedPrice).isEqualTo(1500000L);
+        }
+
+        @Test
+        @DisplayName("PRICE 타입: 정액 할인을 적용한다")
+        void appliesPriceDiscount() {
+            // Arrange
+            Product product = new Product("아이폰 15", 1L, 1L, 1500000L);
+            product.applyDiscount(100000L, DiscountType.PRICE);
+
+            // Act
+            Long discountedPrice = product.calculateDiscountedPrice();
+
+            // Assert
+            assertThat(discountedPrice).isEqualTo(1400000L);
+        }
+
+        @Test
+        @DisplayName("RATE 타입: 정률 할인을 적용한다 (10% 할인)")
+        void appliesRateDiscount() {
+            // Arrange
+            Product product = new Product("아이폰 15", 1L, 1L, 1000000L);
+            product.applyDiscount(10L, DiscountType.RATE);
+
+            // Act
+            Long discountedPrice = product.calculateDiscountedPrice();
+
+            // Assert
+            assertThat(discountedPrice).isEqualTo(900000L);
+        }
+
+        @Test
+        @DisplayName("PRICE 타입: 할인가가 기본가보다 크면 0원을 반환한다")
+        void returnsZero_whenPriceDiscountExceedsBasePrice() {
+            // Arrange
+            Product product = new Product("저가 상품", 1L, 1L, 50000L);
+            product.applyDiscount(100000L, DiscountType.PRICE);
+
+            // Act
+            Long discountedPrice = product.calculateDiscountedPrice();
+
+            // Assert
+            assertThat(discountedPrice).isEqualTo(0L);
+        }
+    }
+
+    @Nested
+    @DisplayName("applyDiscount - 할인 적용")
+    class ApplyDiscount {
+
+        @Test
+        @DisplayName("RATE 타입에서 discount가 100 초과이면 예외가 발생한다")
+        void throwsException_whenRateDiscountExceeds100() {
+            // Arrange
+            Product product = new Product("아이폰 15", 1L, 1L, 1500000L);
+
+            // Act & Assert
+            assertThatThrownBy(() -> product.applyDiscount(101L, DiscountType.RATE))
+                .isInstanceOf(CoreException.class)
+                .satisfies(ex -> assertThat(((CoreException) ex).getErrorType()).isEqualTo(ErrorType.BAD_REQUEST));
+        }
+
+        @Test
+        @DisplayName("할인을 제거할 수 있다")
+        void removesDiscount() {
+            // Arrange
+            Product product = new Product("아이폰 15", 1L, 1L, 1500000L);
+            product.applyDiscount(100000L, DiscountType.PRICE);
+
+            // Act
+            product.removeDiscount();
+
+            // Assert
+            assertAll(
+                () -> assertThat(product.getDiscount()).isNull(),
+                () -> assertThat(product.getDiscountType()).isNull(),
+                () -> assertThat(product.calculateDiscountedPrice()).isEqualTo(1500000L)
+            );
+        }
+    }
 }

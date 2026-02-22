@@ -41,6 +41,30 @@ public class Product {
         return deletedAt != null;
     }
 
+    public Long calculateDiscountedPrice() {
+        if (discount == null || discountType == null) {
+            return basePrice;
+        }
+
+        long discountedPrice = switch (discountType) {
+            case PRICE -> basePrice - discount;
+            case RATE -> basePrice - (basePrice * discount / 100);
+        };
+
+        return Math.max(0L, discountedPrice);
+    }
+
+    public void applyDiscount(Long discount, DiscountType discountType) {
+        ProductValidator.validateDiscount(discount, discountType);
+        this.discount = discount;
+        this.discountType = discountType;
+    }
+
+    public void removeDiscount() {
+        this.discount = null;
+        this.discountType = null;
+    }
+
     private String generateProductCode() {
         String datePrefix = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
         int randomSuffix = ThreadLocalRandom.current().nextInt(0, 100000);

@@ -31,4 +31,10 @@ public class ProductValidator {
             throw new CoreException(ErrorType.BAD_REQUEST, "기본 가격은 0 이상이어야 합니다.");
         }
     }
+
+    public static void validateDiscount(Long discount, DiscountType discountType) {
+        if (discountType == DiscountType.RATE && discount > 100) {
+            throw new CoreException(ErrorType.BAD_REQUEST, "정률 할인은 100%를 초과할 수 없습니다.");
+        }
+    }
 }
