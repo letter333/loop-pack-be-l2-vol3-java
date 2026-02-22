@@ -65,6 +65,27 @@ public class Product {
         this.discountType = null;
     }
 
+    public void update(String name, Long categoryId, Long basePrice,
+                       Long discount, DiscountType discountType, ProductStatus status) {
+        ProductValidator.validateName(name);
+        this.name = name;
+        this.categoryId = categoryId;
+        this.basePrice = basePrice;
+        this.discount = discount;
+        this.discountType = discountType;
+        this.status = status;
+    }
+
+    public boolean isAvailable() {
+        return status == ProductStatus.SALE && !isDeleted();
+    }
+
+    public void delete() {
+        if (deletedAt == null) {
+            this.deletedAt = LocalDateTime.now();
+        }
+    }
+
     private String generateProductCode() {
         String datePrefix = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
         int randomSuffix = ThreadLocalRandom.current().nextInt(0, 100000);

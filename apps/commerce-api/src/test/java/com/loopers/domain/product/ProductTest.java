@@ -204,4 +204,134 @@ class ProductTest {
             );
         }
     }
+
+    @Nested
+    @DisplayName("Product update")
+    class Update {
+
+        @Test
+        @DisplayName("모든 필드를 정상적으로 업데이트한다")
+        void updatesAllFields() {
+            // Arrange
+            Product product = new Product("아이폰 15", 1L, 1L, 1500000L);
+
+            // Act
+            product.update("아이폰 15 Pro", 2L, 1800000L, 50000L, DiscountType.PRICE, ProductStatus.STOP);
+
+            // Assert
+            assertAll(
+                () -> assertThat(product.getName()).isEqualTo("아이폰 15 Pro"),
+                () -> assertThat(product.getCategoryId()).isEqualTo(2L),
+                () -> assertThat(product.getBasePrice()).isEqualTo(1800000L),
+                () -> assertThat(product.getDiscount()).isEqualTo(50000L),
+                () -> assertThat(product.getDiscountType()).isEqualTo(DiscountType.PRICE),
+                () -> assertThat(product.getStatus()).isEqualTo(ProductStatus.STOP)
+            );
+        }
+
+        @Test
+        @DisplayName("brandId는 변경되지 않는다")
+        void brandIdRemainsUnchanged() {
+            // Arrange
+            Product product = new Product("아이폰 15", 1L, 1L, 1500000L);
+            Long originalBrandId = product.getBrandId();
+
+            // Act
+            product.update("아이폰 15 Pro", 2L, 1800000L, null, null, ProductStatus.SALE);
+
+            // Assert
+            assertThat(product.getBrandId()).isEqualTo(originalBrandId);
+        }
+
+        @Test
+        @DisplayName("name을 null로 업데이트하면 BAD_REQUEST 예외가 발생한다")
+        void throwsBadRequest_whenUpdateNameToNull() {
+            // Arrange
+            Product product = new Product("아이폰 15", 1L, 1L, 1500000L);
+
+            // Act & Assert
+            assertThatThrownBy(() -> product.update(null, 2L, 1800000L, null, null, ProductStatus.SALE))
+                .isInstanceOf(CoreException.class)
+                .satisfies(ex -> assertThat(((CoreException) ex).getErrorType()).isEqualTo(ErrorType.BAD_REQUEST));
+        }
+
+        @Test
+        @DisplayName("name을 빈 문자열로 업데이트하면 BAD_REQUEST 예외가 발생한다")
+        void throwsBadRequest_whenUpdateNameToEmpty() {
+            // Arrange
+            Product product = new Product("아이폰 15", 1L, 1L, 1500000L);
+
+            // Act & Assert
+            assertThatThrownBy(() -> product.update("", 2L, 1800000L, null, null, ProductStatus.SALE))
+                .isInstanceOf(CoreException.class)
+                .satisfies(ex -> assertThat(((CoreException) ex).getErrorType()).isEqualTo(ErrorType.BAD_REQUEST));
+        }
+    }
+
+    @Nested
+    @DisplayName("Product status - isAvailable")
+    class IsAvailable {
+
+        @Test
+        @DisplayName("SALE 상태이고 삭제되지 않으면 true를 반환한다")
+        void returnsTrue_whenSaleAndNotDeleted() {
+            // Arrange
+            Product product = new Product("아이폰 15", 1L, 1L, 1500000L);
+
+            // Act & Assert
+            assertThat(product.isAvailable()).isTrue();
+        }
+
+        @Test
+        @DisplayName("STOP 상태이면 false를 반환한다")
+        void returnsFalse_whenStop() {
+            // Arrange
+            Product product = new Product("아이폰 15", 1L, 1L, 1500000L);
+            product.update("아이폰 15", 1L, 1500000L, null, null, ProductStatus.STOP);
+
+            // Act & Assert
+            assertThat(product.isAvailable()).isFalse();
+        }
+
+        @Test
+        @DisplayName("삭제된 상태이면 false를 반환한다")
+        void returnsFalse_whenDeleted() {
+            // Arrange
+            Product product = new Product("아이폰 15", 1L, 1L, 1500000L);
+            product.delete();
+
+            // Act & Assert
+            assertThat(product.isAvailable()).isFalse();
+        }
+    }
+
+    @Nested
+    @DisplayName("Product delete")
+    class Delete {
+
+        @Test
+        @DisplayName("delete 호출 시 deletedAt이 설정된다")
+        void setsDeletedAt_whenDeleteCalled() {
+            // Arrange
+            Product product = new Product("아이폰 15", 1L, 1L, 1500000L);
+
+            // Act
+            product.delete();
+
+            // Assert
+            assertThat(product.isDeleted()).isTrue();
+        }
+
+        @Test
+        @DisplayName("이미 삭제된 상태에서 delete 호출해도 예외가 발생하지 않는다 (멱등성)")
+        void doesNotThrow_whenDeleteCalledTwice() {
+            // Arrange
+            Product product = new Product("아이폰 15", 1L, 1L, 1500000L);
+            product.delete();
+
+            // Act & Assert (멱등성)
+            product.delete();
+            assertThat(product.isDeleted()).isTrue();
+        }
+    }
 }
