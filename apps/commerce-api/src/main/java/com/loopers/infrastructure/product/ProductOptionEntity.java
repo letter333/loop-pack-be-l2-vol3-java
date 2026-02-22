@@ -56,7 +56,7 @@ public class ProductOptionEntity extends BaseEntity {
         );
     }
 
-    public void updateStock(Integer stockQuantity) {
+    public void updateStockQuantity(Integer stockQuantity) {
         this.stockQuantity = stockQuantity;
     }
 }

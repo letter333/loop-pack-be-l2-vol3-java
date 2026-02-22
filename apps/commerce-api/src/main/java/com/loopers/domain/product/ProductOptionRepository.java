@@ -11,5 +11,9 @@ public interface ProductOptionRepository {
 
     ProductOption save(ProductOption productOption);
 
+    void decreaseStock(Long id, int quantity);
+
+    void increaseStock(Long id, int quantity);
+
     void delete(Long id);
 }

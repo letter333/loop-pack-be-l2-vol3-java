@@ -2,6 +2,8 @@ package com.loopers.infrastructure.product;
 
 import com.loopers.domain.product.ProductOption;
 import com.loopers.domain.product.ProductOptionRepository;
+import com.loopers.support.error.CoreException;
+import com.loopers.support.error.ErrorType;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -33,6 +35,26 @@ public class ProductOptionRepositoryImpl implements ProductOptionRepository {
         ProductOptionEntity entity = ProductOptionEntity.from(productOption);
         ProductOptionEntity saved = productOptionJpaRepository.save(entity);
         return saved.toDomain();
+    }
+
+    @Override
+    public void decreaseStock(Long id, int quantity) {
+        ProductOptionEntity entity = productOptionJpaRepository.findById(id)
+            .orElseThrow(() -> new CoreException(ErrorType.NOT_FOUND, "상품 옵션을 찾을 수 없습니다."));
+
+        ProductOption domain = entity.toDomain();
+        domain.decreaseStock(quantity);
+        entity.updateStockQuantity(domain.getStockQuantity());
+    }
+
+    @Override
+    public void increaseStock(Long id, int quantity) {
+        ProductOptionEntity entity = productOptionJpaRepository.findById(id)
+            .orElseThrow(() -> new CoreException(ErrorType.NOT_FOUND, "상품 옵션을 찾을 수 없습니다."));
+
+        ProductOption domain = entity.toDomain();
+        domain.increaseStock(quantity);
+        entity.updateStockQuantity(domain.getStockQuantity());
     }
 
     @Override
