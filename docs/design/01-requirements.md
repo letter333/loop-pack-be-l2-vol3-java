@@ -124,7 +124,8 @@
 | ADR-030 | 로그인 필수 | 401 Unauthorized |
 | ADR-031 | 본인의 배송지만 삭제 가능 | 403 Forbidden |
 | ADR-032 | 존재하지 않는 배송지는 삭제 불가 | 404 Not Found |
-| ADR-033 | Soft Delete 적용 (deleted_at 설정) | - |
+| ADR-033 | Hard Delete 적용 (물리적 삭제) | - |
+| ADR-034 | 삭제 후 남은 배송지가 1개이면 자동으로 기본 배송지 설정 | - |
 
 ---
 

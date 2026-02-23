@@ -378,6 +378,6 @@ class AddressServiceTest {
     }
 
     private Address createAddress(Long id, Long memberId, boolean isDefault) {
-        return new Address(id, memberId, "홍길동", "010-1234-5678", "06234", "서울시", "101호", isDefault, null);
+        return new Address(id, memberId, "홍길동", "010-1234-5678", "06234", "서울시", "101호", isDefault);
     }
 }
