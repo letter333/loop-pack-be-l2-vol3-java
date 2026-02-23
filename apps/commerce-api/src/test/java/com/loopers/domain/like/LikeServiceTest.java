@@ -7,12 +7,14 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.dao.DataIntegrityViolationException;
 
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.BDDMockito.willThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
@@ -91,6 +93,32 @@ class LikeServiceTest {
 
             // Assert
             assertThat(result).isTrue();
+        }
+
+        @Test
+        @DisplayName("save 시 DataIntegrityViolationException 발생하면 삭제로 토글 처리한다")
+        void whenDataIntegrityViolationException_thenDeleteAndReturnFalse() {
+            // Arrange
+            Long memberId = 1L;
+            Long targetId = 100L;
+            TargetType targetType = TargetType.PRODUCT;
+            Like existingLike = new Like(1L, memberId, targetId, targetType, null);
+
+            // 첫 번째 조회: 없음 (save 시도)
+            // 두 번째 조회: 있음 (동시 요청으로 다른 요청이 이미 생성함)
+            given(likeRepository.findByMemberIdAndTargetIdAndTargetType(memberId, targetId, targetType))
+                .willReturn(Optional.empty())
+                .willReturn(Optional.of(existingLike));
+
+            willThrow(new DataIntegrityViolationException("Duplicate entry"))
+                .given(likeRepository).save(any(Like.class));
+
+            // Act
+            boolean result = likeService.toggleLike(memberId, targetId, targetType);
+
+            // Assert
+            assertThat(result).isFalse();
+            verify(likeRepository).delete(existingLike);
         }
     }
 

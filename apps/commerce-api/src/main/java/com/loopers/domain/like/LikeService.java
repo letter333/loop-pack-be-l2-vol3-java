@@ -1,6 +1,7 @@
 package com.loopers.domain.like;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,9 +20,16 @@ public class LikeService {
                 return false;
             })
             .orElseGet(() -> {
-                Like like = new Like(memberId, targetId, targetType);
-                likeRepository.save(like);
-                return true;
+                try {
+                    Like like = new Like(memberId, targetId, targetType);
+                    likeRepository.save(like);
+                    return true;
+                } catch (DataIntegrityViolationException e) {
+                    // 동시 요청으로 이미 좋아요가 생성된 경우 → 삭제로 토글 처리
+                    likeRepository.findByMemberIdAndTargetIdAndTargetType(memberId, targetId, targetType)
+                        .ifPresent(likeRepository::delete);
+                    return false;
+                }
             });
     }
 
