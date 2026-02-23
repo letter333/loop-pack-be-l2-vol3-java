@@ -71,7 +71,8 @@ public class ProductRepositoryImpl implements ProductRepository {
                 product.getBasePrice(),
                 product.getDiscount(),
                 product.getDiscountType(),
-                product.getStatus()
+                product.getStatus(),
+                product.getLikeCount()
             );
             entity.syncOptions(product.getOptions());
             entity.syncImages(product.getImages());

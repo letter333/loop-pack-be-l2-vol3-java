@@ -26,11 +26,15 @@ public class BrandEntity extends BaseEntity {
     @Column(name = "logo_image_url", length = 512)
     private String logoImageUrl;
 
+    @Column(name = "like_count", nullable = false)
+    private Long likeCount = 0L;
+
     public static BrandEntity from(Brand brand) {
         BrandEntity entity = new BrandEntity();
         entity.name = brand.getName();
         entity.description = brand.getDescription();
         entity.logoImageUrl = brand.getLogoImageUrl();
+        entity.likeCount = brand.getLikeCount() != null ? brand.getLikeCount() : 0L;
         return entity;
     }
 
@@ -40,10 +44,25 @@ public class BrandEntity extends BaseEntity {
             name,
             description,
             logoImageUrl,
+            likeCount,
             getCreatedAt() != null ? getCreatedAt().toLocalDateTime() : null,
             getUpdatedAt() != null ? getUpdatedAt().toLocalDateTime() : null,
             getDeletedAt() != null ? getDeletedAt().toLocalDateTime() : null
         );
+    }
+
+    public void increaseLikeCount() {
+        this.likeCount++;
+    }
+
+    public void decreaseLikeCount() {
+        if (this.likeCount > 0) {
+            this.likeCount--;
+        }
+    }
+
+    public void updateLikeCount(Long likeCount) {
+        this.likeCount = likeCount != null ? likeCount : 0L;
     }
 
     public void update(String name, String description, String logoImageUrl) {

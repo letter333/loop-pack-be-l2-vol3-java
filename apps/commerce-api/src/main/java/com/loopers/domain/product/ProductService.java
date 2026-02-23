@@ -122,4 +122,18 @@ public class ProductService {
             productRepository.softDeleteAllByIds(productIds);
         }
     }
+
+    @Transactional(propagation = Propagation.REQUIRED)
+    public Long increaseLikeCount(Long productId) {
+        Product product = getProduct(productId);
+        product.increaseLikeCount();
+        return productRepository.save(product).getLikeCount();
+    }
+
+    @Transactional(propagation = Propagation.REQUIRED)
+    public Long decreaseLikeCount(Long productId) {
+        Product product = getProduct(productId);
+        product.decreaseLikeCount();
+        return productRepository.save(product).getLikeCount();
+    }
 }

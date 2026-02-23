@@ -153,6 +153,62 @@ class BrandTest {
     }
 
     @Nested
+    @DisplayName("likeCount - 좋아요 수 관리")
+    class LikeCount {
+
+        @Test
+        @DisplayName("생성 시 likeCount 기본값은 0이다")
+        void likeCountIsZero_whenCreated() {
+            // Arrange & Act
+            Brand brand = new Brand("Nike", "스포츠 브랜드", "https://example.com/nike-logo.png");
+
+            // Assert
+            assertThat(brand.getLikeCount()).isEqualTo(0L);
+        }
+
+        @Test
+        @DisplayName("increaseLikeCount 호출 시 likeCount가 1 증가한다")
+        void increasesLikeCount() {
+            // Arrange
+            Brand brand = new Brand("Nike", "스포츠 브랜드", "https://example.com/nike-logo.png");
+
+            // Act
+            brand.increaseLikeCount();
+
+            // Assert
+            assertThat(brand.getLikeCount()).isEqualTo(1L);
+        }
+
+        @Test
+        @DisplayName("decreaseLikeCount 호출 시 likeCount가 1 감소한다")
+        void decreasesLikeCount() {
+            // Arrange
+            Brand brand = new Brand("Nike", "스포츠 브랜드", "https://example.com/nike-logo.png");
+            brand.increaseLikeCount();
+            brand.increaseLikeCount();
+
+            // Act
+            brand.decreaseLikeCount();
+
+            // Assert
+            assertThat(brand.getLikeCount()).isEqualTo(1L);
+        }
+
+        @Test
+        @DisplayName("likeCount가 0일 때 decreaseLikeCount 호출해도 0 미만이 되지 않는다")
+        void doesNotGoBelowZero_whenDecreaseCalledAtZero() {
+            // Arrange
+            Brand brand = new Brand("Nike", "스포츠 브랜드", "https://example.com/nike-logo.png");
+
+            // Act
+            brand.decreaseLikeCount();
+
+            // Assert
+            assertThat(brand.getLikeCount()).isEqualTo(0L);
+        }
+    }
+
+    @Nested
     @DisplayName("DB 조회 데이터 복원 (toDomain 용)")
     class RestoreFromDatabase {
 
@@ -164,7 +220,7 @@ class BrandTest {
             LocalDateTime updatedAt = LocalDateTime.of(2024, 1, 2, 10, 0);
 
             // Act
-            Brand brand = new Brand(1L, "Nike", "스포츠 브랜드", "https://example.com/nike-logo.png",
+            Brand brand = new Brand(1L, "Nike", "스포츠 브랜드", "https://example.com/nike-logo.png", 0L,
                 createdAt, updatedAt, null);
 
             // Assert
@@ -184,7 +240,7 @@ class BrandTest {
             LocalDateTime now = LocalDateTime.now();
 
             // Act
-            Brand brand = new Brand(1L, "Nike", "스포츠 브랜드", "https://example.com/nike-logo.png",
+            Brand brand = new Brand(1L, "Nike", "스포츠 브랜드", "https://example.com/nike-logo.png", 0L,
                 now, now, now);
 
             // Assert

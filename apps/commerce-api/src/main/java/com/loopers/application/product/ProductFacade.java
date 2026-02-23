@@ -25,8 +25,7 @@ public class ProductFacade {
     public ProductDetailInfo getProduct(Long productId) {
         Product product = productService.getActiveProduct(productId);
         Brand brand = brandService.getActiveBrand(product.getBrandId());
-        Long likeCount = 0L; // TODO: Like 도메인 구현 후 연동
-        return ProductDetailInfo.from(product, BrandInfo.from(brand), likeCount);
+        return ProductDetailInfo.from(product, BrandInfo.from(brand), product.getLikeCount());
     }
 
     @Transactional(readOnly = true)
@@ -34,8 +33,7 @@ public class ProductFacade {
         Page<Product> products = productService.getProducts(categoryId, keyword, sort, pageable);
         return products.map(product -> {
             Brand brand = brandService.getActiveBrand(product.getBrandId());
-            Long likeCount = 0L; // TODO: Like 도메인 구현 후 연동
-            return ProductInfo.from(product, BrandInfo.from(brand), likeCount);
+            return ProductInfo.from(product, BrandInfo.from(brand), product.getLikeCount());
         });
     }
 

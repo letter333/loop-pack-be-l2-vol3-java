@@ -9,6 +9,7 @@ public record BrandDetailInfo(
     String name,
     String description,
     String logoImageUrl,
+    Long likeCount,
     LocalDateTime createdAt,
     LocalDateTime updatedAt,
     LocalDateTime deletedAt
@@ -19,6 +20,7 @@ public record BrandDetailInfo(
             brand.getName(),
             brand.getDescription(),
             brand.getLogoImageUrl(),
+            brand.getLikeCount(),
             brand.getCreatedAt(),
             brand.getUpdatedAt(),
             brand.getDeletedAt()

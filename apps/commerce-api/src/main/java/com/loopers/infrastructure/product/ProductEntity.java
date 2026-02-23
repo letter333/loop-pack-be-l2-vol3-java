@@ -55,6 +55,9 @@ public class ProductEntity extends BaseEntity {
     @Column(name = "discount_type", length = 20)
     private DiscountType discountType;
 
+    @Column(name = "like_count", nullable = false)
+    private Long likeCount = 0L;
+
     @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
     private Set<ProductOptionEntity> options = new HashSet<>();
 
@@ -71,6 +74,7 @@ public class ProductEntity extends BaseEntity {
         entity.status = product.getStatus();
         entity.discount = product.getDiscount();
         entity.discountType = product.getDiscountType();
+        entity.likeCount = product.getLikeCount() != null ? product.getLikeCount() : 0L;
 
         if (product.getOptions() != null) {
             for (ProductOption option : product.getOptions()) {
@@ -126,6 +130,7 @@ public class ProductEntity extends BaseEntity {
             status,
             discount,
             discountType,
+            likeCount,
             domainOptions,
             domainImages,
             getCreatedAt() != null ? getCreatedAt().toLocalDateTime() : null,
@@ -134,10 +139,21 @@ public class ProductEntity extends BaseEntity {
         );
     }
 
+    public void increaseLikeCount() {
+        this.likeCount++;
+    }
+
+    public void decreaseLikeCount() {
+        if (this.likeCount > 0) {
+            this.likeCount--;
+        }
+    }
+
     public void update(String name, Long categoryId, Long basePrice,
-                       Long discount, DiscountType discountType, ProductStatus status) {
+                       Long discount, DiscountType discountType, ProductStatus status, Long likeCount) {
         this.name = name;
         this.categoryId = categoryId;
+        this.likeCount = likeCount != null ? likeCount : 0L;
         this.basePrice = basePrice;
         this.discount = discount;
         this.discountType = discountType;

@@ -338,6 +338,62 @@ class ProductTest {
     }
 
     @Nested
+    @DisplayName("likeCount - 좋아요 수 관리")
+    class LikeCount {
+
+        @Test
+        @DisplayName("생성 시 likeCount 기본값은 0이다")
+        void likeCountIsZero_whenCreated() {
+            // Arrange & Act
+            Product product = new Product("아이폰 15", 1L, 1L, 1500000L);
+
+            // Assert
+            assertThat(product.getLikeCount()).isEqualTo(0L);
+        }
+
+        @Test
+        @DisplayName("increaseLikeCount 호출 시 likeCount가 1 증가한다")
+        void increasesLikeCount() {
+            // Arrange
+            Product product = new Product("아이폰 15", 1L, 1L, 1500000L);
+
+            // Act
+            product.increaseLikeCount();
+
+            // Assert
+            assertThat(product.getLikeCount()).isEqualTo(1L);
+        }
+
+        @Test
+        @DisplayName("decreaseLikeCount 호출 시 likeCount가 1 감소한다")
+        void decreasesLikeCount() {
+            // Arrange
+            Product product = new Product("아이폰 15", 1L, 1L, 1500000L);
+            product.increaseLikeCount();
+            product.increaseLikeCount();
+
+            // Act
+            product.decreaseLikeCount();
+
+            // Assert
+            assertThat(product.getLikeCount()).isEqualTo(1L);
+        }
+
+        @Test
+        @DisplayName("likeCount가 0일 때 decreaseLikeCount 호출해도 0 미만이 되지 않는다")
+        void doesNotGoBelowZero_whenDecreaseCalledAtZero() {
+            // Arrange
+            Product product = new Product("아이폰 15", 1L, 1L, 1500000L);
+
+            // Act
+            product.decreaseLikeCount();
+
+            // Assert
+            assertThat(product.getLikeCount()).isEqualTo(0L);
+        }
+    }
+
+    @Nested
     @DisplayName("DB 조회 데이터 복원 (toDomain)")
     class RestoreFromDatabase {
 
@@ -351,7 +407,7 @@ class ProductTest {
             // Act
             Product product = new Product(
                 1L, "아이폰 15", "20240101-00001", 1L, 1L, 1500000L,
-                ProductStatus.SALE, 100000L, DiscountType.PRICE,
+                ProductStatus.SALE, 100000L, DiscountType.PRICE, 0L,
                 createdAt, updatedAt, null
             );
 
@@ -379,7 +435,7 @@ class ProductTest {
             // Act
             Product product = new Product(
                 1L, "아이폰 15", "20240101-00001", 1L, 1L, 1500000L,
-                ProductStatus.SALE, null, null,
+                ProductStatus.SALE, null, null, 0L,
                 now, now, now
             );
 

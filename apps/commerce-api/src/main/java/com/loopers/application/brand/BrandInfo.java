@@ -6,14 +6,16 @@ public record BrandInfo(
     Long id,
     String name,
     String description,
-    String logoImageUrl
+    String logoImageUrl,
+    Long likeCount
 ) {
     public static BrandInfo from(Brand brand) {
         return new BrandInfo(
             brand.getId(),
             brand.getName(),
             brand.getDescription(),
-            brand.getLogoImageUrl()
+            brand.getLogoImageUrl(),
+            brand.getLikeCount()
         );
     }
 }

@@ -40,7 +40,15 @@ public class BrandRepositoryImpl implements BrandRepository {
 
     @Override
     public Brand save(Brand brand) {
-        BrandEntity entity = BrandEntity.from(brand);
+        BrandEntity entity;
+        if (brand.getId() != null) {
+            entity = brandJpaRepository.findById(brand.getId())
+                .orElseThrow(() -> new CoreException(ErrorType.NOT_FOUND, "브랜드를 찾을 수 없습니다."));
+            entity.update(brand.getName(), brand.getDescription(), brand.getLogoImageUrl());
+            entity.updateLikeCount(brand.getLikeCount());
+        } else {
+            entity = BrandEntity.from(brand);
+        }
         BrandEntity saved = brandJpaRepository.save(entity);
         return saved.toDomain();
     }

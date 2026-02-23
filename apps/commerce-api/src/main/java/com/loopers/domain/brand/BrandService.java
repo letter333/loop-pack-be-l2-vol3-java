@@ -60,4 +60,18 @@ public class BrandService {
     public Brand validateBrand(Long brandId) {
         return getActiveBrand(brandId);
     }
+
+    @Transactional(propagation = Propagation.REQUIRED)
+    public Long increaseLikeCount(Long brandId) {
+        Brand brand = getBrand(brandId);
+        brand.increaseLikeCount();
+        return brandRepository.save(brand).getLikeCount();
+    }
+
+    @Transactional(propagation = Propagation.REQUIRED)
+    public Long decreaseLikeCount(Long brandId) {
+        Brand brand = getBrand(brandId);
+        brand.decreaseLikeCount();
+        return brandRepository.save(brand).getLikeCount();
+    }
 }

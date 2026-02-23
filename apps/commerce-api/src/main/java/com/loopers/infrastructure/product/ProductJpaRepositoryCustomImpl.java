@@ -64,7 +64,7 @@ public class ProductJpaRepositoryCustomImpl implements ProductJpaRepositoryCusto
         }
         return switch (sort) {
             case PRICE_ASC -> " ORDER BY base_price ASC";
-            case LIKES_DESC -> " ORDER BY created_at DESC"; // TODO: Like 연동
+            case LIKES_DESC -> " ORDER BY like_count DESC, created_at DESC";
             default -> " ORDER BY created_at DESC";
         };
     }

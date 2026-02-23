@@ -13,6 +13,7 @@ public class Brand {
     private String name;
     private String description;
     private String logoImageUrl;
+    private Long likeCount;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private LocalDateTime deletedAt;
@@ -22,14 +23,16 @@ public class Brand {
         this.name = name;
         this.description = description;
         this.logoImageUrl = logoImageUrl;
+        this.likeCount = 0L;
     }
 
-    public Brand(Long id, String name, String description, String logoImageUrl,
+    public Brand(Long id, String name, String description, String logoImageUrl, Long likeCount,
                  LocalDateTime createdAt, LocalDateTime updatedAt, LocalDateTime deletedAt) {
         this.id = id;
         this.name = name;
         this.description = description;
         this.logoImageUrl = logoImageUrl;
+        this.likeCount = likeCount != null ? likeCount : 0L;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
         this.deletedAt = deletedAt;
@@ -50,6 +53,16 @@ public class Brand {
 
     public boolean isDeleted() {
         return this.deletedAt != null;
+    }
+
+    public void increaseLikeCount() {
+        this.likeCount++;
+    }
+
+    public void decreaseLikeCount() {
+        if (this.likeCount > 0) {
+            this.likeCount--;
+        }
     }
 
     private void validateName(String name) {

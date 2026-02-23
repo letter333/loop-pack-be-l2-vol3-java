@@ -23,6 +23,7 @@ public class Product {
     private ProductStatus status;
     private Long discount;
     private DiscountType discountType;
+    private Long likeCount;
     private List<ProductOption> options;
     private List<ProductImage> images;
     private LocalDateTime createdAt;
@@ -41,6 +42,7 @@ public class Product {
         this.basePrice = basePrice;
         this.status = ProductStatus.SALE;
         this.productCode = generateProductCode();
+        this.likeCount = 0L;
         this.options = new ArrayList<>();
         this.images = new ArrayList<>();
     }
@@ -53,7 +55,7 @@ public class Product {
     }
 
     public Product(Long id, String name, String productCode, Long brandId, Long categoryId, Long basePrice,
-                   ProductStatus status, Long discount, DiscountType discountType,
+                   ProductStatus status, Long discount, DiscountType discountType, Long likeCount,
                    LocalDateTime createdAt, LocalDateTime updatedAt, LocalDateTime deletedAt) {
         this.id = id;
         this.name = name;
@@ -64,6 +66,7 @@ public class Product {
         this.status = status;
         this.discount = discount;
         this.discountType = discountType;
+        this.likeCount = likeCount != null ? likeCount : 0L;
         this.options = new ArrayList<>();
         this.images = new ArrayList<>();
         this.createdAt = createdAt;
@@ -72,7 +75,7 @@ public class Product {
     }
 
     public Product(Long id, String name, String productCode, Long brandId, Long categoryId, Long basePrice,
-                   ProductStatus status, Long discount, DiscountType discountType,
+                   ProductStatus status, Long discount, DiscountType discountType, Long likeCount,
                    List<ProductOption> options, List<ProductImage> images,
                    LocalDateTime createdAt, LocalDateTime updatedAt, LocalDateTime deletedAt) {
         this.id = id;
@@ -84,6 +87,7 @@ public class Product {
         this.status = status;
         this.discount = discount;
         this.discountType = discountType;
+        this.likeCount = likeCount != null ? likeCount : 0L;
         this.options = options != null ? new ArrayList<>(options) : new ArrayList<>();
         this.images = images != null ? new ArrayList<>(images) : new ArrayList<>();
         this.createdAt = createdAt;
@@ -177,6 +181,16 @@ public class Product {
 
     public void removeImage(Long imageId) {
         this.images.removeIf(img -> img.getId().equals(imageId));
+    }
+
+    public void increaseLikeCount() {
+        this.likeCount++;
+    }
+
+    public void decreaseLikeCount() {
+        if (this.likeCount > 0) {
+            this.likeCount--;
+        }
     }
 
     private String generateProductCode() {
