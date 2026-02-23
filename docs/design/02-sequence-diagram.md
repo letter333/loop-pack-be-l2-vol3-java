@@ -89,13 +89,14 @@ sequenceDiagram
     participant Controller
     participant Facade
     participant ProductService as 상품 서비스
-    participant ProductOptionService as 상품 옵션 서비스
+    participant BrandService as 브랜드 서비스
     participant Repository
 
     Client->>Controller: GET /api/v1/products/{productId}
-    Controller->>Facade: getProductDetail(productId)
+    Controller->>Facade: getProduct(productId)
     Facade->>ProductService: getActiveProduct(productId)
-    ProductService->>Repository: findById(productId)
+    ProductService->>Repository: findByIdWithOptionsAndImages(productId)
+    Note over Repository: Product + Options + Images Fetch Join
 
     alt 상품 미존재
         Repository-->>ProductService: Empty
@@ -104,7 +105,7 @@ sequenceDiagram
         Controller-->>Client: 404 Not Found
     end
 
-    Repository-->>ProductService: Product
+    Repository-->>ProductService: Product (with Options, Images)
     ProductService->>ProductService: 삭제 상태 검증
 
     alt 삭제된 상품
@@ -114,11 +115,12 @@ sequenceDiagram
     end
 
     ProductService-->>Facade: Product
-    Facade->>ProductOptionService: getOptions(productId)
-    ProductOptionService->>Repository: findByProductId(productId)
-    Repository-->>ProductOptionService: List<ProductOption>
-    ProductOptionService-->>Facade: List<ProductOption>
-    Facade-->>Controller: ProductDetailInfo
+    Facade->>BrandService: getActiveBrand(brandId)
+    BrandService->>Repository: findById(brandId)
+    Repository-->>BrandService: Brand
+    BrandService-->>Facade: Brand
+    Note over Facade: Product 애그리거트에서 Options, Images 직접 조회
+    Facade-->>Controller: ProductDetailInfo (with Options, Images, Brand)
     Controller-->>Client: 200 OK
 ```
 
@@ -324,7 +326,6 @@ sequenceDiagram
     participant Controller
     participant Facade
     participant ProductService as 상품 서비스
-    participant ProductOptionService as 상품 옵션 서비스
     participant Repository
 
     Admin->>Controller: GET /api/v1/admin/products/{productId}
@@ -336,7 +337,8 @@ sequenceDiagram
 
     Controller->>Facade: getProductDetail(productId)
     Facade->>ProductService: getProduct(productId)
-    ProductService->>Repository: findById(productId)
+    ProductService->>Repository: findByIdWithOptionsAndImages(productId)
+    Note over Repository: Product + Options + Images Fetch Join
 
     alt 상품 미존재
         Repository-->>ProductService: Empty
@@ -345,14 +347,11 @@ sequenceDiagram
         Controller-->>Admin: 404 Not Found
     end
 
-    Repository-->>ProductService: Product
+    Repository-->>ProductService: Product (with Options, Images)
     Note over ProductService: 품절/판매중지 상품도 조회 가능
     ProductService-->>Facade: Product
-    Facade->>ProductOptionService: getOptions(productId)
-    ProductOptionService->>Repository: findByProductId(productId)
-    Repository-->>ProductOptionService: List<ProductOption>
-    ProductOptionService-->>Facade: List<ProductOption>
-    Facade-->>Controller: ProductDetailInfo
+    Note over Facade: Product 애그리거트에서 Options, Images 직접 조회
+    Facade-->>Controller: ProductAdminDetailInfo
     Note over Controller: 재고, 상태, 등록/수정일시 포함
     Controller-->>Admin: 200 OK
 ```

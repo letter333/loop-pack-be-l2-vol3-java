@@ -490,6 +490,7 @@ classDiagram
 - **Facade 사용 기준**: 다른 도메인 서비스 호출이 필요한 경우에만 Facade를 사용하는가?
 - **도메인 경계 유지**: ProductService가 다른 도메인의 Repository를 직접 참조하지 않는가?
 - **조회 시 검증 정책**: 존재하지 않는 카테고리 필터 시 404 Not Found 반환
+- **애그리거트 패턴**: Product가 Options, Images를 애그리거트 루트로서 관리하는가?
 
 ### 클래스 다이어그램
 
@@ -501,7 +502,7 @@ classDiagram
     class ProductController {
         -ProductFacade productFacade
         +getProducts(categoryId, keyword, sort, pageable) ApiResponse~Page~
-        +getProductInfo(productId) ApiResponse~ProductDetailResponse~
+        +getProduct(productId) ApiResponse~ProductDetailResponse~
     }
 
     class ProductAdminController {
@@ -521,8 +522,8 @@ classDiagram
         +Long basePrice
         +Long discountedPrice
         +ProductStatus status
-        +Brand brand
-        +Category category
+        +BrandInfo brand
+        +Long likeCount
         +List~ProductImageInfo~ images
         +List~ProductOptionInfo~ options
     }
@@ -544,13 +545,15 @@ classDiagram
         +Long id
         +String name
         +String productCode
+        +Long brandId
+        +Long categoryId
         +Long basePrice
         +Long discountedPrice
         +ProductStatus status
-        +Brand brand
-        +Category category
-        +List~ProductImageInfo~ images
+        +Long discount
+        +DiscountType discountType
         +List~ProductOptionInfo~ options
+        +List~ProductImageInfo~ images
         +LocalDateTime createdAt
         +LocalDateTime updatedAt
         +LocalDateTime deletedAt
@@ -582,14 +585,14 @@ classDiagram
     %% Application Layer
     class ProductFacade {
         -ProductService productService
-        -ProductOptionService productOptionService
         -BrandService brandService
         -CategoryService categoryService
+        -AdminValidator adminValidator
         +getProducts(categoryId, keyword, sort, pageable) Page~ProductInfo~
-        +getProductDetail(productId) ProductDetailInfo
-        +createProduct(...) ProductInfo
-        +updateProduct(...) ProductInfo
-        +validateAndGetProducts(productIds) List~Product~
+        +getProduct(productId) ProductDetailInfo
+        +getProductDetail(ldap, productId) ProductAdminDetailInfo
+        +createProduct(ldap, command) ProductAdminDetailInfo
+        +deleteProduct(ldap, productId) void
     }
 
     class ProductInfo {
@@ -602,9 +605,36 @@ classDiagram
     }
 
     class ProductDetailInfo {
-        +ProductInfo product
+        +Long id
+        +String name
+        +String productCode
+        +Long basePrice
+        +Long discountedPrice
+        +ProductStatus status
+        +Long discount
+        +DiscountType discountType
+        +BrandInfo brand
+        +Long likeCount
         +List~ProductOptionInfo~ options
         +List~ProductImageInfo~ images
+    }
+
+    class ProductAdminDetailInfo {
+        +Long id
+        +String name
+        +String productCode
+        +Long brandId
+        +Long categoryId
+        +Long basePrice
+        +Long discountedPrice
+        +ProductStatus status
+        +Long discount
+        +DiscountType discountType
+        +List~ProductOptionInfo~ options
+        +List~ProductImageInfo~ images
+        +LocalDateTime createdAt
+        +LocalDateTime updatedAt
+        +LocalDateTime deletedAt
     }
 
     %% Domain Layer
@@ -618,6 +648,8 @@ classDiagram
         -Long categoryId
         -Long discount
         -DiscountType discountType
+        -List~ProductOption~ options
+        -List~ProductImage~ images
         -LocalDateTime createdAt
         -LocalDateTime updatedAt
         -LocalDateTime deletedAt
@@ -625,6 +657,11 @@ classDiagram
         +isAvailable() boolean
         +isDeleted() boolean
         +delete() void
+        +addOption(option) void
+        +addImage(image) void
+        +getOption(optionId) ProductOption
+        +decreaseStock(optionId, quantity) void
+        +increaseStock(optionId, quantity) void
     }
 
     class ProductStatus {
@@ -642,29 +679,25 @@ classDiagram
 
     class ProductService {
         -ProductRepository productRepository
-        -ProductOptionRepository productOptionRepository
-        -ProductImageRepository productImageRepository
         +getProduct(productId) Product
         +getActiveProduct(productId) Product
         +getProducts(categoryId, keyword, sort, pageable) Page~Product~
         +getProductsByBrandId(brandId, pageable) Page~Product~
         +createProduct(product) Product
-        +updateProduct(product) Product
         +deleteProduct(productId) void
         +deleteProductsByBrandId(brandId) void
-        +validateProducts(products) List~Product~
-        +decreaseStock(optionId, quantity) void
-        +increaseStock(optionId, quantity) void
+        +decreaseStock(productId, optionId, quantity) void
+        +increaseStock(productId, optionId, quantity) void
     }
 
     %% Infrastructure Layer
     class ProductRepository {
         <<interface>>
         +findById(productId) Optional~Product~
+        +findByIdWithOptionsAndImages(productId) Optional~Product~
         +findByBrandId(brandId) List~Product~
         +findByBrandId(brandId, pageable) Page~Product~
         +findProducts(categoryId, keyword, sort, pageable) Page~Product~
-        +findAllByIdInWithOptions(productIds) List~Product~
         +save(product) Product
         +saveAll(products) List~Product~
     }
@@ -679,51 +712,54 @@ classDiagram
         -Long categoryId
         -Long discount
         -DiscountType discountType
+        -Set~ProductOptionEntity~ options
+        -Set~ProductImageEntity~ images
         -LocalDateTime createdAt
         -LocalDateTime updatedAt
         -LocalDateTime deletedAt
         +toDomain() Product
         +from(product)$ ProductEntity
+        +addOption(option) void
+        +addImage(image) void
     }
 
     %% Relationships
-    ProductController --> ProductFacade : 목록 조회, 상세 조회
-    ProductController ..> ProductDetailResponse
-    ProductAdminController --> ProductService : 목록 조회, 삭제
-    ProductAdminController --> ProductFacade : 상세, 등록, 수정
-    ProductAdminController ..> ProductResponse
-    ProductAdminController ..> ProductAdminDetailResponse
+    ProductController --> ProductFacade
+    ProductAdminController --> ProductFacade
     ProductFacade --> ProductService
-    ProductFacade --> ProductOptionService
-    ProductFacade --> BrandService : 등록 시 검증
-    ProductFacade --> CategoryService : 등록/수정 시 검증
+    ProductFacade --> BrandService
+    ProductFacade --> CategoryService
     ProductService --> ProductRepository
-    ProductService --> ProductOptionRepository : 재고 관리, 옵션 CUD
-    ProductService --> ProductImageRepository : 이미지 CUD
     ProductService --> Product
     Product --> ProductStatus
     Product --> DiscountType
+    Product "1" --> "*" ProductOption : aggregate
+    Product "1" --> "*" ProductImage : aggregate
 ```
 
 ### 핵심 포인트
 
-1. **Facade 사용 기준 명확화**
+1. **애그리거트 패턴 적용**
+   - Product가 애그리거트 루트로서 Options, Images를 직접 관리
+   - ProductOptionService 제거 → Product 도메인 객체를 통해 옵션/이미지 접근
+   - JPA `cascade = CascadeType.ALL, orphanRemoval = true`로 CUD 자동 처리
+
+2. **Facade 사용 기준 명확화**
    - `getProducts()` → **Facade** (카테고리 존재 검증 포함)
-   - `getProductDetail()` → **Facade** (Product + Option 조합)
+   - `getProduct()` → **Facade** (Product 애그리거트 + Brand 조합)
+   - `getProductDetail()` → **Facade** (Admin 전용, Product 애그리거트 반환)
    - `createProduct()` → **Facade** (Brand/Category 존재 검증)
-   - `updateProduct()` → **Facade** (Category 변경 시 검증)
-   - `deleteProduct()` → **Service** (Soft Delete, 단일 도메인)
+   - `deleteProduct()` → **Facade** (Admin 검증 + Soft Delete)
 
-2. **도메인 경계 유지**: ProductService는 ProductRepository와 ProductOptionRepository를 의존하여 상품 CRUD 및 재고 검증/차감을 담당하고, ProductOptionService는 조회 전용으로 Facade에서 상세 조회 시 옵션/이미지 조합에 사용. 다른 도메인(Brand, Category) 검증은 Facade에서 수행
+3. **재고 관리**: `ProductService.decreaseStock(productId, optionId, quantity)` → `Product.decreaseStock(optionId, quantity)` → `ProductOption.decreaseStock(quantity)` 체인으로 처리
 
-3. **조회 정책**: 존재하지 않는 categoryId로 필터 시 404 Not Found 반환
+4. **Fetch Join**: `findByIdWithOptionsAndImages()`로 N+1 문제 방지
 
 ### 잠재 리스크
 
 | 리스크 | 영향 | 대안 |
 |--------|------|------|
-| **ProductFacade 의존성 (4개)** | 복잡도 증가, 테스트 어려움 | 등록/수정 전용 Facade 분리 검토 |
-| **상품-옵션 일관성** | 상품 삭제 시 옵션도 삭제 필요 | Facade에서 옵션 삭제 처리 또는 CASCADE 설정 |
+| **애그리거트 크기** | 옵션/이미지가 많으면 메모리 부담 | 상세 조회 시에만 Fetch Join, 목록 조회는 Product만 |
 | **brandId 변경 불가 정책** | 요구사항에 명시되어 있으나 검증 로직 필요 | updateProduct에서 brandId 변경 시도 시 예외 |
 
 ---
@@ -735,6 +771,7 @@ classDiagram
 상품 옵션 도메인의 클래스 다이어그램으로 다음을 검증한다:
 - **단순한 옵션 구조**: 옵션별로 추가 금액과 재고를 직접 관리하는가?
 - **재고 관리 책임**: 옵션 단위 재고 관리가 명확한가?
+- **애그리거트 소속**: ProductOption, ProductImage가 Product 애그리거트의 일부인가?
 
 ### 클래스 다이어그램
 
@@ -742,7 +779,7 @@ classDiagram
 classDiagram
     direction TB
 
-    %% Domain Layer - Option
+    %% Domain Layer - Option (Product Aggregate)
     class ProductOption {
         -Long id
         -Long productId
@@ -761,7 +798,7 @@ classDiagram
         +delete() void
     }
 
-    %% Domain Layer - Image
+    %% Domain Layer - Image (Product Aggregate)
     class ProductImage {
         -Long id
         -Long productId
@@ -779,41 +816,20 @@ classDiagram
         DETAIL
     }
 
-    %% Service Layer
-    class ProductOptionService {
-        -ProductOptionRepository optionRepository
-        -ProductImageRepository imageRepository
-        +getOptions(productId) List~ProductOption~
-        +getOption(optionId) ProductOption
-        +getImages(productId) List~ProductImage~
-    }
+    %% Note: ProductOption과 ProductImage는 Product 애그리거트의 일부
+    %% 별도의 Service/Repository 없이 Product를 통해 관리됨
+    %% JPA Cascade로 CUD 처리
 
-    %% Infrastructure Layer
-    class ProductOptionRepository {
-        <<interface>>
-        +findByProductId(productId) List~ProductOption~
-        +findById(optionId) Optional~ProductOption~
-        +findAllByIdIn(optionIds) List~ProductOption~
-        +save(option) ProductOption
-    }
-
-    class ProductImageRepository {
-        <<interface>>
-        +findByProductId(productId) List~ProductImage~
-        +save(image) ProductImage
-    }
-
-    %% Relationships
     ProductImage --> ImageType
-    ProductOptionService --> ProductOptionRepository
-    ProductOptionService --> ProductImageRepository
 ```
 
 ### 핵심 포인트
 
-1. **옵션 = 판매 단위**: 각 옵션(예: RED, L)이 독립적인 추가 금액과 재고를 관리
-2. **단순한 구조**: 옵션 그룹/SKU/매핑 테이블 없이 단일 `product_options` 테이블로 관리
-3. **ProductFacade에서 조합 조회**: 상품 상세 조회 시 Product + Option + Image를 ProductFacade에서 조합
+1. **애그리거트 패턴**: ProductOption과 ProductImage는 Product의 하위 엔티티로, Product를 통해서만 접근
+2. **JPA Cascade**: `cascade = CascadeType.ALL, orphanRemoval = true`로 CUD 자동 처리
+3. **재고 관리**: `Product.decreaseStock(optionId, quantity)`로 Product를 통해 재고 관리
+4. **Fetch Join**: `findByIdWithOptionsAndImages()`로 N+1 문제 방지
+5. **Service/Repository 제거**: ProductOptionService, ProductOptionRepository, ProductImageRepository 제거
 
 ### 잠재 리스크
 
