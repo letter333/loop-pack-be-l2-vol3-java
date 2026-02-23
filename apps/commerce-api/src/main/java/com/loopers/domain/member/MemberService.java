@@ -5,6 +5,7 @@ import com.loopers.support.error.ErrorType;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
@@ -16,7 +17,7 @@ public class MemberService {
     private final MemberRepository memberRepository;
     private final PasswordEncoder passwordEncoder;
 
-    @Transactional(readOnly = true)
+    @Transactional(readOnly = true, propagation = Propagation.SUPPORTS)
     public Member authenticate(String loginId, String rawPassword) {
         Member member = memberRepository.findByLoginId(loginId)
             .orElseThrow(() -> new CoreException(ErrorType.UNAUTHORIZED));
@@ -28,7 +29,7 @@ public class MemberService {
         return member;
     }
 
-    @Transactional
+    @Transactional(propagation = Propagation.REQUIRED)
     public Member signUp(String loginId, String password, String name, LocalDate birthday, String email) {
         if (memberRepository.existsByLoginId(loginId)) {
             throw new CoreException(ErrorType.CONFLICT);
@@ -42,7 +43,7 @@ public class MemberService {
         return memberRepository.save(member);
     }
 
-    @Transactional
+    @Transactional(propagation = Propagation.REQUIRED)
     public void updatePassword(String loginId, String currentPassword, String newPassword) {
         Member member = memberRepository.findByLoginId(loginId)
             .orElseThrow(() -> new CoreException(ErrorType.UNAUTHORIZED));

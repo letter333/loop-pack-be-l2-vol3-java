@@ -4,6 +4,7 @@ import com.loopers.support.error.CoreException;
 import com.loopers.support.error.ErrorType;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
@@ -14,13 +15,13 @@ public class CategoryService {
 
     private final CategoryRepository categoryRepository;
 
-    @Transactional(readOnly = true)
+    @Transactional(readOnly = true, propagation = Propagation.SUPPORTS)
     public Category getCategory(Long categoryId) {
         return categoryRepository.findById(categoryId)
             .orElseThrow(() -> new CoreException(ErrorType.NOT_FOUND, "카테고리를 찾을 수 없습니다."));
     }
 
-    @Transactional(readOnly = true)
+    @Transactional(readOnly = true, propagation = Propagation.SUPPORTS)
     public Category getActiveCategory(Long categoryId) {
         Category category = getCategory(categoryId);
         if (category.isDeleted()) {
@@ -29,12 +30,12 @@ public class CategoryService {
         return category;
     }
 
-    @Transactional(readOnly = true)
+    @Transactional(readOnly = true, propagation = Propagation.SUPPORTS)
     public List<Category> getAllActiveCategories() {
         return categoryRepository.findAllActive();
     }
 
-    @Transactional
+    @Transactional(propagation = Propagation.REQUIRED)
     public Category createCategory(String name, Long parentId) {
         if (parentId == null) {
             Category category = new Category(name);
@@ -50,14 +51,14 @@ public class CategoryService {
         return categoryRepository.save(saved);
     }
 
-    @Transactional
+    @Transactional(propagation = Propagation.REQUIRED)
     public Category updateCategory(Long categoryId, String name) {
         Category category = getCategory(categoryId);
         category.update(name);
         return categoryRepository.save(category);
     }
 
-    @Transactional
+    @Transactional(propagation = Propagation.REQUIRED)
     public void deleteCategory(Long categoryId) {
         Category category = getCategory(categoryId);
 
@@ -70,7 +71,7 @@ public class CategoryService {
         categoryRepository.delete(categoryId);
     }
 
-    @Transactional(readOnly = true)
+    @Transactional(readOnly = true, propagation = Propagation.SUPPORTS)
     public Category validateCategory(Long categoryId) {
         return getActiveCategory(categoryId);
     }
