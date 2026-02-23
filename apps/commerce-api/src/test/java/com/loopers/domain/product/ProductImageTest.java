@@ -33,12 +33,13 @@ class ProductImageTest {
         }
 
         @Test
-        @DisplayName("productId가 null이면 BAD_REQUEST 예외가 발생한다")
-        void throwsBadRequest_whenProductIdIsNull() {
-            // Act & Assert
-            assertThatThrownBy(() -> new ProductImage(null, ImageType.MAIN, "https://example.com/image.jpg", "상품 이미지"))
-                .isInstanceOf(CoreException.class)
-                .satisfies(ex -> assertThat(((CoreException) ex).getErrorType()).isEqualTo(ErrorType.BAD_REQUEST));
+        @DisplayName("productId가 null이면 정상 생성된다 (애그리거트 루트를 통해 설정)")
+        void createsProductImage_whenProductIdIsNull() {
+            // Arrange & Act
+            ProductImage image = new ProductImage(null, ImageType.MAIN, "https://example.com/image.jpg", "상품 이미지");
+
+            // Assert
+            assertThat(image.getProductId()).isNull();
         }
 
         @Test

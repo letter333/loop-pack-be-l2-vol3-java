@@ -5,12 +5,6 @@ import com.loopers.support.error.ErrorType;
 
 public class ProductOptionValidator {
 
-    public static void validateProductId(Long productId) {
-        if (productId == null) {
-            throw new CoreException(ErrorType.BAD_REQUEST, "상품 ID는 필수입니다.");
-        }
-    }
-
     public static void validateOptionValue(String optionValue) {
         if (optionValue == null || optionValue.isBlank()) {
             throw new CoreException(ErrorType.BAD_REQUEST, "옵션값은 필수입니다.");

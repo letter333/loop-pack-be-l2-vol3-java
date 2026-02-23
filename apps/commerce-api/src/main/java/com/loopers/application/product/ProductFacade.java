@@ -20,11 +20,11 @@ public class ProductFacade {
     private final BrandService brandService;
     private final AdminValidator adminValidator;
 
-    public ProductInfo getProduct(Long productId) {
+    public ProductDetailInfo getProduct(Long productId) {
         Product product = productService.getActiveProduct(productId);
         Brand brand = brandService.getActiveBrand(product.getBrandId());
         Long likeCount = 0L; // TODO: Like 도메인 구현 후 연동
-        return ProductInfo.from(product, BrandInfo.from(brand), likeCount);
+        return ProductDetailInfo.from(product, BrandInfo.from(brand), likeCount);
     }
 
     public Page<ProductInfo> getProducts(Long categoryId, String keyword, ProductSortType sort, Pageable pageable) {
@@ -36,27 +36,27 @@ public class ProductFacade {
         });
     }
 
-    public ProductDetailInfo getProductDetail(String ldap, Long productId) {
+    public ProductAdminDetailInfo getProductDetail(String ldap, Long productId) {
         adminValidator.validate(ldap);
         Product product = productService.getProduct(productId);
-        return ProductDetailInfo.from(product);
+        return ProductAdminDetailInfo.from(product);
     }
 
-    public ProductDetailInfo createProduct(String ldap, ProductCommand.Create command) {
+    public ProductAdminDetailInfo createProduct(String ldap, ProductCommand.Create command) {
         adminValidator.validate(ldap);
         Product product = productService.createProduct(
             command.name(), command.brandId(), command.categoryId(), command.basePrice()
         );
-        return ProductDetailInfo.from(product);
+        return ProductAdminDetailInfo.from(product);
     }
 
-    public ProductDetailInfo updateProduct(String ldap, Long productId, ProductCommand.Update command) {
+    public ProductAdminDetailInfo updateProduct(String ldap, Long productId, ProductCommand.Update command) {
         adminValidator.validate(ldap);
         Product product = productService.updateProduct(
             productId, command.name(), command.categoryId(), command.basePrice(),
             command.discount(), command.discountType(), command.status()
         );
-        return ProductDetailInfo.from(product);
+        return ProductAdminDetailInfo.from(product);
     }
 
     public void deleteProduct(String ldap, Long productId) {

@@ -4,10 +4,14 @@ import com.loopers.domain.BaseEntity;
 import com.loopers.domain.product.ProductOption;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 import org.hibernate.annotations.SQLDelete;
 
 @Entity
@@ -17,8 +21,10 @@ import org.hibernate.annotations.SQLDelete;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class ProductOptionEntity extends BaseEntity {
 
-    @Column(name = "product_id", nullable = false)
-    private Long productId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "product_id", nullable = false)
+    @Setter
+    private ProductEntity product;
 
     @Column(name = "option_value", nullable = false, length = 50)
     private String optionValue;
@@ -34,7 +40,6 @@ public class ProductOptionEntity extends BaseEntity {
 
     public static ProductOptionEntity from(ProductOption productOption) {
         ProductOptionEntity entity = new ProductOptionEntity();
-        entity.productId = productOption.getProductId();
         entity.optionValue = productOption.getOptionValue();
         entity.displayName = productOption.getDisplayName();
         entity.extraPrice = productOption.getExtraPrice();
@@ -42,10 +47,14 @@ public class ProductOptionEntity extends BaseEntity {
         return entity;
     }
 
+    public Long getProductId() {
+        return product != null ? product.getId() : null;
+    }
+
     public ProductOption toDomain() {
         return new ProductOption(
             getId(),
-            productId,
+            getProductId(),
             optionValue,
             displayName,
             extraPrice,

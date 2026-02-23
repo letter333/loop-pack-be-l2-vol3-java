@@ -1,8 +1,14 @@
 package com.loopers.interfaces.api.product;
 
+import com.loopers.application.product.ProductDetailInfo;
+import com.loopers.application.product.ProductImageInfo;
 import com.loopers.application.product.ProductInfo;
+import com.loopers.application.product.ProductOptionInfo;
 import com.loopers.domain.product.DiscountType;
+import com.loopers.domain.product.ImageType;
 import com.loopers.domain.product.ProductStatus;
+
+import java.util.List;
 
 public class ProductV1Dto {
 
@@ -16,6 +22,40 @@ public class ProductV1Dto {
                 info.id(),
                 info.name(),
                 info.logoImageUrl()
+            );
+        }
+    }
+
+    public record OptionResponse(
+        Long id,
+        String optionValue,
+        String displayName,
+        Long extraPrice,
+        Integer stockQuantity
+    ) {
+        public static OptionResponse from(ProductOptionInfo info) {
+            return new OptionResponse(
+                info.id(),
+                info.optionValue(),
+                info.displayName(),
+                info.extraPrice(),
+                info.stockQuantity()
+            );
+        }
+    }
+
+    public record ImageResponse(
+        Long id,
+        ImageType type,
+        String url,
+        String altText
+    ) {
+        public static ImageResponse from(ProductImageInfo info) {
+            return new ImageResponse(
+                info.id(),
+                info.type(),
+                info.url(),
+                info.altText()
             );
         }
     }
@@ -44,6 +84,38 @@ public class ProductV1Dto {
                 info.discountType(),
                 info.brand() != null ? BrandResponse.from(info.brand()) : null,
                 info.likeCount()
+            );
+        }
+    }
+
+    public record ProductDetailResponse(
+        Long id,
+        String name,
+        String productCode,
+        Long basePrice,
+        Long discountedPrice,
+        ProductStatus status,
+        Long discount,
+        DiscountType discountType,
+        BrandResponse brand,
+        Long likeCount,
+        List<OptionResponse> options,
+        List<ImageResponse> images
+    ) {
+        public static ProductDetailResponse from(ProductDetailInfo info) {
+            return new ProductDetailResponse(
+                info.id(),
+                info.name(),
+                info.productCode(),
+                info.basePrice(),
+                info.discountedPrice(),
+                info.status(),
+                info.discount(),
+                info.discountType(),
+                info.brand() != null ? BrandResponse.from(info.brand()) : null,
+                info.likeCount(),
+                info.options().stream().map(OptionResponse::from).toList(),
+                info.images().stream().map(ImageResponse::from).toList()
             );
         }
     }

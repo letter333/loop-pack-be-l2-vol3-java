@@ -47,9 +47,15 @@ public class ProductService {
     }
 
     @Transactional
-    public Product createProduct(String name, Long brandId, Long categoryId, Long basePrice) {
-        Product product = new Product(name, brandId, categoryId, basePrice);
+    public Product createProduct(String name, Long brandId, Long categoryId, Long basePrice,
+                                  List<ProductOption> options, List<ProductImage> images) {
+        Product product = new Product(name, brandId, categoryId, basePrice, options, images);
         return productRepository.save(product);
+    }
+
+    @Transactional
+    public Product createProduct(String name, Long brandId, Long categoryId, Long basePrice) {
+        return createProduct(name, brandId, categoryId, basePrice, null, null);
     }
 
     @Transactional
@@ -69,5 +75,25 @@ public class ProductService {
     @Transactional(readOnly = true)
     public Product validateProduct(Long productId) {
         return getActiveProduct(productId);
+    }
+
+    @Transactional
+    public void decreaseStock(Long productId, Long optionId, int quantity) {
+        Product product = getProduct(productId);
+        product.decreaseStock(optionId, quantity);
+        productRepository.save(product);
+    }
+
+    @Transactional
+    public void increaseStock(Long productId, Long optionId, int quantity) {
+        Product product = getProduct(productId);
+        product.increaseStock(optionId, quantity);
+        productRepository.save(product);
+    }
+
+    @Transactional(readOnly = true)
+    public ProductOption getProductOption(Long productId, Long optionId) {
+        Product product = getProduct(productId);
+        return product.getOption(optionId);
     }
 }

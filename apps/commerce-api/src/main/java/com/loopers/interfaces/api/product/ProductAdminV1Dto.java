@@ -1,7 +1,10 @@
 package com.loopers.interfaces.api.product;
 
-import com.loopers.application.product.ProductDetailInfo;
+import com.loopers.application.product.ProductAdminDetailInfo;
+import com.loopers.application.product.ProductImageInfo;
+import com.loopers.application.product.ProductOptionInfo;
 import com.loopers.domain.product.DiscountType;
+import com.loopers.domain.product.ImageType;
 import com.loopers.domain.product.ProductStatus;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -9,6 +12,7 @@ import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 public class ProductAdminV1Dto {
 
@@ -47,6 +51,40 @@ public class ProductAdminV1Dto {
         ProductStatus status
     ) {}
 
+    public record OptionResponse(
+        Long id,
+        String optionValue,
+        String displayName,
+        Long extraPrice,
+        Integer stockQuantity
+    ) {
+        public static OptionResponse from(ProductOptionInfo info) {
+            return new OptionResponse(
+                info.id(),
+                info.optionValue(),
+                info.displayName(),
+                info.extraPrice(),
+                info.stockQuantity()
+            );
+        }
+    }
+
+    public record ImageResponse(
+        Long id,
+        ImageType type,
+        String url,
+        String altText
+    ) {
+        public static ImageResponse from(ProductImageInfo info) {
+            return new ImageResponse(
+                info.id(),
+                info.type(),
+                info.url(),
+                info.altText()
+            );
+        }
+    }
+
     public record ProductDetailResponse(
         Long id,
         String name,
@@ -58,11 +96,13 @@ public class ProductAdminV1Dto {
         ProductStatus status,
         Long discount,
         DiscountType discountType,
+        List<OptionResponse> options,
+        List<ImageResponse> images,
         LocalDateTime createdAt,
         LocalDateTime updatedAt,
         LocalDateTime deletedAt
     ) {
-        public static ProductDetailResponse from(ProductDetailInfo info) {
+        public static ProductDetailResponse from(ProductAdminDetailInfo info) {
             return new ProductDetailResponse(
                 info.id(),
                 info.name(),
@@ -74,6 +114,8 @@ public class ProductAdminV1Dto {
                 info.status(),
                 info.discount(),
                 info.discountType(),
+                info.options().stream().map(OptionResponse::from).toList(),
+                info.images().stream().map(ImageResponse::from).toList(),
                 info.createdAt(),
                 info.updatedAt(),
                 info.deletedAt()

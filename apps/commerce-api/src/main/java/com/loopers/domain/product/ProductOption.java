@@ -20,7 +20,6 @@ public class ProductOption {
     private LocalDateTime deletedAt;
 
     public ProductOption(Long productId, String optionValue, String displayName, Long extraPrice, Integer stockQuantity) {
-        ProductOptionValidator.validateProductId(productId);
         ProductOptionValidator.validateOptionValue(optionValue);
         ProductOptionValidator.validateStockQuantity(stockQuantity);
 

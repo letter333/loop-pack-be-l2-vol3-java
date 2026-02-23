@@ -21,7 +21,7 @@ public class ProductRepositoryImpl implements ProductRepository {
 
     @Override
     public Optional<Product> findById(Long id) {
-        return productJpaRepository.findById(id)
+        return productJpaRepository.findByIdWithOptionsAndImages(id)
             .map(ProductEntity::toDomain);
     }
 
@@ -49,7 +49,7 @@ public class ProductRepositoryImpl implements ProductRepository {
     public Product save(Product product) {
         ProductEntity entity;
         if (product.getId() != null) {
-            entity = productJpaRepository.findById(product.getId())
+            entity = productJpaRepository.findByIdWithOptionsAndImages(product.getId())
                 .orElseThrow(() -> new CoreException(ErrorType.NOT_FOUND, "상품을 찾을 수 없습니다."));
             entity.update(
                 product.getName(),
@@ -59,6 +59,8 @@ public class ProductRepositoryImpl implements ProductRepository {
                 product.getDiscountType(),
                 product.getStatus()
             );
+            entity.syncOptions(product.getOptions());
+            entity.syncImages(product.getImages());
         } else {
             entity = ProductEntity.from(product);
         }

@@ -24,7 +24,7 @@ public interface ProductV1ApiSpec {
 
     @Operation(
         summary = "상품 상세 조회",
-        description = "상품 상세 정보를 조회합니다. 브랜드 정보와 좋아요 수를 포함합니다."
+        description = "상품 상세 정보를 조회합니다. 브랜드 정보, 좋아요 수, 옵션 및 이미지를 포함합니다."
     )
-    ApiResponse<ProductV1Dto.ProductResponse> getProduct(Long productId);
+    ApiResponse<ProductV1Dto.ProductDetailResponse> getProduct(Long productId);
 }

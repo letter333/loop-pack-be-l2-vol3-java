@@ -34,12 +34,13 @@ class ProductOptionTest {
         }
 
         @Test
-        @DisplayName("productId가 null이면 BAD_REQUEST 예외가 발생한다")
-        void throwsBadRequest_whenProductIdIsNull() {
-            // Act & Assert
-            assertThatThrownBy(() -> new ProductOption(null, "BLACK_M", "블랙 / M", 5000L, 100))
-                .isInstanceOf(CoreException.class)
-                .satisfies(ex -> assertThat(((CoreException) ex).getErrorType()).isEqualTo(ErrorType.BAD_REQUEST));
+        @DisplayName("productId가 null이면 정상 생성된다 (애그리거트 루트를 통해 설정)")
+        void createsProductOption_whenProductIdIsNull() {
+            // Arrange & Act
+            ProductOption option = new ProductOption(null, "BLACK_M", "블랙 / M", 5000L, 100);
+
+            // Assert
+            assertThat(option.getProductId()).isNull();
         }
 
         @Test

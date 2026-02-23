@@ -253,7 +253,7 @@ class ProductV1ApiE2ETest {
             Product product = productRepository.save(new Product("아이폰 15", savedBrand.getId(), 1L, 1500000L));
 
             // Act
-            ResponseEntity<ApiResponse<ProductV1Dto.ProductResponse>> response =
+            ResponseEntity<ApiResponse<ProductV1Dto.ProductDetailResponse>> response =
                 testRestTemplate.exchange(ENDPOINT + "/" + product.getId(), HttpMethod.GET, null,
                     new ParameterizedTypeReference<>() {});
 
@@ -262,7 +262,9 @@ class ProductV1ApiE2ETest {
                 () -> assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK),
                 () -> assertThat(response.getBody().data().id()).isEqualTo(product.getId()),
                 () -> assertThat(response.getBody().data().name()).isEqualTo("아이폰 15"),
-                () -> assertThat(response.getBody().data().brand().name()).isEqualTo("Apple")
+                () -> assertThat(response.getBody().data().brand().name()).isEqualTo("Apple"),
+                () -> assertThat(response.getBody().data().options()).isEmpty(),
+                () -> assertThat(response.getBody().data().images()).isEmpty()
             );
         }
 

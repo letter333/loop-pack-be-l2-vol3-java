@@ -1,10 +1,14 @@
 package com.loopers.domain.product;
 
+import com.loopers.support.error.CoreException;
+import com.loopers.support.error.ErrorType;
 import lombok.Getter;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 
 @Getter
@@ -19,6 +23,8 @@ public class Product {
     private ProductStatus status;
     private Long discount;
     private DiscountType discountType;
+    private List<ProductOption> options;
+    private List<ProductImage> images;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private LocalDateTime deletedAt;
@@ -35,6 +41,15 @@ public class Product {
         this.basePrice = basePrice;
         this.status = ProductStatus.SALE;
         this.productCode = generateProductCode();
+        this.options = new ArrayList<>();
+        this.images = new ArrayList<>();
+    }
+
+    public Product(String name, Long brandId, Long categoryId, Long basePrice,
+                   List<ProductOption> options, List<ProductImage> images) {
+        this(name, brandId, categoryId, basePrice);
+        this.options = options != null ? new ArrayList<>(options) : new ArrayList<>();
+        this.images = images != null ? new ArrayList<>(images) : new ArrayList<>();
     }
 
     public Product(Long id, String name, String productCode, Long brandId, Long categoryId, Long basePrice,
@@ -49,6 +64,28 @@ public class Product {
         this.status = status;
         this.discount = discount;
         this.discountType = discountType;
+        this.options = new ArrayList<>();
+        this.images = new ArrayList<>();
+        this.createdAt = createdAt;
+        this.updatedAt = updatedAt;
+        this.deletedAt = deletedAt;
+    }
+
+    public Product(Long id, String name, String productCode, Long brandId, Long categoryId, Long basePrice,
+                   ProductStatus status, Long discount, DiscountType discountType,
+                   List<ProductOption> options, List<ProductImage> images,
+                   LocalDateTime createdAt, LocalDateTime updatedAt, LocalDateTime deletedAt) {
+        this.id = id;
+        this.name = name;
+        this.productCode = productCode;
+        this.brandId = brandId;
+        this.categoryId = categoryId;
+        this.basePrice = basePrice;
+        this.status = status;
+        this.discount = discount;
+        this.discountType = discountType;
+        this.options = options != null ? new ArrayList<>(options) : new ArrayList<>();
+        this.images = images != null ? new ArrayList<>(images) : new ArrayList<>();
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
         this.deletedAt = deletedAt;
@@ -101,6 +138,45 @@ public class Product {
         if (deletedAt == null) {
             this.deletedAt = LocalDateTime.now();
         }
+    }
+
+    public void addOption(ProductOption option) {
+        if (option == null) {
+            throw new CoreException(ErrorType.BAD_REQUEST, "옵션은 null일 수 없습니다.");
+        }
+        this.options.add(option);
+    }
+
+    public void removeOption(Long optionId) {
+        this.options.removeIf(opt -> opt.getId().equals(optionId));
+    }
+
+    public ProductOption getOption(Long optionId) {
+        return options.stream()
+            .filter(opt -> opt.getId().equals(optionId))
+            .findFirst()
+            .orElseThrow(() -> new CoreException(ErrorType.NOT_FOUND, "상품 옵션을 찾을 수 없습니다."));
+    }
+
+    public void decreaseStock(Long optionId, int quantity) {
+        ProductOption option = getOption(optionId);
+        option.decreaseStock(quantity);
+    }
+
+    public void increaseStock(Long optionId, int quantity) {
+        ProductOption option = getOption(optionId);
+        option.increaseStock(quantity);
+    }
+
+    public void addImage(ProductImage image) {
+        if (image == null) {
+            throw new CoreException(ErrorType.BAD_REQUEST, "이미지는 null일 수 없습니다.");
+        }
+        this.images.add(image);
+    }
+
+    public void removeImage(Long imageId) {
+        this.images.removeIf(img -> img.getId().equals(imageId));
     }
 
     private String generateProductCode() {

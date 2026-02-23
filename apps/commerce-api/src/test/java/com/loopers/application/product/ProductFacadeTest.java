@@ -2,7 +2,10 @@ package com.loopers.application.product;
 
 import com.loopers.domain.brand.Brand;
 import com.loopers.domain.brand.BrandRepository;
+import com.loopers.domain.product.ImageType;
 import com.loopers.domain.product.Product;
+import com.loopers.domain.product.ProductImage;
+import com.loopers.domain.product.ProductOption;
 import com.loopers.domain.product.ProductRepository;
 import com.loopers.domain.product.ProductSortType;
 import com.loopers.domain.product.ProductStatus;
@@ -19,6 +22,8 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -65,7 +70,7 @@ class ProductFacadeTest {
             );
 
             // Act
-            ProductInfo result = productFacade.getProduct(product.getId());
+            ProductDetailInfo result = productFacade.getProduct(product.getId());
 
             // Assert
             assertAll(
@@ -73,7 +78,38 @@ class ProductFacadeTest {
                 () -> assertThat(result.name()).isEqualTo("아이폰 15"),
                 () -> assertThat(result.brand()).isNotNull(),
                 () -> assertThat(result.brand().name()).isEqualTo("Apple"),
-                () -> assertThat(result.likeCount()).isEqualTo(0L)
+                () -> assertThat(result.likeCount()).isEqualTo(0L),
+                () -> assertThat(result.options()).isEmpty(),
+                () -> assertThat(result.images()).isEmpty()
+            );
+        }
+
+        @Test
+        @DisplayName("상품 정보에 옵션과 이미지가 포함된다")
+        void returnsProductInfoWithOptionsAndImages() {
+            // Arrange
+            List<ProductOption> options = List.of(
+                new ProductOption(null, "256GB", "256GB", 0L, 100),
+                new ProductOption(null, "512GB", "512GB", 100000L, 50)
+            );
+            List<ProductImage> images = List.of(
+                new ProductImage(null, ImageType.MAIN, "https://example.com/main.jpg", "메인 이미지")
+            );
+            Product product = productRepository.save(
+                new Product("아이폰 15", savedBrand.getId(), 1L, 1500000L, options, images)
+            );
+
+            // Act
+            ProductDetailInfo result = productFacade.getProduct(product.getId());
+
+            // Assert
+            assertAll(
+                () -> assertThat(result.options()).hasSize(2),
+                () -> assertThat(result.options()).extracting(ProductOptionInfo::optionValue)
+                    .containsExactlyInAnyOrder("256GB", "512GB"),
+                () -> assertThat(result.images()).hasSize(1),
+                () -> assertThat(result.images()).extracting(ProductImageInfo::type)
+                    .containsExactly(ImageType.MAIN)
             );
         }
 
@@ -147,14 +183,16 @@ class ProductFacadeTest {
             );
 
             // Act
-            ProductDetailInfo result = productFacade.createProduct("loopers.admin", command);
+            ProductAdminDetailInfo result = productFacade.createProduct("loopers.admin", command);
 
             // Assert
             assertAll(
                 () -> assertThat(result.id()).isNotNull(),
                 () -> assertThat(result.name()).isEqualTo("아이폰 15"),
                 () -> assertThat(result.brandId()).isEqualTo(savedBrand.getId()),
-                () -> assertThat(result.status()).isEqualTo(ProductStatus.SALE)
+                () -> assertThat(result.status()).isEqualTo(ProductStatus.SALE),
+                () -> assertThat(result.options()).isEmpty(),
+                () -> assertThat(result.images()).isEmpty()
             );
         }
 

@@ -1,5 +1,6 @@
 package com.loopers.interfaces.api.product;
 
+import com.loopers.application.product.ProductDetailInfo;
 import com.loopers.application.product.ProductFacade;
 import com.loopers.application.product.ProductInfo;
 import com.loopers.domain.product.ProductSortType;
@@ -36,9 +37,9 @@ public class ProductV1Controller implements ProductV1ApiSpec {
 
     @GetMapping("/{productId}")
     @Override
-    public ApiResponse<ProductV1Dto.ProductResponse> getProduct(@PathVariable Long productId) {
-        ProductInfo info = productFacade.getProduct(productId);
-        ProductV1Dto.ProductResponse response = ProductV1Dto.ProductResponse.from(info);
+    public ApiResponse<ProductV1Dto.ProductDetailResponse> getProduct(@PathVariable Long productId) {
+        ProductDetailInfo info = productFacade.getProduct(productId);
+        ProductV1Dto.ProductDetailResponse response = ProductV1Dto.ProductDetailResponse.from(info);
         return ApiResponse.success(response);
     }
 }
