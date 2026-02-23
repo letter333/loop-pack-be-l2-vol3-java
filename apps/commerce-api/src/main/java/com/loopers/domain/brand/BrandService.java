@@ -1,5 +1,6 @@
 package com.loopers.domain.brand;
 
+import com.loopers.domain.product.ProductService;
 import com.loopers.support.error.CoreException;
 import com.loopers.support.error.ErrorType;
 import lombok.RequiredArgsConstructor;
@@ -14,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class BrandService {
 
     private final BrandRepository brandRepository;
+    private final ProductService productService;
 
     @Transactional(readOnly = true, propagation = Propagation.SUPPORTS)
     public Brand getBrand(Long brandId) {
@@ -50,6 +52,7 @@ public class BrandService {
     @Transactional(propagation = Propagation.REQUIRED)
     public void deleteBrand(Long brandId) {
         getBrand(brandId);  // 존재 확인
+        productService.deleteProductsByBrandId(brandId);
         brandRepository.delete(brandId);
     }
 

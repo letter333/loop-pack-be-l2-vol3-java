@@ -40,6 +40,20 @@ public class ProductRepositoryImpl implements ProductRepository {
     }
 
     @Override
+    public List<Product> findAllActiveByBrandId(Long brandId) {
+        return productJpaRepository.findAllByBrandIdAndDeletedAtIsNull(brandId).stream()
+            .map(ProductEntity::toDomain)
+            .toList();
+    }
+
+    @Override
+    public List<Product> findAllActiveByCategoryIds(List<Long> categoryIds) {
+        return productJpaRepository.findAllByCategoryIdInAndDeletedAtIsNull(categoryIds).stream()
+            .map(ProductEntity::toDomain)
+            .toList();
+    }
+
+    @Override
     public Page<Product> findProducts(Long categoryId, String keyword, ProductSortType sort, Pageable pageable) {
         return productJpaRepository.findProducts(categoryId, keyword, sort, pageable)
             .map(ProductEntity::toDomain);
@@ -71,6 +85,13 @@ public class ProductRepositoryImpl implements ProductRepository {
     @Override
     public void delete(Long id) {
         productJpaRepository.deleteById(id);
+    }
+
+    @Override
+    public void softDeleteAllByIds(List<Long> ids) {
+        if (ids != null && !ids.isEmpty()) {
+            productJpaRepository.softDeleteAllByIds(ids);
+        }
     }
 
     @Override

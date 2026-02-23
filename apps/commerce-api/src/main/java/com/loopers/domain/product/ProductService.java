@@ -97,4 +97,29 @@ public class ProductService {
         Product product = getProduct(productId);
         return product.getOption(optionId);
     }
+
+    @Transactional(propagation = Propagation.REQUIRED)
+    public void deleteProductsByBrandId(Long brandId) {
+        List<Product> products = productRepository.findAllActiveByBrandId(brandId);
+        if (!products.isEmpty()) {
+            List<Long> productIds = products.stream()
+                .map(Product::getId)
+                .toList();
+            productRepository.softDeleteAllByIds(productIds);
+        }
+    }
+
+    @Transactional(propagation = Propagation.REQUIRED)
+    public void deleteProductsByCategoryIds(List<Long> categoryIds) {
+        if (categoryIds == null || categoryIds.isEmpty()) {
+            return;
+        }
+        List<Product> products = productRepository.findAllActiveByCategoryIds(categoryIds);
+        if (!products.isEmpty()) {
+            List<Long> productIds = products.stream()
+                .map(Product::getId)
+                .toList();
+            productRepository.softDeleteAllByIds(productIds);
+        }
+    }
 }

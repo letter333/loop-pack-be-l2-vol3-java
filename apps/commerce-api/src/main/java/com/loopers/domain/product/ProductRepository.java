@@ -14,11 +14,17 @@ public interface ProductRepository {
 
     List<Product> findAllActiveByCategoryId(Long categoryId);
 
+    List<Product> findAllActiveByBrandId(Long brandId);
+
+    List<Product> findAllActiveByCategoryIds(List<Long> categoryIds);
+
     Page<Product> findProducts(Long categoryId, String keyword, ProductSortType sort, Pageable pageable);
 
     Product save(Product product);
 
     void delete(Long id);
+
+    void softDeleteAllByIds(List<Long> ids);
 
     boolean existsById(Long id);
 }

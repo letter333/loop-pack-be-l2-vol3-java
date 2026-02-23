@@ -1,5 +1,6 @@
 package com.loopers.domain.category;
 
+import com.loopers.domain.product.ProductService;
 import com.loopers.support.error.CoreException;
 import com.loopers.support.error.ErrorType;
 import lombok.RequiredArgsConstructor;
@@ -7,6 +8,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Component
@@ -14,6 +16,7 @@ import java.util.List;
 public class CategoryService {
 
     private final CategoryRepository categoryRepository;
+    private final ProductService productService;
 
     @Transactional(readOnly = true, propagation = Propagation.SUPPORTS)
     public Category getCategory(Long categoryId) {
@@ -62,8 +65,17 @@ public class CategoryService {
     public void deleteCategory(Long categoryId) {
         Category category = getCategory(categoryId);
 
+        // 삭제할 카테고리 ID 수집 (자신 + 하위)
+        List<Long> categoryIdsToDelete = new ArrayList<>();
+        categoryIdsToDelete.add(categoryId);
+
         // 하위 카테고리도 함께 삭제 (CAT-012)
         List<Category> children = categoryRepository.findAllActiveChildrenByPath(category.getPath() + "/");
+        categoryIdsToDelete.addAll(children.stream().map(Category::getId).toList());
+
+        // 연관 상품 삭제
+        productService.deleteProductsByCategoryIds(categoryIdsToDelete);
+
         for (Category child : children) {
             categoryRepository.delete(child.getId());
         }

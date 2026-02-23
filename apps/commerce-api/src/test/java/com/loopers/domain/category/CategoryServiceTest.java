@@ -1,5 +1,10 @@
 package com.loopers.domain.category;
 
+import com.loopers.domain.brand.Brand;
+import com.loopers.domain.brand.BrandRepository;
+import com.loopers.domain.product.Product;
+import com.loopers.domain.product.ProductRepository;
+import com.loopers.domain.product.ProductService;
 import com.loopers.support.error.CoreException;
 import com.loopers.support.error.ErrorType;
 import com.loopers.utils.DatabaseCleanUp;
@@ -25,6 +30,15 @@ class CategoryServiceTest {
 
     @Autowired
     private CategoryRepository categoryRepository;
+
+    @Autowired
+    private ProductService productService;
+
+    @Autowired
+    private ProductRepository productRepository;
+
+    @Autowired
+    private BrandRepository brandRepository;
 
     @Autowired
     private DatabaseCleanUp databaseCleanUp;
@@ -213,6 +227,89 @@ class CategoryServiceTest {
                 () -> assertThat(categoryService.getCategory(parent.getId()).isDeleted()).isTrue(),
                 () -> assertThat(categoryService.getCategory(child.getId()).isDeleted()).isTrue(),
                 () -> assertThat(categoryService.getCategory(grandChild.getId()).isDeleted()).isTrue()
+            );
+        }
+
+        @Test
+        @DisplayName("카테고리 삭제 시 연관된 상품도 함께 Soft Delete 된다")
+        void deletesRelatedProducts_whenCategoryDeleted() {
+            // Arrange
+            Brand brand = brandRepository.save(new Brand("Nike", "스포츠 브랜드", "https://logo.png"));
+            Category category = categoryService.createCategory("스포츠", null);
+            Product product1 = productService.createProduct("나이키 신발", brand.getId(), category.getId(), 100000L);
+            Product product2 = productService.createProduct("나이키 가방", brand.getId(), category.getId(), 50000L);
+
+            // Act
+            categoryService.deleteCategory(category.getId());
+
+            // Assert
+            Product deletedProduct1 = productRepository.findById(product1.getId()).orElseThrow();
+            Product deletedProduct2 = productRepository.findById(product2.getId()).orElseThrow();
+            assertAll(
+                () -> assertThat(deletedProduct1.isDeleted()).isTrue(),
+                () -> assertThat(deletedProduct2.isDeleted()).isTrue()
+            );
+        }
+
+        @Test
+        @DisplayName("부모 카테고리 삭제 시 하위 카테고리의 상품도 함께 Soft Delete 된다")
+        void deletesChildCategoryProducts_whenParentCategoryDeleted() {
+            // Arrange
+            Brand brand = brandRepository.save(new Brand("Nike", "스포츠 브랜드", "https://logo.png"));
+            Category parent = categoryService.createCategory("전자제품", null);
+            Category child = categoryService.createCategory("휴대폰", parent.getId());
+            Category grandChild = categoryService.createCategory("스마트폰", child.getId());
+            Product parentProduct = productService.createProduct("전자제품1", brand.getId(), parent.getId(), 100000L);
+            Product childProduct = productService.createProduct("휴대폰1", brand.getId(), child.getId(), 200000L);
+            Product grandChildProduct = productService.createProduct("스마트폰1", brand.getId(), grandChild.getId(), 300000L);
+
+            // Act
+            categoryService.deleteCategory(parent.getId());
+
+            // Assert
+            Product deletedParentProduct = productRepository.findById(parentProduct.getId()).orElseThrow();
+            Product deletedChildProduct = productRepository.findById(childProduct.getId()).orElseThrow();
+            Product deletedGrandChildProduct = productRepository.findById(grandChildProduct.getId()).orElseThrow();
+            assertAll(
+                () -> assertThat(deletedParentProduct.isDeleted()).isTrue(),
+                () -> assertThat(deletedChildProduct.isDeleted()).isTrue(),
+                () -> assertThat(deletedGrandChildProduct.isDeleted()).isTrue()
+            );
+        }
+
+        @Test
+        @DisplayName("연관 상품이 없는 카테고리 삭제 시 정상 동작한다")
+        void deletesSuccessfully_whenNoRelatedProducts() {
+            // Arrange
+            Category category = categoryService.createCategory("전자제품", null);
+
+            // Act
+            categoryService.deleteCategory(category.getId());
+
+            // Assert
+            Category deleted = categoryService.getCategory(category.getId());
+            assertThat(deleted.isDeleted()).isTrue();
+        }
+
+        @Test
+        @DisplayName("다른 카테고리의 상품은 영향받지 않는다")
+        void doesNotAffectOtherCategoryProducts_whenCategoryDeleted() {
+            // Arrange
+            Brand brand = brandRepository.save(new Brand("Nike", "스포츠 브랜드", "https://logo.png"));
+            Category sports = categoryService.createCategory("스포츠", null);
+            Category electronics = categoryService.createCategory("전자제품", null);
+            Product sportsProduct = productService.createProduct("스포츠용품", brand.getId(), sports.getId(), 100000L);
+            Product electronicsProduct = productService.createProduct("전자제품1", brand.getId(), electronics.getId(), 200000L);
+
+            // Act
+            categoryService.deleteCategory(sports.getId());
+
+            // Assert
+            Product deletedSportsProduct = productRepository.findById(sportsProduct.getId()).orElseThrow();
+            Product activeElectronicsProduct = productRepository.findById(electronicsProduct.getId()).orElseThrow();
+            assertAll(
+                () -> assertThat(deletedSportsProduct.isDeleted()).isTrue(),
+                () -> assertThat(activeElectronicsProduct.isDeleted()).isFalse()
             );
         }
     }

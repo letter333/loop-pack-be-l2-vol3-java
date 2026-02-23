@@ -1,5 +1,10 @@
 package com.loopers.domain.brand;
 
+import com.loopers.domain.category.Category;
+import com.loopers.domain.category.CategoryRepository;
+import com.loopers.domain.product.Product;
+import com.loopers.domain.product.ProductRepository;
+import com.loopers.domain.product.ProductService;
 import com.loopers.support.error.CoreException;
 import com.loopers.support.error.ErrorType;
 import com.loopers.utils.DatabaseCleanUp;
@@ -25,6 +30,15 @@ class BrandServiceTest {
 
     @Autowired
     private BrandRepository brandRepository;
+
+    @Autowired
+    private ProductService productService;
+
+    @Autowired
+    private ProductRepository productRepository;
+
+    @Autowired
+    private CategoryRepository categoryRepository;
 
     @Autowired
     private DatabaseCleanUp databaseCleanUp;
@@ -229,6 +243,63 @@ class BrandServiceTest {
             assertThatThrownBy(() -> brandService.deleteBrand(nonExistentId))
                 .isInstanceOf(CoreException.class)
                 .satisfies(ex -> assertThat(((CoreException) ex).getErrorType()).isEqualTo(ErrorType.NOT_FOUND));
+        }
+
+        @Test
+        @DisplayName("브랜드 삭제 시 연관된 상품도 함께 Soft Delete 된다")
+        void deletesRelatedProducts_whenBrandDeleted() {
+            // Arrange
+            Brand brand = brandRepository.save(new Brand("Nike", "스포츠 브랜드", "https://logo.png"));
+            Category category = categoryRepository.save(new Category("스포츠"));
+            Product product1 = productService.createProduct("나이키 신발", brand.getId(), category.getId(), 100000L);
+            Product product2 = productService.createProduct("나이키 가방", brand.getId(), category.getId(), 50000L);
+
+            // Act
+            brandService.deleteBrand(brand.getId());
+
+            // Assert
+            Product deletedProduct1 = productRepository.findById(product1.getId()).orElseThrow();
+            Product deletedProduct2 = productRepository.findById(product2.getId()).orElseThrow();
+            assertAll(
+                () -> assertThat(deletedProduct1.isDeleted()).isTrue(),
+                () -> assertThat(deletedProduct2.isDeleted()).isTrue()
+            );
+        }
+
+        @Test
+        @DisplayName("연관 상품이 없는 브랜드 삭제 시 정상 동작한다")
+        void deletesSuccessfully_whenNoRelatedProducts() {
+            // Arrange
+            Brand brand = brandRepository.save(new Brand("Nike", "스포츠 브랜드", "https://logo.png"));
+
+            // Act
+            brandService.deleteBrand(brand.getId());
+
+            // Assert
+            Brand deleted = brandService.getBrand(brand.getId());
+            assertThat(deleted.isDeleted()).isTrue();
+        }
+
+        @Test
+        @DisplayName("다른 브랜드의 상품은 영향받지 않는다")
+        void doesNotAffectOtherBrandProducts_whenBrandDeleted() {
+            // Arrange
+            Brand nike = brandRepository.save(new Brand("Nike", "스포츠 브랜드", "https://nike.png"));
+            Brand adidas = brandRepository.save(new Brand("Adidas", "독일 브랜드", "https://adidas.png"));
+            Category category = categoryRepository.save(new Category("스포츠"));
+            Product nikeProduct = productService.createProduct("나이키 신발", nike.getId(), category.getId(), 100000L);
+            Product adidasProduct = productService.createProduct("아디다스 신발", adidas.getId(), category.getId(), 120000L);
+
+            // Act
+            brandService.deleteBrand(nike.getId());
+
+            // Assert
+            Product deletedNikeProduct = productRepository.findById(nikeProduct.getId()).orElseThrow();
+            Product activeAdidasProduct = productRepository.findById(adidasProduct.getId()).orElseThrow();
+            assertAll(
+                () -> assertThat(deletedNikeProduct.isDeleted()).isTrue(),
+                () -> assertThat(activeAdidasProduct.isDeleted()).isFalse()
+            );
         }
     }
 
