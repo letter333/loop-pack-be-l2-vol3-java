@@ -52,16 +52,16 @@ public class OrderEntity {
     @Column(name = "recipient_name", nullable = false, length = 50)
     private String recipientName;
 
-    @Column(name = "phone", nullable = false, length = 20)
+    @Column(name = "recipient_phone", nullable = false, length = 20)
     private String phone;
 
-    @Column(name = "zip_code", length = 10)
+    @Column(name = "recipient_zip_code", length = 10)
     private String zipCode;
 
-    @Column(name = "address", nullable = false, length = 255)
+    @Column(name = "recipient_address", nullable = false, length = 255)
     private String address;
 
-    @Column(name = "address_detail", length = 255)
+    @Column(name = "recipient_address_detail", length = 255)
     private String addressDetail;
 
     @Column(name = "shipping_memo", length = 255)
