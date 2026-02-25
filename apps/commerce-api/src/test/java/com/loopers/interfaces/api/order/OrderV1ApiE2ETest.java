@@ -417,7 +417,9 @@ class OrderV1ApiE2ETest {
         @DisplayName("취소 후 재고가 복구된다")
         void restoresStock_afterCancel() {
             // arrange
-            int initialStock = product.getOptions().get(0).getStockQuantity();
+            // Note: @BeforeEach already created an order with quantity=1, so stock is 99 at this point
+            Product currentProduct = productRepository.findById(product.getId()).orElseThrow();
+            int stockBeforeNewOrder = currentProduct.getOptions().get(0).getStockQuantity();
             int orderedQuantity = 5;
 
             HttpHeaders headers = createAuthHeaders(member.getLoginId(), "Password123!");
@@ -444,7 +446,7 @@ class OrderV1ApiE2ETest {
                 .findFirst()
                 .map(ProductOption::getStockQuantity)
                 .orElse(0);
-            assertThat(finalStock).isEqualTo(initialStock);
+            assertThat(finalStock).isEqualTo(stockBeforeNewOrder);
         }
 
         private Long createOrderAndGetId() {

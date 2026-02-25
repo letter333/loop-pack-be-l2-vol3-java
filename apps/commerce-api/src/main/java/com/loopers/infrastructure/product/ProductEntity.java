@@ -161,12 +161,28 @@ public class ProductEntity extends BaseEntity {
     }
 
     public void syncOptions(List<ProductOption> newOptions) {
-        this.options.clear();
-        if (newOptions != null) {
-            for (ProductOption option : newOptions) {
-                addOption(ProductOptionEntity.from(option));
+        if (newOptions == null || newOptions.isEmpty()) {
+            this.options.clear();
+            return;
+        }
+
+        // Update existing options and track which IDs we've seen
+        Set<Long> updatedIds = new HashSet<>();
+        for (ProductOption domainOption : newOptions) {
+            if (domainOption.getId() != null) {
+                ProductOptionEntity existingEntity = findOptionById(domainOption.getId());
+                if (existingEntity != null) {
+                    existingEntity.updateStockQuantity(domainOption.getStockQuantity());
+                    updatedIds.add(domainOption.getId());
+                }
+            } else {
+                // New option without ID
+                addOption(ProductOptionEntity.from(domainOption));
             }
         }
+
+        // Remove options that are no longer in the domain list
+        this.options.removeIf(opt -> opt.getId() != null && !updatedIds.contains(opt.getId()));
     }
 
     public void syncImages(List<ProductImage> newImages) {

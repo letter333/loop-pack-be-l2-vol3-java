@@ -30,13 +30,13 @@ public class OrderRepositoryImpl implements OrderRepository {
 
     @Override
     public Optional<Order> findById(Long id) {
-        return orderJpaRepository.findById(id)
+        return orderJpaRepository.findByIdWithOrderProducts(id)
             .map(OrderEntity::toDomain);
     }
 
     @Override
     public List<Order> findByMemberIdAndCreatedAtAfter(Long memberId, LocalDateTime startDate) {
-        return orderJpaRepository.findByMemberIdAndCreatedAtAfterOrderByCreatedAtDesc(memberId, startDate)
+        return orderJpaRepository.findByMemberIdAndCreatedAtAfterWithOrderProducts(memberId, startDate)
             .stream()
             .map(OrderEntity::toDomain)
             .toList();
@@ -44,7 +44,7 @@ public class OrderRepositoryImpl implements OrderRepository {
 
     @Override
     public List<Order> findByMemberId(Long memberId) {
-        return orderJpaRepository.findByMemberIdOrderByCreatedAtDesc(memberId)
+        return orderJpaRepository.findByMemberIdWithOrderProducts(memberId)
             .stream()
             .map(OrderEntity::toDomain)
             .toList();
@@ -52,7 +52,7 @@ public class OrderRepositoryImpl implements OrderRepository {
 
     @Override
     public List<Order> findAll() {
-        return orderJpaRepository.findAllByOrderByCreatedAtDesc()
+        return orderJpaRepository.findAllWithOrderProducts()
             .stream()
             .map(OrderEntity::toDomain)
             .toList();

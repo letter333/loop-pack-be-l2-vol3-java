@@ -1,0 +1,71 @@
+### Order API - 주문 관련 API 테스트
+
+### 환경 변수
+@baseUrl = http://localhost:8080
+@loginId = testuser
+@password = Password123!
+@adminLdap = loopers.admin
+
+### ===== User API =====
+
+### 주문 생성
+POST {{baseUrl}}/api/v1/orders
+Content-Type: application/json
+X-Loopers-LoginId: {{loginId}}
+X-Loopers-LoginPw: {{password}}
+
+{
+  "addressId": 1,
+  "shippingMemo": "문 앞에 놓아주세요",
+  "items": [
+    {
+      "productId": 1,
+      "productOptionId": 1,
+      "quantity": 2
+    }
+  ]
+}
+
+### 주문 목록 조회 (기본: 3개월)
+GET {{baseUrl}}/api/v1/orders
+X-Loopers-LoginId: {{loginId}}
+X-Loopers-LoginPw: {{password}}
+
+### 주문 목록 조회 (6개월)
+GET {{baseUrl}}/api/v1/orders?period=SIX_MONTHS
+X-Loopers-LoginId: {{loginId}}
+X-Loopers-LoginPw: {{password}}
+
+### 주문 목록 조회 (1년)
+GET {{baseUrl}}/api/v1/orders?period=ONE_YEAR
+X-Loopers-LoginId: {{loginId}}
+X-Loopers-LoginPw: {{password}}
+
+### 주문 목록 조회 (전체)
+GET {{baseUrl}}/api/v1/orders?period=ALL
+X-Loopers-LoginId: {{loginId}}
+X-Loopers-LoginPw: {{password}}
+
+### 주문 상세 조회
+GET {{baseUrl}}/api/v1/orders/1
+X-Loopers-LoginId: {{loginId}}
+X-Loopers-LoginPw: {{password}}
+
+### 주문 취소
+PATCH {{baseUrl}}/api/v1/orders/1/cancel
+X-Loopers-LoginId: {{loginId}}
+X-Loopers-LoginPw: {{password}}
+
+### ===== Admin API =====
+
+### [Admin] 주문 목록 조회 (전체)
+GET {{baseUrl}}/api/v1/admin/orders
+X-Loopers-Ldap: {{adminLdap}}
+
+### [Admin] 주문 목록 조회 (3개월)
+GET {{baseUrl}}/api/v1/admin/orders?period=THREE_MONTHS
+X-Loopers-Ldap: {{adminLdap}}
+
+### [Admin] 주문 상세 조회
+GET {{baseUrl}}/api/v1/admin/orders/1
+X-Loopers-Ldap: {{adminLdap}}
