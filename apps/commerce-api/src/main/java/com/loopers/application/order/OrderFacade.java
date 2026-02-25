@@ -8,6 +8,7 @@ import com.loopers.domain.order.Order;
 import com.loopers.domain.order.OrderPeriod;
 import com.loopers.domain.order.OrderProduct;
 import com.loopers.domain.order.OrderService;
+import com.loopers.domain.order.OrderStatus;
 import com.loopers.domain.product.ImageType;
 import com.loopers.domain.product.Product;
 import com.loopers.domain.product.ProductImage;
@@ -128,6 +129,24 @@ public class OrderFacade {
         adminValidator.validate(ldap);
         Order order = orderService.getOrder(orderId);
         return OrderAdminDetailInfo.from(order);
+    }
+
+    @Transactional
+    public OrderAdminDetailInfo changeOrderStatusForAdmin(String ldap, Long orderId, OrderStatus newStatus) {
+        adminValidator.validate(ldap);
+        Order order = orderService.getOrder(orderId);
+
+        boolean needsStockRestore = (newStatus == OrderStatus.CANCELLED);
+        List<OrderProduct> orderProducts = needsStockRestore ? order.getOrderProducts() : List.of();
+
+        Order updatedOrder = orderService.changeStatus(orderId, newStatus);
+
+        if (needsStockRestore) {
+            for (OrderProduct op : orderProducts) {
+                productService.increaseStock(op.getProductId(), op.getProductOptionId(), op.getQuantity());
+            }
+        }
+        return OrderAdminDetailInfo.from(updatedOrder);
     }
 
     private Address findAddressForMember(Long memberId, Long addressId) {

@@ -28,4 +28,14 @@ public interface OrderAdminV1ApiSpec {
         @Parameter(description = "LDAP 인증 헤더", required = true) String ldap,
         @Parameter(description = "주문 ID", required = true) Long orderId
     );
+
+    @Operation(
+        summary = "[Admin] 주문 상태 변경",
+        description = "주문 상태를 변경합니다. 관리자 권한이 필요합니다."
+    )
+    ApiResponse<OrderAdminV1Dto.OrderAdminDetailResponse> changeOrderStatus(
+        @Parameter(description = "LDAP 인증 헤더", required = true) String ldap,
+        @Parameter(description = "주문 ID", required = true) Long orderId,
+        OrderAdminV1Dto.ChangeStatusRequest request
+    );
 }

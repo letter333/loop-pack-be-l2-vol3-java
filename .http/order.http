@@ -69,3 +69,57 @@ X-Loopers-Ldap: {{adminLdap}}
 ### [Admin] 주문 상세 조회
 GET {{baseUrl}}/api/v1/admin/orders/1
 X-Loopers-Ldap: {{adminLdap}}
+
+### [Admin] 주문 상태 변경 - PAID
+PATCH {{baseUrl}}/api/v1/admin/orders/1/status
+Content-Type: application/json
+X-Loopers-Ldap: {{adminLdap}}
+
+{
+  "status": "PAID"
+}
+
+### [Admin] 주문 상태 변경 - PREPARING
+PATCH {{baseUrl}}/api/v1/admin/orders/1/status
+Content-Type: application/json
+X-Loopers-Ldap: {{adminLdap}}
+
+{
+  "status": "PREPARING"
+}
+
+### [Admin] 주문 상태 변경 - SHIPPING
+PATCH {{baseUrl}}/api/v1/admin/orders/1/status
+Content-Type: application/json
+X-Loopers-Ldap: {{adminLdap}}
+
+{
+  "status": "SHIPPING"
+}
+
+### [Admin] 주문 상태 변경 - DELIVERED
+PATCH {{baseUrl}}/api/v1/admin/orders/1/status
+Content-Type: application/json
+X-Loopers-Ldap: {{adminLdap}}
+
+{
+  "status": "DELIVERED"
+}
+
+### [Admin] 주문 상태 변경 - CANCELLED (재고 복구됨)
+PATCH {{baseUrl}}/api/v1/admin/orders/1/status
+Content-Type: application/json
+X-Loopers-Ldap: {{adminLdap}}
+
+{
+  "status": "CANCELLED"
+}
+
+### [Admin] 주문 상태 변경 - RETURNED (재고 복구 안됨)
+PATCH {{baseUrl}}/api/v1/admin/orders/1/status
+Content-Type: application/json
+X-Loopers-Ldap: {{adminLdap}}
+
+{
+  "status": "RETURNED"
+}

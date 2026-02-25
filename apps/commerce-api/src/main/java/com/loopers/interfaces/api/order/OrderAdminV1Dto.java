@@ -5,10 +5,16 @@ import com.loopers.application.order.OrderInfo;
 import com.loopers.application.order.OrderProductInfo;
 import com.loopers.domain.order.OrderProductStatus;
 import com.loopers.domain.order.OrderStatus;
+import jakarta.validation.constraints.NotNull;
 
 import java.util.List;
 
 public class OrderAdminV1Dto {
+
+    public record ChangeStatusRequest(
+        @NotNull(message = "변경할 상태는 필수입니다.")
+        OrderStatus status
+    ) {}
 
     public record OrderAdminResponse(
         Long id,

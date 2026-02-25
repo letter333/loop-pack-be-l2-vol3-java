@@ -103,6 +103,28 @@ public class Order {
         this.orderProducts.forEach(OrderProduct::cancel);
     }
 
+    public boolean canTransitionTo(OrderStatus newStatus) {
+        return switch (this.status) {
+            case PENDING -> newStatus == OrderStatus.PAID || newStatus == OrderStatus.CANCELLED;
+            case PAID -> newStatus == OrderStatus.PREPARING || newStatus == OrderStatus.CANCELLED;
+            case PREPARING -> newStatus == OrderStatus.SHIPPING;
+            case SHIPPING -> newStatus == OrderStatus.DELIVERED;
+            case DELIVERED -> newStatus == OrderStatus.RETURNED;
+            case CANCELLED, RETURNED -> false;
+        };
+    }
+
+    public void transitionTo(OrderStatus newStatus) {
+        if (!canTransitionTo(newStatus)) {
+            throw new CoreException(ErrorType.BAD_REQUEST,
+                String.format("'%s' 상태에서 '%s' 상태로 변경할 수 없습니다.", this.status, newStatus));
+        }
+        this.status = newStatus;
+        if (newStatus == OrderStatus.CANCELLED) {
+            this.orderProducts.forEach(OrderProduct::cancel);
+        }
+    }
+
     public boolean isOwnedBy(Long memberId) {
         return this.memberId.equals(memberId);
     }

@@ -6,6 +6,8 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
+import java.util.List;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertAll;
@@ -291,6 +293,222 @@ class OrderTest {
 
             // act & assert
             assertThat(order.isOwnedBy(2L)).isFalse();
+        }
+    }
+
+    @DisplayName("상태 전환 가능 여부 (canTransitionTo)")
+    @Nested
+    class CanTransitionTo {
+
+        @Test
+        @DisplayName("PENDING에서 PAID로 전환 가능")
+        void canTransition_fromPending_toPaid() {
+            // arrange
+            Order order = createOrderWithStatus(OrderStatus.PENDING);
+
+            // act & assert
+            assertThat(order.canTransitionTo(OrderStatus.PAID)).isTrue();
+        }
+
+        @Test
+        @DisplayName("PENDING에서 CANCELLED로 전환 가능")
+        void canTransition_fromPending_toCancelled() {
+            // arrange
+            Order order = createOrderWithStatus(OrderStatus.PENDING);
+
+            // act & assert
+            assertThat(order.canTransitionTo(OrderStatus.CANCELLED)).isTrue();
+        }
+
+        @Test
+        @DisplayName("PENDING에서 PREPARING으로 전환 불가")
+        void cannotTransition_fromPending_toPreparing() {
+            // arrange
+            Order order = createOrderWithStatus(OrderStatus.PENDING);
+
+            // act & assert
+            assertThat(order.canTransitionTo(OrderStatus.PREPARING)).isFalse();
+        }
+
+        @Test
+        @DisplayName("PAID에서 PREPARING으로 전환 가능")
+        void canTransition_fromPaid_toPreparing() {
+            // arrange
+            Order order = createOrderWithStatus(OrderStatus.PAID);
+
+            // act & assert
+            assertThat(order.canTransitionTo(OrderStatus.PREPARING)).isTrue();
+        }
+
+        @Test
+        @DisplayName("PAID에서 CANCELLED로 전환 가능")
+        void canTransition_fromPaid_toCancelled() {
+            // arrange
+            Order order = createOrderWithStatus(OrderStatus.PAID);
+
+            // act & assert
+            assertThat(order.canTransitionTo(OrderStatus.CANCELLED)).isTrue();
+        }
+
+        @Test
+        @DisplayName("PAID에서 SHIPPING으로 직접 전환 불가")
+        void cannotTransition_fromPaid_toShipping() {
+            // arrange
+            Order order = createOrderWithStatus(OrderStatus.PAID);
+
+            // act & assert
+            assertThat(order.canTransitionTo(OrderStatus.SHIPPING)).isFalse();
+        }
+
+        @Test
+        @DisplayName("PREPARING에서 SHIPPING으로 전환 가능")
+        void canTransition_fromPreparing_toShipping() {
+            // arrange
+            Order order = createOrderWithStatus(OrderStatus.PREPARING);
+
+            // act & assert
+            assertThat(order.canTransitionTo(OrderStatus.SHIPPING)).isTrue();
+        }
+
+        @Test
+        @DisplayName("PREPARING에서 CANCELLED로 전환 불가")
+        void cannotTransition_fromPreparing_toCancelled() {
+            // arrange
+            Order order = createOrderWithStatus(OrderStatus.PREPARING);
+
+            // act & assert
+            assertThat(order.canTransitionTo(OrderStatus.CANCELLED)).isFalse();
+        }
+
+        @Test
+        @DisplayName("SHIPPING에서 DELIVERED로 전환 가능")
+        void canTransition_fromShipping_toDelivered() {
+            // arrange
+            Order order = createOrderWithStatus(OrderStatus.SHIPPING);
+
+            // act & assert
+            assertThat(order.canTransitionTo(OrderStatus.DELIVERED)).isTrue();
+        }
+
+        @Test
+        @DisplayName("DELIVERED에서 RETURNED로 전환 가능")
+        void canTransition_fromDelivered_toReturned() {
+            // arrange
+            Order order = createOrderWithStatus(OrderStatus.DELIVERED);
+
+            // act & assert
+            assertThat(order.canTransitionTo(OrderStatus.RETURNED)).isTrue();
+        }
+
+        @Test
+        @DisplayName("CANCELLED에서는 어떤 상태로도 전환 불가")
+        void cannotTransition_fromCancelled() {
+            // arrange
+            Order order = createOrderWithStatus(OrderStatus.CANCELLED);
+
+            // act & assert
+            assertAll(
+                () -> assertThat(order.canTransitionTo(OrderStatus.PENDING)).isFalse(),
+                () -> assertThat(order.canTransitionTo(OrderStatus.PAID)).isFalse(),
+                () -> assertThat(order.canTransitionTo(OrderStatus.PREPARING)).isFalse(),
+                () -> assertThat(order.canTransitionTo(OrderStatus.SHIPPING)).isFalse(),
+                () -> assertThat(order.canTransitionTo(OrderStatus.DELIVERED)).isFalse(),
+                () -> assertThat(order.canTransitionTo(OrderStatus.RETURNED)).isFalse()
+            );
+        }
+
+        @Test
+        @DisplayName("RETURNED에서는 어떤 상태로도 전환 불가")
+        void cannotTransition_fromReturned() {
+            // arrange
+            Order order = createOrderWithStatus(OrderStatus.RETURNED);
+
+            // act & assert
+            assertAll(
+                () -> assertThat(order.canTransitionTo(OrderStatus.PENDING)).isFalse(),
+                () -> assertThat(order.canTransitionTo(OrderStatus.PAID)).isFalse(),
+                () -> assertThat(order.canTransitionTo(OrderStatus.PREPARING)).isFalse(),
+                () -> assertThat(order.canTransitionTo(OrderStatus.SHIPPING)).isFalse(),
+                () -> assertThat(order.canTransitionTo(OrderStatus.DELIVERED)).isFalse(),
+                () -> assertThat(order.canTransitionTo(OrderStatus.CANCELLED)).isFalse()
+            );
+        }
+    }
+
+    @DisplayName("상태 전환 (transitionTo)")
+    @Nested
+    class TransitionTo {
+
+        @Test
+        @DisplayName("유효한 상태 전환 시 상태가 변경된다")
+        void changesStatus_whenValidTransition() {
+            // arrange
+            Order order = createOrderWithStatus(OrderStatus.PAID);
+
+            // act
+            order.transitionTo(OrderStatus.PREPARING);
+
+            // assert
+            assertThat(order.getStatus()).isEqualTo(OrderStatus.PREPARING);
+        }
+
+        @Test
+        @DisplayName("유효하지 않은 상태 전환 시 예외가 발생한다")
+        void throwsException_whenInvalidTransition() {
+            // arrange
+            Order order = createOrderWithStatus(OrderStatus.PENDING);
+
+            // act & assert
+            assertThatThrownBy(() -> order.transitionTo(OrderStatus.SHIPPING))
+                .isInstanceOf(CoreException.class)
+                .extracting("errorType")
+                .isEqualTo(ErrorType.BAD_REQUEST);
+        }
+
+        @Test
+        @DisplayName("CANCELLED로 전환 시 모든 OrderProduct도 취소된다")
+        void cancelsAllOrderProducts_whenTransitionToCancelled() {
+            // arrange
+            Order order = createOrderWithStatus(OrderStatus.PENDING);
+            OrderProduct orderProduct1 = new OrderProduct(1L, 10L, "상품1", "옵션1", 10000L, 0L, 1, null);
+            OrderProduct orderProduct2 = new OrderProduct(2L, 20L, "상품2", "옵션2", 20000L, 0L, 1, null);
+            order.setOrderProducts(List.of(orderProduct1, orderProduct2));
+
+            // act
+            order.transitionTo(OrderStatus.CANCELLED);
+
+            // assert
+            assertAll(
+                () -> assertThat(order.getStatus()).isEqualTo(OrderStatus.CANCELLED),
+                () -> assertThat(orderProduct1.getStatus()).isEqualTo(OrderProductStatus.CANCELLED),
+                () -> assertThat(orderProduct2.getStatus()).isEqualTo(OrderProductStatus.CANCELLED)
+            );
+        }
+
+        @Test
+        @DisplayName("CANCELLED 상태에서 전환 시도하면 예외가 발생한다")
+        void throwsException_whenTransitionFromCancelled() {
+            // arrange
+            Order order = createOrderWithStatus(OrderStatus.CANCELLED);
+
+            // act & assert
+            assertThatThrownBy(() -> order.transitionTo(OrderStatus.PAID))
+                .isInstanceOf(CoreException.class)
+                .extracting("errorType")
+                .isEqualTo(ErrorType.BAD_REQUEST);
+        }
+
+        @Test
+        @DisplayName("RETURNED 상태에서 전환 시도하면 예외가 발생한다")
+        void throwsException_whenTransitionFromReturned() {
+            // arrange
+            Order order = createOrderWithStatus(OrderStatus.RETURNED);
+
+            // act & assert
+            assertThatThrownBy(() -> order.transitionTo(OrderStatus.CANCELLED))
+                .isInstanceOf(CoreException.class)
+                .extracting("errorType")
+                .isEqualTo(ErrorType.BAD_REQUEST);
         }
     }
 

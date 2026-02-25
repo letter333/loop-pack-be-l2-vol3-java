@@ -45,6 +45,13 @@ public class OrderService {
         return orderRepository.save(order);
     }
 
+    @Transactional(propagation = Propagation.REQUIRED)
+    public Order changeStatus(Long orderId, OrderStatus newStatus) {
+        Order order = getOrder(orderId);
+        order.transitionTo(newStatus);
+        return orderRepository.save(order);
+    }
+
     public void validateOwnership(Long memberId, Order order) {
         if (!order.isOwnedBy(memberId)) {
             throw new CoreException(ErrorType.FORBIDDEN, "해당 주문에 대한 권한이 없습니다.");
