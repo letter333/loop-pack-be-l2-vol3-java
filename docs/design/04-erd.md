@@ -124,6 +124,7 @@ varchar(100) option_value "주문 당시 옵션값 (예: 빨강) (스냅샷)"
 bigint price "주문 당시 판매가"
 bigint extra_price "주문 당시 옵션 추가금"
 int quantity "주문 수량"
+varchar(500) thumbnail_url "주문 당시 상품 썸네일 URL (스냅샷)"
 enum status "주문 상품 상태 (NORMAL, CANCEL_REQUESTED, CANCELLED, RETURN_REQUESTED, RETURNED)"
 datetime created_at
 datetime updated_at
