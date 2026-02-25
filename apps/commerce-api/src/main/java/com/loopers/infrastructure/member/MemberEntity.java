@@ -9,22 +9,22 @@ import jakarta.persistence.Table;
 import java.time.LocalDate;
 
 @Entity
-@Table(name = "member")
+@Table(name = "members")
 public class MemberEntity extends BaseEntity {
 
-    @Column(name = "login_id", nullable = false, unique = true, length = 30)
+    @Column(name = "login_id", nullable = false, unique = true, length = 50)
     private String loginId;
 
     @Column(name = "password", nullable = false)
     private String password;
 
-    @Column(name = "name", nullable = false, length = 50)
+    @Column(name = "name", nullable = false, length = 30)
     private String name;
 
     @Column(name = "birthday", nullable = false)
     private LocalDate birthday;
 
-    @Column(name = "email", nullable = false, unique = true, length = 100)
+    @Column(name = "email", nullable = false, unique = true, length = 50)
     private String email;
 
     protected MemberEntity() {}

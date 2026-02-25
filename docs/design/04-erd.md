@@ -24,7 +24,6 @@ varchar(255) address_detail "상세 주소"
 boolean is_default "기본 배송지 여부"
 datetime created_at
 datetime updated_at
-datetime deleted_at
 }
 
 products {
@@ -37,6 +36,7 @@ bigint brand_id FK "NOT NULL | 브랜드 ID"
 bigint category_id FK "NOT NULL | 카테고리 ID"
 bigint discount "할인 금액, 할인율"
 enum discount_type "PRICE, RATE"
+bigint like_count "좋아요 수 (기본값: 0)"
 datetime created_at
 datetime updated_at
 datetime deleted_at
@@ -70,6 +70,7 @@ bigint id PK
 varchar(50) name "NOT NULL | 브랜드명"
 text description "브랜드 설명"
 varchar(512) logo_image_url "로고 이미지 URL"
+bigint like_count "좋아요 수 (기본값: 0)"
 datetime created_at
 datetime updated_at
 datetime deleted_at
