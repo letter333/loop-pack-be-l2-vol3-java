@@ -17,10 +17,10 @@ public record OrderAdminDetailInfo(
     String address,
     String addressDetail,
     String shippingMemo,
-    int totalAmount,
-    int shippingFee,
-    int discountAmount,
-    int paymentAmount,
+    Long totalAmount,
+    Long shippingFee,
+    Long discountAmount,
+    Long paymentAmount,
     List<OrderProductInfo> orderProducts
 ) {
 

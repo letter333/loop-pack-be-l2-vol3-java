@@ -12,14 +12,14 @@ public class OrderProduct {
     private Long productOptionId;
     private String productName;
     private String optionName;
-    private int price;
-    private int extraPrice;
+    private Long price;
+    private Long extraPrice;
     private int quantity;
     private String thumbnailUrl;
     private OrderProductStatus status;
 
     public OrderProduct(Long productId, Long productOptionId, String productName, String optionName,
-                        int price, int extraPrice, int quantity, String thumbnailUrl) {
+                        Long price, Long extraPrice, int quantity, String thumbnailUrl) {
         validateQuantity(quantity);
 
         this.productId = productId;
@@ -34,7 +34,7 @@ public class OrderProduct {
     }
 
     public OrderProduct(Long id, Long productId, Long productOptionId, String productName, String optionName,
-                        int price, int extraPrice, int quantity, String thumbnailUrl, OrderProductStatus status) {
+                        Long price, Long extraPrice, int quantity, String thumbnailUrl, OrderProductStatus status) {
         this.id = id;
         this.productId = productId;
         this.productOptionId = productOptionId;
@@ -47,7 +47,7 @@ public class OrderProduct {
         this.status = status;
     }
 
-    public int calculateTotalPrice() {
+    public Long calculateTotalPrice() {
         return (price + extraPrice) * quantity;
     }
 

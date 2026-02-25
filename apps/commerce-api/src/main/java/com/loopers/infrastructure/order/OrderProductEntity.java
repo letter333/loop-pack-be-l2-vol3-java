@@ -50,10 +50,10 @@ public class OrderProductEntity {
     private String optionName;
 
     @Column(name = "price", nullable = false)
-    private int price;
+    private Long price;
 
     @Column(name = "extra_price", nullable = false)
-    private int extraPrice;
+    private Long extraPrice;
 
     @Column(name = "quantity", nullable = false)
     private int quantity;

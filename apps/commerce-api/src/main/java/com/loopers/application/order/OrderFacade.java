@@ -60,8 +60,8 @@ public class OrderFacade {
                 item.productOptionId(),
                 product.getName(),
                 option.getDisplayName(),
-                product.getBasePrice().intValue(),
-                option.getExtraPrice() != null ? option.getExtraPrice().intValue() : 0,
+                product.getBasePrice(),
+                option.getExtraPrice() != null ? option.getExtraPrice() : 0L,
                 item.quantity(),
                 thumbnailUrl
             );

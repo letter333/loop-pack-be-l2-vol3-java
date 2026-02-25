@@ -385,7 +385,7 @@ class OrderFacadeTest {
         return new Order(
             id, memberId, "ORD20250225-0000001", "테스트 주문",
             "홍길동", "010-1234-5678", "06234", "서울시 강남구", "101호", "문 앞에 놓아주세요",
-            status, 10000, 0, 0, 10000
+            status, 10000L, 0L, 0L, 10000L
         );
     }
 
@@ -395,7 +395,7 @@ class OrderFacadeTest {
             ? OrderProductStatus.CANCELLED
             : OrderProductStatus.NORMAL;
         OrderProduct orderProduct = new OrderProduct(
-            1L, 1L, 10L, "테스트 상품", "옵션1", 5000, 0, 2, null, productStatus
+            1L, 1L, 10L, "테스트 상품", "옵션1", 5000L, 0L, 2, null, productStatus
         );
         order.setOrderProducts(List.of(orderProduct));
         return order;

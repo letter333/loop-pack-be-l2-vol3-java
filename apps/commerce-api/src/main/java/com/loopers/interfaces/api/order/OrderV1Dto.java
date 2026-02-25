@@ -46,8 +46,8 @@ public class OrderV1Dto {
         String orderNumber,
         String orderName,
         OrderStatus status,
-        int totalAmount,
-        int paymentAmount,
+        Long totalAmount,
+        Long paymentAmount,
         String thumbnailUrl
     ) {
         public static OrderResponse from(OrderInfo info) {
@@ -74,10 +74,10 @@ public class OrderV1Dto {
         String address,
         String addressDetail,
         String shippingMemo,
-        int totalAmount,
-        int shippingFee,
-        int discountAmount,
-        int paymentAmount,
+        Long totalAmount,
+        Long shippingFee,
+        Long discountAmount,
+        Long paymentAmount,
         List<OrderProductResponse> orderProducts
     ) {
         public static OrderDetailResponse from(OrderDetailInfo info) {
@@ -110,8 +110,8 @@ public class OrderV1Dto {
         Long productOptionId,
         String productName,
         String optionName,
-        int price,
-        int extraPrice,
+        Long price,
+        Long extraPrice,
         int quantity,
         String thumbnailUrl,
         OrderProductStatus status

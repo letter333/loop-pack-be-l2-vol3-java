@@ -74,7 +74,7 @@ class OrderTest {
         void addsOrderProduct() {
             // arrange
             Order order = new Order(1L, "홍길동", "010-1234-5678", null, "서울시", null, null);
-            OrderProduct orderProduct = new OrderProduct(1L, 10L, "상품1", "옵션1", 10000, 0, 1, null);
+            OrderProduct orderProduct = new OrderProduct(1L, 10L, "상품1", "옵션1", 10000L, 0L, 1, null);
 
             // act
             order.addOrderProduct(orderProduct);
@@ -89,7 +89,7 @@ class OrderTest {
         void generatesOrderName_withSingleProduct() {
             // arrange
             Order order = new Order(1L, "홍길동", "010-1234-5678", null, "서울시", null, null);
-            OrderProduct orderProduct = new OrderProduct(1L, 10L, "테스트상품", "옵션1", 10000, 0, 1, null);
+            OrderProduct orderProduct = new OrderProduct(1L, 10L, "테스트상품", "옵션1", 10000L, 0L, 1, null);
 
             // act
             order.addOrderProduct(orderProduct);
@@ -103,8 +103,8 @@ class OrderTest {
         void generatesOrderName_withMultipleProducts() {
             // arrange
             Order order = new Order(1L, "홍길동", "010-1234-5678", null, "서울시", null, null);
-            OrderProduct orderProduct1 = new OrderProduct(1L, 10L, "첫번째상품", "옵션1", 10000, 0, 1, null);
-            OrderProduct orderProduct2 = new OrderProduct(2L, 20L, "두번째상품", "옵션2", 20000, 0, 1, null);
+            OrderProduct orderProduct1 = new OrderProduct(1L, 10L, "첫번째상품", "옵션1", 10000L, 0L, 1, null);
+            OrderProduct orderProduct2 = new OrderProduct(2L, 20L, "두번째상품", "옵션2", 20000L, 0L, 1, null);
 
             // act
             order.addOrderProduct(orderProduct1);
@@ -119,8 +119,8 @@ class OrderTest {
         void calculatesTotalAmount() {
             // arrange
             Order order = new Order(1L, "홍길동", "010-1234-5678", null, "서울시", null, null);
-            OrderProduct orderProduct1 = new OrderProduct(1L, 10L, "상품1", "옵션1", 10000, 1000, 2, null);
-            OrderProduct orderProduct2 = new OrderProduct(2L, 20L, "상품2", "옵션2", 5000, 0, 3, null);
+            OrderProduct orderProduct1 = new OrderProduct(1L, 10L, "상품1", "옵션1", 10000L, 1000L, 2, null);
+            OrderProduct orderProduct2 = new OrderProduct(2L, 20L, "상품2", "옵션2", 5000L, 0L, 3, null);
 
             // act
             order.addOrderProduct(orderProduct1);
@@ -136,17 +136,17 @@ class OrderTest {
         void calculatesPaymentAmount() {
             // arrange
             Order order = new Order(1L, "홍길동", "010-1234-5678", null, "서울시", null, null);
-            OrderProduct orderProduct = new OrderProduct(1L, 10L, "상품1", "옵션1", 10000, 0, 1, null);
+            OrderProduct orderProduct = new OrderProduct(1L, 10L, "상품1", "옵션1", 10000L, 0L, 1, null);
             order.addOrderProduct(orderProduct);
-            order.setShippingFee(3000);
-            order.setDiscountAmount(1000);
+            order.setShippingFee(3000L);
+            order.setDiscountAmount(1000L);
 
             // act
             order.calculateAmounts();
 
             // assert
             // 10000 + 3000 - 1000 = 12000
-            assertThat(order.getPaymentAmount()).isEqualTo(12000);
+            assertThat(order.getPaymentAmount()).isEqualTo(12000L);
         }
     }
 
@@ -253,8 +253,8 @@ class OrderTest {
         void cancelsAllOrderProducts() {
             // arrange
             Order order = new Order(1L, "홍길동", "010-1234-5678", null, "서울시", null, null);
-            OrderProduct orderProduct1 = new OrderProduct(1L, 10L, "상품1", "옵션1", 10000, 0, 1, null);
-            OrderProduct orderProduct2 = new OrderProduct(2L, 20L, "상품2", "옵션2", 20000, 0, 1, null);
+            OrderProduct orderProduct1 = new OrderProduct(1L, 10L, "상품1", "옵션1", 10000L, 0L, 1, null);
+            OrderProduct orderProduct2 = new OrderProduct(2L, 20L, "상품2", "옵션2", 20000L, 0L, 1, null);
             order.addOrderProduct(orderProduct1);
             order.addOrderProduct(orderProduct2);
 
@@ -298,7 +298,7 @@ class OrderTest {
         return new Order(
             null, 1L, "ORD20250225-0000001", "테스트 주문",
             "홍길동", "010-1234-5678", null, "서울시", null, null,
-            status, 10000, 0, 0, 10000
+            status, 10000L, 0L, 0L, 10000L
         );
     }
 }

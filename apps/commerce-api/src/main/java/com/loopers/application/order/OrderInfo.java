@@ -8,8 +8,8 @@ public record OrderInfo(
     String orderNumber,
     String orderName,
     OrderStatus status,
-    int totalAmount,
-    int paymentAmount,
+    Long totalAmount,
+    Long paymentAmount,
     String thumbnailUrl
 ) {
 

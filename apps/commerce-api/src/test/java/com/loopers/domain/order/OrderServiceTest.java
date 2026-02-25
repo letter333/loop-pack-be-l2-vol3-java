@@ -205,7 +205,7 @@ class OrderServiceTest {
         return new Order(
             id, memberId, "ORD20250225-0000001", "테스트 주문",
             "홍길동", "010-1234-5678", null, "서울시", null, null,
-            status, 10000, 0, 0, 10000
+            status, 10000L, 0L, 0L, 10000L
         );
     }
 }

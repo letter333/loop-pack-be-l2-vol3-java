@@ -72,16 +72,16 @@ public class OrderEntity {
     private OrderStatus status;
 
     @Column(name = "total_amount", nullable = false)
-    private int totalAmount;
+    private Long totalAmount;
 
     @Column(name = "shipping_fee", nullable = false)
-    private int shippingFee;
+    private Long shippingFee;
 
     @Column(name = "discount_amount", nullable = false)
-    private int discountAmount;
+    private Long discountAmount;
 
     @Column(name = "payment_amount", nullable = false)
-    private int paymentAmount;
+    private Long paymentAmount;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;

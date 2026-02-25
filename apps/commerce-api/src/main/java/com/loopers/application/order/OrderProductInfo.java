@@ -9,8 +9,8 @@ public record OrderProductInfo(
     Long productOptionId,
     String productName,
     String optionName,
-    int price,
-    int extraPrice,
+    Long price,
+    Long extraPrice,
     int quantity,
     String thumbnailUrl,
     OrderProductStatus status

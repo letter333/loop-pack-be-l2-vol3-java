@@ -24,8 +24,8 @@ class OrderProductTest {
             Long productOptionId = 10L;
             String productName = "테스트 상품";
             String optionName = "옵션1";
-            int price = 10000;
-            int extraPrice = 1000;
+            Long price = 10000L;
+            Long extraPrice = 1000L;
             int quantity = 2;
             String thumbnailUrl = "https://example.com/image.jpg";
 
@@ -54,7 +54,7 @@ class OrderProductTest {
         void throwsException_whenQuantityIsZero() {
             // act & assert
             assertThatThrownBy(() -> new OrderProduct(
-                1L, 10L, "상품", "옵션", 10000, 0, 0, null
+                1L, 10L, "상품", "옵션", 10000L, 0L, 0, null
             ))
                 .isInstanceOf(CoreException.class)
                 .extracting("errorType")
@@ -66,7 +66,7 @@ class OrderProductTest {
         void throwsException_whenQuantityIsNegative() {
             // act & assert
             assertThatThrownBy(() -> new OrderProduct(
-                1L, 10L, "상품", "옵션", 10000, 0, -1, null
+                1L, 10L, "상품", "옵션", 10000L, 0L, -1, null
             ))
                 .isInstanceOf(CoreException.class)
                 .extracting("errorType")
@@ -83,14 +83,14 @@ class OrderProductTest {
         void calculatesTotalPrice() {
             // arrange
             OrderProduct orderProduct = new OrderProduct(
-                1L, 10L, "상품", "옵션", 10000, 1000, 3, null
+                1L, 10L, "상품", "옵션", 10000L, 1000L, 3, null
             );
 
             // act
-            int result = orderProduct.calculateTotalPrice();
+            Long result = orderProduct.calculateTotalPrice();
 
             // assert
-            assertThat(result).isEqualTo((10000 + 1000) * 3);
+            assertThat(result).isEqualTo((10000L + 1000L) * 3);
         }
 
         @Test
@@ -98,14 +98,14 @@ class OrderProductTest {
         void calculatesTotalPrice_whenExtraPriceIsZero() {
             // arrange
             OrderProduct orderProduct = new OrderProduct(
-                1L, 10L, "상품", "옵션", 10000, 0, 2, null
+                1L, 10L, "상품", "옵션", 10000L, 0L, 2, null
             );
 
             // act
-            int result = orderProduct.calculateTotalPrice();
+            Long result = orderProduct.calculateTotalPrice();
 
             // assert
-            assertThat(result).isEqualTo(10000 * 2);
+            assertThat(result).isEqualTo(10000L * 2);
         }
     }
 
@@ -118,7 +118,7 @@ class OrderProductTest {
         void cancels_whenStatusIsNormal() {
             // arrange
             OrderProduct orderProduct = new OrderProduct(
-                1L, 10L, "상품", "옵션", 10000, 0, 1, null
+                1L, 10L, "상품", "옵션", 10000L, 0L, 1, null
             );
 
             // act
@@ -133,7 +133,7 @@ class OrderProductTest {
         void throwsException_whenAlreadyCancelled() {
             // arrange
             OrderProduct orderProduct = new OrderProduct(
-                1L, 10L, "상품", "옵션", 10000, 0, 1, null
+                1L, 10L, "상품", "옵션", 10000L, 0L, 1, null
             );
             orderProduct.cancel();
 

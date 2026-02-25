@@ -24,10 +24,10 @@ public class Order {
     private String addressDetail;
     private String shippingMemo;
     private OrderStatus status;
-    private int totalAmount;
-    private int shippingFee;
-    private int discountAmount;
-    private int paymentAmount;
+    private Long totalAmount;
+    private Long shippingFee;
+    private Long discountAmount;
+    private Long paymentAmount;
     private List<OrderProduct> orderProducts = new ArrayList<>();
 
     public Order(Long memberId, String recipientName, String phone, String zipCode,
@@ -43,16 +43,16 @@ public class Order {
         this.addressDetail = addressDetail;
         this.shippingMemo = shippingMemo;
         this.status = OrderStatus.PENDING;
-        this.totalAmount = 0;
-        this.shippingFee = 0;
-        this.discountAmount = 0;
-        this.paymentAmount = 0;
+        this.totalAmount = 0L;
+        this.shippingFee = 0L;
+        this.discountAmount = 0L;
+        this.paymentAmount = 0L;
     }
 
     public Order(Long id, Long memberId, String orderNumber, String orderName,
                  String recipientName, String phone, String zipCode, String address,
                  String addressDetail, String shippingMemo, OrderStatus status,
-                 int totalAmount, int shippingFee, int discountAmount, int paymentAmount) {
+                 Long totalAmount, Long shippingFee, Long discountAmount, Long paymentAmount) {
         this.id = id;
         this.memberId = memberId;
         this.orderNumber = orderNumber;
@@ -76,17 +76,17 @@ public class Order {
         calculateAmounts();
     }
 
-    public void setShippingFee(int shippingFee) {
+    public void setShippingFee(Long shippingFee) {
         this.shippingFee = shippingFee;
     }
 
-    public void setDiscountAmount(int discountAmount) {
+    public void setDiscountAmount(Long discountAmount) {
         this.discountAmount = discountAmount;
     }
 
     public void calculateAmounts() {
         this.totalAmount = orderProducts.stream()
-            .mapToInt(OrderProduct::calculateTotalPrice)
+            .mapToLong(OrderProduct::calculateTotalPrice)
             .sum();
         this.paymentAmount = this.totalAmount + this.shippingFee - this.discountAmount;
     }
