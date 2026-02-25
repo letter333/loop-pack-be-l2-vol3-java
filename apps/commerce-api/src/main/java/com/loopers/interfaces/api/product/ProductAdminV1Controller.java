@@ -6,6 +6,8 @@ import com.loopers.application.product.ProductFacade;
 import com.loopers.interfaces.api.ApiResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -24,6 +26,17 @@ import org.springframework.web.bind.annotation.RestController;
 public class ProductAdminV1Controller implements ProductAdminV1ApiSpec {
 
     private final ProductFacade productFacade;
+
+    @GetMapping
+    @Override
+    public ApiResponse<Page<ProductAdminV1Dto.ProductDetailResponse>> getProducts(
+        @RequestHeader("X-Loopers-Ldap") String ldap,
+        Pageable pageable
+    ) {
+        Page<ProductAdminDetailInfo> infos = productFacade.getProductsForAdmin(ldap, pageable);
+        Page<ProductAdminV1Dto.ProductDetailResponse> response = infos.map(ProductAdminV1Dto.ProductDetailResponse::from);
+        return ApiResponse.success(response);
+    }
 
     @GetMapping("/{productId}")
     @Override

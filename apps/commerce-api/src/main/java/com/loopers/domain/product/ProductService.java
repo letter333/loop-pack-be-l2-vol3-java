@@ -136,4 +136,9 @@ public class ProductService {
         product.decreaseLikeCount();
         return productRepository.save(product).getLikeCount();
     }
+
+    @Transactional(readOnly = true, propagation = Propagation.SUPPORTS)
+    public Page<Product> getProductsForAdmin(Pageable pageable) {
+        return productRepository.findAllIncludingDeleted(pageable);
+    }
 }

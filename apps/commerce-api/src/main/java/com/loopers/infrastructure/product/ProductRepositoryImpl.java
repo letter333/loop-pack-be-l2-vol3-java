@@ -99,4 +99,10 @@ public class ProductRepositoryImpl implements ProductRepository {
     public boolean existsById(Long id) {
         return productJpaRepository.existsByIdAndDeletedAtIsNull(id);
     }
+
+    @Override
+    public Page<Product> findAllIncludingDeleted(Pageable pageable) {
+        return productJpaRepository.findAllIncludingDeleted(pageable)
+            .map(ProductEntity::toDomain);
+    }
 }

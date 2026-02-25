@@ -1,5 +1,7 @@
 package com.loopers.infrastructure.product;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -31,4 +33,7 @@ public interface ProductJpaRepository extends JpaRepository<ProductEntity, Long>
     @Modifying
     @Query("UPDATE ProductEntity p SET p.deletedAt = CURRENT_TIMESTAMP WHERE p.id IN :ids AND p.deletedAt IS NULL")
     void softDeleteAllByIds(@Param("ids") List<Long> ids);
+
+    @Query("SELECT p FROM ProductEntity p")
+    Page<ProductEntity> findAllIncludingDeleted(Pageable pageable);
 }

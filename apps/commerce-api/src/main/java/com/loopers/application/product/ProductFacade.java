@@ -68,4 +68,11 @@ public class ProductFacade {
         adminValidator.validate(ldap);
         productService.deleteProduct(productId);
     }
+
+    @Transactional(readOnly = true)
+    public Page<ProductAdminDetailInfo> getProductsForAdmin(String ldap, Pageable pageable) {
+        adminValidator.validate(ldap);
+        return productService.getProductsForAdmin(pageable)
+            .map(ProductAdminDetailInfo::from);
+    }
 }

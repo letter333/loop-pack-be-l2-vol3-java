@@ -27,4 +27,6 @@ public interface ProductRepository {
     void softDeleteAllByIds(List<Long> ids);
 
     boolean existsById(Long id);
+
+    Page<Product> findAllIncludingDeleted(Pageable pageable);
 }
