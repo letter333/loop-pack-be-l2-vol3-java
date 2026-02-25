@@ -64,7 +64,7 @@ public class OrderEntity {
     @Column(name = "recipient_address_detail", length = 255)
     private String addressDetail;
 
-    @Column(name = "shipping_memo", length = 255)
+    @Column(name = "shipping_memo", length = 500)
     private String shippingMemo;
 
     @Enumerated(EnumType.STRING)
