@@ -11,21 +11,21 @@ public class OrderProduct {
     private Long productId;
     private Long productOptionId;
     private String productName;
-    private String optionName;
+    private String optionValue;
     private Long price;
     private Long extraPrice;
     private int quantity;
     private String thumbnailUrl;
     private OrderProductStatus status;
 
-    public OrderProduct(Long productId, Long productOptionId, String productName, String optionName,
+    public OrderProduct(Long productId, Long productOptionId, String productName, String optionValue,
                         Long price, Long extraPrice, int quantity, String thumbnailUrl) {
         validateQuantity(quantity);
 
         this.productId = productId;
         this.productOptionId = productOptionId;
         this.productName = productName;
-        this.optionName = optionName;
+        this.optionValue = optionValue;
         this.price = price;
         this.extraPrice = extraPrice;
         this.quantity = quantity;
@@ -33,13 +33,13 @@ public class OrderProduct {
         this.status = OrderProductStatus.NORMAL;
     }
 
-    public OrderProduct(Long id, Long productId, Long productOptionId, String productName, String optionName,
+    public OrderProduct(Long id, Long productId, Long productOptionId, String productName, String optionValue,
                         Long price, Long extraPrice, int quantity, String thumbnailUrl, OrderProductStatus status) {
         this.id = id;
         this.productId = productId;
         this.productOptionId = productOptionId;
         this.productName = productName;
-        this.optionName = optionName;
+        this.optionValue = optionValue;
         this.price = price;
         this.extraPrice = extraPrice;
         this.quantity = quantity;

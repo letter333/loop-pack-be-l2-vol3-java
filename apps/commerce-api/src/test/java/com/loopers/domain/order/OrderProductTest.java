@@ -23,7 +23,7 @@ class OrderProductTest {
             Long productId = 1L;
             Long productOptionId = 10L;
             String productName = "테스트 상품";
-            String optionName = "옵션1";
+            String optionValue = "옵션1";
             Long price = 10000L;
             Long extraPrice = 1000L;
             int quantity = 2;
@@ -31,7 +31,7 @@ class OrderProductTest {
 
             // act
             OrderProduct result = new OrderProduct(
-                productId, productOptionId, productName, optionName,
+                productId, productOptionId, productName, optionValue,
                 price, extraPrice, quantity, thumbnailUrl
             );
 
@@ -40,7 +40,7 @@ class OrderProductTest {
                 () -> assertThat(result.getProductId()).isEqualTo(productId),
                 () -> assertThat(result.getProductOptionId()).isEqualTo(productOptionId),
                 () -> assertThat(result.getProductName()).isEqualTo(productName),
-                () -> assertThat(result.getOptionName()).isEqualTo(optionName),
+                () -> assertThat(result.getOptionValue()).isEqualTo(optionValue),
                 () -> assertThat(result.getPrice()).isEqualTo(price),
                 () -> assertThat(result.getExtraPrice()).isEqualTo(extraPrice),
                 () -> assertThat(result.getQuantity()).isEqualTo(quantity),

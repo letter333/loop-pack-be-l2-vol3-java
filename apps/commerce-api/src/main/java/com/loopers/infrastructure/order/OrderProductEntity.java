@@ -46,8 +46,8 @@ public class OrderProductEntity {
     @Column(name = "product_name", nullable = false, length = 100)
     private String productName;
 
-    @Column(name = "option_name", length = 100)
-    private String optionName;
+    @Column(name = "option_value", length = 100)
+    private String optionValue;
 
     @Column(name = "price", nullable = false)
     private Long price;
@@ -88,7 +88,7 @@ public class OrderProductEntity {
         entity.productId = orderProduct.getProductId();
         entity.productOptionId = orderProduct.getProductOptionId();
         entity.productName = orderProduct.getProductName();
-        entity.optionName = orderProduct.getOptionName();
+        entity.optionValue = orderProduct.getOptionValue();
         entity.price = orderProduct.getPrice();
         entity.extraPrice = orderProduct.getExtraPrice();
         entity.quantity = orderProduct.getQuantity();
@@ -103,7 +103,7 @@ public class OrderProductEntity {
             productId,
             productOptionId,
             productName,
-            optionName,
+            optionValue,
             price,
             extraPrice,
             quantity,
