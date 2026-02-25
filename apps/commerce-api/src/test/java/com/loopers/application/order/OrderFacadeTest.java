@@ -14,6 +14,7 @@ import com.loopers.domain.product.Product;
 import com.loopers.domain.product.ProductOption;
 import com.loopers.domain.product.ProductService;
 import com.loopers.domain.product.ProductStatus;
+import com.loopers.support.auth.AdminValidator;
 import com.loopers.support.error.CoreException;
 import com.loopers.support.error.ErrorType;
 import org.junit.jupiter.api.DisplayName;
@@ -34,6 +35,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 
@@ -51,6 +53,9 @@ class OrderFacadeTest {
 
     @Mock
     private ProductService productService;
+
+    @Mock
+    private AdminValidator adminValidator;
 
     @InjectMocks
     private OrderFacade orderFacade;
@@ -323,16 +328,19 @@ class OrderFacadeTest {
     @Nested
     class AdminOrders {
 
+        private static final String ADMIN_LDAP = "loopers.admin";
+
         @Test
         @DisplayName("Admin이 주문 목록을 조회한다")
         void returnsAllOrders_forAdmin() {
             // arrange
             Order order1 = createOrder(1L, MEMBER_ID, OrderStatus.PENDING);
             Order order2 = createOrder(2L, 2L, OrderStatus.PAID);
+            doNothing().when(adminValidator).validate(ADMIN_LDAP);
             given(orderService.getOrders(eq(null), any())).willReturn(List.of(order1, order2));
 
             // act
-            List<OrderInfo> result = orderFacade.getOrdersForAdmin(OrderPeriod.ALL);
+            List<OrderInfo> result = orderFacade.getOrdersForAdmin(ADMIN_LDAP, OrderPeriod.ALL);
 
             // assert
             assertThat(result).hasSize(2);
@@ -343,10 +351,11 @@ class OrderFacadeTest {
         void returnsOrderDetail_forAdmin() {
             // arrange
             Order order = createOrder(ORDER_ID, MEMBER_ID, OrderStatus.PENDING);
+            doNothing().when(adminValidator).validate(ADMIN_LDAP);
             given(orderService.getOrder(ORDER_ID)).willReturn(order);
 
             // act
-            OrderAdminDetailInfo result = orderFacade.getOrderDetailForAdmin(ORDER_ID);
+            OrderAdminDetailInfo result = orderFacade.getOrderDetailForAdmin(ADMIN_LDAP, ORDER_ID);
 
             // assert
             assertAll(

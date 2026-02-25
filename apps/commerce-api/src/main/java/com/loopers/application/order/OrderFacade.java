@@ -13,6 +13,7 @@ import com.loopers.domain.product.Product;
 import com.loopers.domain.product.ProductImage;
 import com.loopers.domain.product.ProductOption;
 import com.loopers.domain.product.ProductService;
+import com.loopers.support.auth.AdminValidator;
 import com.loopers.support.error.CoreException;
 import com.loopers.support.error.ErrorType;
 import lombok.RequiredArgsConstructor;
@@ -30,6 +31,7 @@ public class OrderFacade {
     private final MemberService memberService;
     private final AddressService addressService;
     private final ProductService productService;
+    private final AdminValidator adminValidator;
 
     @Transactional
     public OrderDetailInfo createOrder(String loginId, String password, OrderCommand.Create command) {
@@ -112,7 +114,8 @@ public class OrderFacade {
     }
 
     @Transactional(readOnly = true)
-    public List<OrderInfo> getOrdersForAdmin(OrderPeriod period) {
+    public List<OrderInfo> getOrdersForAdmin(String ldap, OrderPeriod period) {
+        adminValidator.validate(ldap);
         LocalDateTime startDate = period != null ? period.getStartDate() : null;
         return orderService.getOrders(null, startDate)
             .stream()
@@ -121,7 +124,8 @@ public class OrderFacade {
     }
 
     @Transactional(readOnly = true)
-    public OrderAdminDetailInfo getOrderDetailForAdmin(Long orderId) {
+    public OrderAdminDetailInfo getOrderDetailForAdmin(String ldap, Long orderId) {
+        adminValidator.validate(ldap);
         Order order = orderService.getOrder(orderId);
         return OrderAdminDetailInfo.from(order);
     }
