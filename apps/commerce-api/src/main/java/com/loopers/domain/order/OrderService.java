@@ -24,6 +24,9 @@ public class OrderService {
 
     @Transactional(readOnly = true, propagation = Propagation.SUPPORTS)
     public List<Order> getOrders(Long memberId, LocalDateTime startDate) {
+        if (memberId == null) {
+            return orderRepository.findAll();
+        }
         if (startDate == null) {
             return orderRepository.findByMemberId(memberId);
         }
