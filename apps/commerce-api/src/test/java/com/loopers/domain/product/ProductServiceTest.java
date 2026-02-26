@@ -340,6 +340,61 @@ class ProductServiceTest {
                 () -> assertThat(result.getContent().get(0).getId()).isEqualTo(activeProduct.getId())
             );
         }
+
+        @Test
+        @DisplayName("좋아요 많은순으로 정렬하여 조회한다")
+        void returnsProducts_sortedByLikesDesc() {
+            // Arrange
+            Product product1 = productRepository.save(new Product("아이폰 15", 1L, 1L, 1500000L));
+            Product product2 = productRepository.save(new Product("갤럭시 S24", 2L, 1L, 1400000L));
+            Product product3 = productRepository.save(new Product("맥북 프로", 1L, 2L, 3000000L));
+
+            // 좋아요 수 설정: product2(5) > product1(3) > product3(1)
+            for (int i = 0; i < 3; i++) productService.increaseLikeCount(product1.getId());
+            for (int i = 0; i < 5; i++) productService.increaseLikeCount(product2.getId());
+            productService.increaseLikeCount(product3.getId());
+
+            Pageable pageable = PageRequest.of(0, 10);
+
+            // Act
+            Page<Product> result = productService.getProducts(null, null, ProductSortType.LIKES_DESC, pageable);
+
+            // Assert
+            assertAll(
+                () -> assertThat(result.getContent().get(0).getId()).isEqualTo(product2.getId()),
+                () -> assertThat(result.getContent().get(0).getLikeCount()).isEqualTo(5L),
+                () -> assertThat(result.getContent().get(1).getId()).isEqualTo(product1.getId()),
+                () -> assertThat(result.getContent().get(1).getLikeCount()).isEqualTo(3L),
+                () -> assertThat(result.getContent().get(2).getId()).isEqualTo(product3.getId()),
+                () -> assertThat(result.getContent().get(2).getLikeCount()).isEqualTo(1L)
+            );
+        }
+
+        @Test
+        @DisplayName("좋아요 수가 같으면 최신순으로 정렬한다")
+        void returnsProducts_sortedByCreatedAtDesc_whenLikeCountIsSame() {
+            // Arrange
+            Product product1 = productRepository.save(new Product("아이폰 15", 1L, 1L, 1500000L));
+            Product product2 = productRepository.save(new Product("갤럭시 S24", 2L, 1L, 1400000L));
+            Product product3 = productRepository.save(new Product("맥북 프로", 1L, 2L, 3000000L));
+
+            // 모든 상품 좋아요 수 동일하게 설정
+            productService.increaseLikeCount(product1.getId());
+            productService.increaseLikeCount(product2.getId());
+            productService.increaseLikeCount(product3.getId());
+
+            Pageable pageable = PageRequest.of(0, 10);
+
+            // Act
+            Page<Product> result = productService.getProducts(null, null, ProductSortType.LIKES_DESC, pageable);
+
+            // Assert - 좋아요 수 동일하면 최신순 (product3 > product2 > product1)
+            assertAll(
+                () -> assertThat(result.getContent().get(0).getId()).isEqualTo(product3.getId()),
+                () -> assertThat(result.getContent().get(1).getId()).isEqualTo(product2.getId()),
+                () -> assertThat(result.getContent().get(2).getId()).isEqualTo(product1.getId())
+            );
+        }
     }
 
     @Nested
@@ -466,6 +521,52 @@ class ProductServiceTest {
                 .isInstanceOf(CoreException.class)
                 .satisfies(ex -> assertThat(((CoreException) ex).getErrorType()).isEqualTo(ErrorType.NOT_FOUND));
         }
+
+        @Test
+        @DisplayName("SOLDOUT 상태에서 재고가 증가하면 SALE로 복구된다")
+        void changesStatusToSale_whenStockRestored() {
+            // Arrange
+            List<ProductOption> options = List.of(
+                new ProductOption(null, "BLACK_M", "블랙 / M", 5000L, 0)
+            );
+            Product saved = productRepository.save(new Product("아이폰 15", 1L, 1L, 1500000L, options, null));
+            Long optionId = saved.getOptions().get(0).getId();
+            // 상품을 SOLDOUT 상태로 변경
+            productService.updateProduct(saved.getId(), "아이폰 15", 1L, 1500000L, null, null, ProductStatus.SOLDOUT);
+
+            // Act
+            productService.increaseStock(saved.getId(), optionId, 10);
+
+            // Assert
+            Product result = productService.getProduct(saved.getId());
+            assertAll(
+                () -> assertThat(result.getOption(optionId).getStockQuantity()).isEqualTo(10),
+                () -> assertThat(result.getStatus()).isEqualTo(ProductStatus.SALE)
+            );
+        }
+
+        @Test
+        @DisplayName("STOP 상태에서 재고가 증가해도 STOP 상태를 유지한다")
+        void maintainsStopStatus_whenStockRestored() {
+            // Arrange
+            List<ProductOption> options = List.of(
+                new ProductOption(null, "BLACK_M", "블랙 / M", 5000L, 0)
+            );
+            Product saved = productRepository.save(new Product("아이폰 15", 1L, 1L, 1500000L, options, null));
+            Long optionId = saved.getOptions().get(0).getId();
+            // 상품을 STOP 상태로 변경
+            productService.updateProduct(saved.getId(), "아이폰 15", 1L, 1500000L, null, null, ProductStatus.STOP);
+
+            // Act
+            productService.increaseStock(saved.getId(), optionId, 10);
+
+            // Assert
+            Product result = productService.getProduct(saved.getId());
+            assertAll(
+                () -> assertThat(result.getOption(optionId).getStockQuantity()).isEqualTo(10),
+                () -> assertThat(result.getStatus()).isEqualTo(ProductStatus.STOP)
+            );
+        }
     }
 
     @Nested
@@ -516,6 +617,65 @@ class ProductServiceTest {
             assertThatThrownBy(() -> productService.decreaseStock(saved.getId(), 999L, 10))
                 .isInstanceOf(CoreException.class)
                 .satisfies(ex -> assertThat(((CoreException) ex).getErrorType()).isEqualTo(ErrorType.NOT_FOUND));
+        }
+
+        @Test
+        @DisplayName("모든 옵션의 재고가 0이 되면 SOLDOUT으로 상태가 변경된다")
+        void changesStatusToSoldout_whenAllStockDepleted() {
+            // Arrange
+            List<ProductOption> options = List.of(
+                new ProductOption(null, "BLACK_M", "블랙 / M", 5000L, 10),
+                new ProductOption(null, "WHITE_M", "화이트 / M", 5000L, 5)
+            );
+            Product saved = productRepository.save(new Product("아이폰 15", 1L, 1L, 1500000L, options, null));
+
+            // 다시 조회하여 저장된 옵션 ID 확인 (optionValue로 식별)
+            Product loaded = productService.getProduct(saved.getId());
+            ProductOption blackOption = loaded.getOptions().stream()
+                .filter(o -> o.getOptionValue().equals("BLACK_M"))
+                .findFirst().orElseThrow();
+            ProductOption whiteOption = loaded.getOptions().stream()
+                .filter(o -> o.getOptionValue().equals("WHITE_M"))
+                .findFirst().orElseThrow();
+
+            // Act - 모든 재고 소진
+            productService.decreaseStock(saved.getId(), blackOption.getId(), 10);
+            productService.decreaseStock(saved.getId(), whiteOption.getId(), 5);
+
+            // Assert
+            Product result = productService.getProduct(saved.getId());
+            assertAll(
+                () -> assertThat(result.getOption(blackOption.getId()).getStockQuantity()).isEqualTo(0),
+                () -> assertThat(result.getOption(whiteOption.getId()).getStockQuantity()).isEqualTo(0),
+                () -> assertThat(result.getStatus()).isEqualTo(ProductStatus.SOLDOUT)
+            );
+        }
+
+        @Test
+        @DisplayName("일부 옵션의 재고만 0이면 SALE 상태를 유지한다")
+        void maintainsSaleStatus_whenSomeOptionsHaveStock() {
+            // Arrange
+            List<ProductOption> options = List.of(
+                new ProductOption(null, "BLACK_M", "블랙 / M", 5000L, 10),
+                new ProductOption(null, "WHITE_M", "화이트 / M", 5000L, 5)
+            );
+            Product saved = productRepository.save(new Product("아이폰 15", 1L, 1L, 1500000L, options, null));
+
+            // 다시 조회하여 저장된 옵션 ID 확인 (optionValue로 식별)
+            Product loaded = productService.getProduct(saved.getId());
+            ProductOption blackOption = loaded.getOptions().stream()
+                .filter(o -> o.getOptionValue().equals("BLACK_M"))
+                .findFirst().orElseThrow();
+
+            // Act - 첫 번째 옵션만 재고 소진
+            productService.decreaseStock(saved.getId(), blackOption.getId(), 10);
+
+            // Assert
+            Product result = productService.getProduct(saved.getId());
+            assertAll(
+                () -> assertThat(result.getOption(blackOption.getId()).getStockQuantity()).isEqualTo(0),
+                () -> assertThat(result.getStatus()).isEqualTo(ProductStatus.SALE)
+            );
         }
     }
 

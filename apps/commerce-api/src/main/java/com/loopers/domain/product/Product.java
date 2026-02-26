@@ -169,11 +169,34 @@ public class Product {
     public void decreaseStock(Long optionId, int quantity) {
         ProductOption option = getOption(optionId);
         option.decreaseStock(quantity);
+        checkAndUpdateSoldoutStatus();
     }
 
     public void increaseStock(Long optionId, int quantity) {
         ProductOption option = getOption(optionId);
         option.increaseStock(quantity);
+        checkAndUpdateSoldoutStatus();
+    }
+
+    public int getTotalStockQuantity() {
+        if (options == null || options.isEmpty()) {
+            return 0;
+        }
+        return options.stream()
+            .mapToInt(ProductOption::getStockQuantity)
+            .sum();
+    }
+
+    public void checkAndUpdateSoldoutStatus() {
+        if (this.status == ProductStatus.STOP) {
+            return;
+        }
+        int totalStock = getTotalStockQuantity();
+        if (totalStock == 0 && this.status == ProductStatus.SALE) {
+            this.status = ProductStatus.SOLDOUT;
+        } else if (totalStock > 0 && this.status == ProductStatus.SOLDOUT) {
+            this.status = ProductStatus.SALE;
+        }
     }
 
     public void addImage(ProductImage image) {

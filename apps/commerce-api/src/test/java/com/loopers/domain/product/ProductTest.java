@@ -470,4 +470,83 @@ class ProductTest {
             assertThat(product.isDeleted()).isTrue();
         }
     }
+
+    @Nested
+    @DisplayName("SoldoutStatusTransition - 재고 기반 상태 전환")
+    class SoldoutStatusTransition {
+
+        @Test
+        @DisplayName("모든 옵션의 재고 합계를 반환한다")
+        void returnsTotalStockQuantity() {
+            // Arrange
+            Product product = new Product("아이폰 15", 1L, 1L, 1500000L);
+            product.addOption(new ProductOption(1L, "BLACK_M", "블랙 / M", 5000L, 10));
+            product.addOption(new ProductOption(2L, "WHITE_M", "화이트 / M", 5000L, 20));
+            product.addOption(new ProductOption(3L, "BLACK_L", "블랙 / L", 5000L, 30));
+
+            // Act
+            int totalStock = product.getTotalStockQuantity();
+
+            // Assert
+            assertThat(totalStock).isEqualTo(60);
+        }
+
+        @Test
+        @DisplayName("옵션이 없으면 총 재고는 0을 반환한다")
+        void returnZero_whenNoOptions() {
+            // Arrange
+            Product product = new Product("아이폰 15", 1L, 1L, 1500000L);
+
+            // Act
+            int totalStock = product.getTotalStockQuantity();
+
+            // Assert
+            assertThat(totalStock).isEqualTo(0);
+        }
+
+        @Test
+        @DisplayName("모든 재고가 0이 되면 SALE에서 SOLDOUT으로 상태가 변경된다")
+        void changesStatusToSoldout_whenTotalStockIsZero() {
+            // Arrange
+            Product product = new Product("아이폰 15", 1L, 1L, 1500000L);
+            product.addOption(new ProductOption(1L, "BLACK_M", "블랙 / M", 5000L, 0));
+            product.addOption(new ProductOption(2L, "WHITE_M", "화이트 / M", 5000L, 0));
+
+            // Act
+            product.checkAndUpdateSoldoutStatus();
+
+            // Assert
+            assertThat(product.getStatus()).isEqualTo(ProductStatus.SOLDOUT);
+        }
+
+        @Test
+        @DisplayName("SOLDOUT 상태에서 재고가 추가되면 SALE로 복구된다")
+        void changesStatusToSale_whenStockRestoredFromSoldout() {
+            // Arrange
+            Product product = new Product("아이폰 15", 1L, 1L, 1500000L);
+            product.addOption(new ProductOption(1L, "BLACK_M", "블랙 / M", 5000L, 10));
+            product.update("아이폰 15", 1L, 1500000L, null, null, ProductStatus.SOLDOUT);
+
+            // Act
+            product.checkAndUpdateSoldoutStatus();
+
+            // Assert
+            assertThat(product.getStatus()).isEqualTo(ProductStatus.SALE);
+        }
+
+        @Test
+        @DisplayName("STOP 상태는 재고와 상관없이 유지된다")
+        void maintainsStopStatus_regardlessOfStock() {
+            // Arrange
+            Product product = new Product("아이폰 15", 1L, 1L, 1500000L);
+            product.addOption(new ProductOption(1L, "BLACK_M", "블랙 / M", 5000L, 0));
+            product.update("아이폰 15", 1L, 1500000L, null, null, ProductStatus.STOP);
+
+            // Act
+            product.checkAndUpdateSoldoutStatus();
+
+            // Assert
+            assertThat(product.getStatus()).isEqualTo(ProductStatus.STOP);
+        }
+    }
 }
