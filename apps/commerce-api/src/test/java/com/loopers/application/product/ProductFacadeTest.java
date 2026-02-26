@@ -4,6 +4,7 @@ import com.loopers.domain.brand.Brand;
 import com.loopers.domain.brand.BrandRepository;
 import com.loopers.domain.category.Category;
 import com.loopers.domain.category.CategoryRepository;
+import com.loopers.domain.product.DiscountType;
 import com.loopers.domain.product.ImageType;
 import com.loopers.domain.product.Product;
 import com.loopers.domain.product.ProductImage;
@@ -265,6 +266,213 @@ class ProductFacadeTest {
             assertThatThrownBy(() -> productFacade.getProduct(product.getId()))
                 .isInstanceOf(CoreException.class)
                 .satisfies(ex -> assertThat(((CoreException) ex).getErrorType()).isEqualTo(ErrorType.NOT_FOUND));
+        }
+    }
+
+    @Nested
+    @DisplayName("updateProduct (Admin)")
+    class UpdateProduct {
+
+        @Test
+        @DisplayName("관리자가 상품을 정상적으로 수정한다")
+        void updatesProduct() {
+            // Arrange
+            Product product = productRepository.save(
+                new Product("아이폰 15", savedBrand.getId(), savedCategory.getId(), 1500000L)
+            );
+            ProductCommand.Update command = new ProductCommand.Update(
+                "아이폰 15 Pro", savedCategory.getId(), 1800000L,
+                100000L, DiscountType.PRICE, ProductStatus.SALE
+            );
+
+            // Act
+            ProductAdminDetailInfo result = productFacade.updateProduct("loopers.admin", product.getId(), command);
+
+            // Assert
+            assertAll(
+                () -> assertThat(result.name()).isEqualTo("아이폰 15 Pro"),
+                () -> assertThat(result.basePrice()).isEqualTo(1800000L),
+                () -> assertThat(result.discount()).isEqualTo(100000L),
+                () -> assertThat(result.discountType()).isEqualTo(DiscountType.PRICE),
+                () -> assertThat(result.discountedPrice()).isEqualTo(1700000L)
+            );
+        }
+
+        @Test
+        @DisplayName("잘못된 할인 정보로 수정 시 BAD_REQUEST 예외가 발생한다")
+        void throwsBadRequest_whenInvalidDiscount() {
+            // Arrange
+            Product product = productRepository.save(
+                new Product("아이폰 15", savedBrand.getId(), savedCategory.getId(), 1500000L)
+            );
+            ProductCommand.Update command = new ProductCommand.Update(
+                "아이폰 15 Pro", savedCategory.getId(), 1000000L,
+                1500000L, DiscountType.PRICE, ProductStatus.SALE // 할인이 가격보다 큼
+            );
+
+            // Act & Assert
+            assertThatThrownBy(() -> productFacade.updateProduct("loopers.admin", product.getId(), command))
+                .isInstanceOf(CoreException.class)
+                .satisfies(ex -> assertThat(((CoreException) ex).getErrorType()).isEqualTo(ErrorType.BAD_REQUEST));
+        }
+
+        @Test
+        @DisplayName("할인 금액만 있고 할인 타입이 null이면 BAD_REQUEST 예외가 발생한다")
+        void throwsBadRequest_whenDiscountWithoutType() {
+            // Arrange
+            Product product = productRepository.save(
+                new Product("아이폰 15", savedBrand.getId(), savedCategory.getId(), 1500000L)
+            );
+            ProductCommand.Update command = new ProductCommand.Update(
+                "아이폰 15 Pro", savedCategory.getId(), 1500000L,
+                100000L, null, ProductStatus.SALE
+            );
+
+            // Act & Assert
+            assertThatThrownBy(() -> productFacade.updateProduct("loopers.admin", product.getId(), command))
+                .isInstanceOf(CoreException.class)
+                .satisfies(ex -> assertThat(((CoreException) ex).getErrorType()).isEqualTo(ErrorType.BAD_REQUEST));
+        }
+
+        @Test
+        @DisplayName("관리자가 아니면 FORBIDDEN 예외가 발생한다")
+        void throwsForbidden_whenNotAdmin() {
+            // Arrange
+            Product product = productRepository.save(
+                new Product("아이폰 15", savedBrand.getId(), savedCategory.getId(), 1500000L)
+            );
+            ProductCommand.Update command = new ProductCommand.Update(
+                "아이폰 15 Pro", savedCategory.getId(), 1800000L,
+                null, null, ProductStatus.SALE
+            );
+
+            // Act & Assert
+            assertThatThrownBy(() -> productFacade.updateProduct("invalid.ldap", product.getId(), command))
+                .isInstanceOf(CoreException.class)
+                .satisfies(ex -> assertThat(((CoreException) ex).getErrorType()).isEqualTo(ErrorType.FORBIDDEN));
+        }
+    }
+
+    @Nested
+    @DisplayName("getProductDetail (Admin)")
+    class GetProductDetail {
+
+        @Test
+        @DisplayName("관리자가 상품 상세 정보를 조회한다")
+        void returnsProductDetail() {
+            // Arrange
+            List<ProductOption> options = List.of(
+                new ProductOption(null, "256GB", "256GB", 0L, 100)
+            );
+            List<ProductImage> images = List.of(
+                new ProductImage(null, ImageType.MAIN, "https://example.com/main.jpg", "메인 이미지")
+            );
+            Product product = productRepository.save(
+                new Product("아이폰 15", savedBrand.getId(), savedCategory.getId(), 1500000L, options, images)
+            );
+
+            // Act
+            ProductAdminDetailInfo result = productFacade.getProductDetail("loopers.admin", product.getId());
+
+            // Assert
+            assertAll(
+                () -> assertThat(result.id()).isEqualTo(product.getId()),
+                () -> assertThat(result.name()).isEqualTo("아이폰 15"),
+                () -> assertThat(result.options()).hasSize(1),
+                () -> assertThat(result.images()).hasSize(1)
+            );
+        }
+
+        @Test
+        @DisplayName("관리자가 삭제된 상품도 조회할 수 있다")
+        void returnsDeletedProduct() {
+            // Arrange
+            Product product = productRepository.save(
+                new Product("아이폰 15", savedBrand.getId(), savedCategory.getId(), 1500000L)
+            );
+            productFacade.deleteProduct("loopers.admin", product.getId());
+
+            // Act
+            ProductAdminDetailInfo result = productFacade.getProductDetail("loopers.admin", product.getId());
+
+            // Assert
+            assertAll(
+                () -> assertThat(result.id()).isEqualTo(product.getId()),
+                () -> assertThat(result.deletedAt()).isNotNull()
+            );
+        }
+
+        @Test
+        @DisplayName("관리자가 아니면 FORBIDDEN 예외가 발생한다")
+        void throwsForbidden_whenNotAdmin() {
+            // Arrange
+            Product product = productRepository.save(
+                new Product("아이폰 15", savedBrand.getId(), savedCategory.getId(), 1500000L)
+            );
+
+            // Act & Assert
+            assertThatThrownBy(() -> productFacade.getProductDetail("invalid.ldap", product.getId()))
+                .isInstanceOf(CoreException.class)
+                .satisfies(ex -> assertThat(((CoreException) ex).getErrorType()).isEqualTo(ErrorType.FORBIDDEN));
+        }
+    }
+
+    @Nested
+    @DisplayName("getProductsForAdmin")
+    class GetProductsForAdmin {
+
+        @Test
+        @DisplayName("관리자가 페이지로 상품 목록을 조회한다")
+        void returnsPagedProducts() {
+            // Arrange
+            productRepository.save(new Product("아이폰 15", savedBrand.getId(), savedCategory.getId(), 1500000L));
+            productRepository.save(new Product("갤럭시 S24", savedBrand.getId(), savedCategory.getId(), 1400000L));
+            Pageable pageable = PageRequest.of(0, 10);
+
+            // Act
+            Page<ProductAdminDetailInfo> result = productFacade.getProductsForAdmin("loopers.admin", pageable);
+
+            // Assert
+            assertAll(
+                () -> assertThat(result.getContent()).hasSize(2),
+                () -> assertThat(result.getTotalElements()).isEqualTo(2)
+            );
+        }
+
+        @Test
+        @DisplayName("관리자가 삭제된 상품도 포함하여 조회할 수 있다")
+        void includesDeletedProducts() {
+            // Arrange
+            Product activeProduct = productRepository.save(
+                new Product("아이폰 15", savedBrand.getId(), savedCategory.getId(), 1500000L)
+            );
+            Product deletedProduct = productRepository.save(
+                new Product("갤럭시 S24", savedBrand.getId(), savedCategory.getId(), 1400000L)
+            );
+            productFacade.deleteProduct("loopers.admin", deletedProduct.getId());
+            Pageable pageable = PageRequest.of(0, 10);
+
+            // Act
+            Page<ProductAdminDetailInfo> result = productFacade.getProductsForAdmin("loopers.admin", pageable);
+
+            // Assert
+            assertAll(
+                () -> assertThat(result.getContent()).hasSize(2),
+                () -> assertThat(result.getContent())
+                    .anyMatch(p -> p.deletedAt() != null)
+            );
+        }
+
+        @Test
+        @DisplayName("관리자가 아니면 FORBIDDEN 예외가 발생한다")
+        void throwsForbidden_whenNotAdmin() {
+            // Arrange
+            Pageable pageable = PageRequest.of(0, 10);
+
+            // Act & Assert
+            assertThatThrownBy(() -> productFacade.getProductsForAdmin("invalid.ldap", pageable))
+                .isInstanceOf(CoreException.class)
+                .satisfies(ex -> assertThat(((CoreException) ex).getErrorType()).isEqualTo(ErrorType.FORBIDDEN));
         }
     }
 }

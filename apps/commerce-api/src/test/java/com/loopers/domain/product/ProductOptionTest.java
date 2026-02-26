@@ -198,5 +198,30 @@ class ProductOptionTest {
                 .isInstanceOf(CoreException.class)
                 .satisfies(ex -> assertThat(((CoreException) ex).getErrorType()).isEqualTo(ErrorType.BAD_REQUEST));
         }
+
+        @Test
+        @DisplayName("재고 증가 시 상한선(Integer.MAX_VALUE)을 초과하면 BAD_REQUEST 예외가 발생한다")
+        void throwsBadRequest_whenStockExceedsMaxValue() {
+            // Arrange
+            ProductOption option = new ProductOption(1L, "BLACK_M", "블랙 / M", 5000L, Integer.MAX_VALUE - 10);
+
+            // Act & Assert
+            assertThatThrownBy(() -> option.increaseStock(20))
+                .isInstanceOf(CoreException.class)
+                .satisfies(ex -> assertThat(((CoreException) ex).getErrorType()).isEqualTo(ErrorType.BAD_REQUEST));
+        }
+
+        @Test
+        @DisplayName("재고 증가 시 정확히 상한선(Integer.MAX_VALUE)이면 정상적으로 증가한다")
+        void increasesStock_whenResultEqualsMaxValue() {
+            // Arrange
+            ProductOption option = new ProductOption(1L, "BLACK_M", "블랙 / M", 5000L, Integer.MAX_VALUE - 10);
+
+            // Act
+            option.increaseStock(10);
+
+            // Assert
+            assertThat(option.getStockQuantity()).isEqualTo(Integer.MAX_VALUE);
+        }
     }
 }

@@ -8,7 +8,7 @@ import com.loopers.domain.product.ImageType;
 import com.loopers.domain.product.ProductStatus;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.PositiveOrZero;
 import jakarta.validation.constraints.Size;
 
 import java.time.LocalDateTime;
@@ -28,7 +28,7 @@ public class ProductAdminV1Dto {
         Long categoryId,
 
         @NotNull(message = "기본 가격은 필수입니다.")
-        @Positive(message = "기본 가격은 0보다 커야 합니다.")
+        @PositiveOrZero(message = "기본 가격은 0 이상이어야 합니다.")
         Long basePrice
     ) {}
 
@@ -41,7 +41,7 @@ public class ProductAdminV1Dto {
         Long categoryId,
 
         @NotNull(message = "기본 가격은 필수입니다.")
-        @Positive(message = "기본 가격은 0보다 커야 합니다.")
+        @PositiveOrZero(message = "기본 가격은 0 이상이어야 합니다.")
         Long basePrice,
 
         Long discount,

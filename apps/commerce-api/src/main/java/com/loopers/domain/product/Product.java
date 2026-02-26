@@ -126,7 +126,10 @@ public class Product {
     public void update(String name, Long categoryId, Long basePrice,
                        Long discount, DiscountType discountType, ProductStatus status) {
         ProductValidator.validateName(name);
+        ProductValidator.validateCategoryId(categoryId);
+        ProductValidator.validateBasePrice(basePrice);
         ProductValidator.validateDiscount(discount, discountType, basePrice);
+        ProductValidator.validateStatus(status);
         this.name = name;
         this.categoryId = categoryId;
         this.basePrice = basePrice;

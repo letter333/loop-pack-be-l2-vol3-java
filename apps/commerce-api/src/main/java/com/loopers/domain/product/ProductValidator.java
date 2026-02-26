@@ -3,7 +3,11 @@ package com.loopers.domain.product;
 import com.loopers.support.error.CoreException;
 import com.loopers.support.error.ErrorType;
 
-public class ProductValidator {
+public final class ProductValidator {
+
+    private ProductValidator() {
+        // 인스턴스화 방지
+    }
 
     public static void validateName(String name) {
         if (name == null || name.isBlank()) {
@@ -33,8 +37,19 @@ public class ProductValidator {
     }
 
     public static void validateDiscount(Long discount, DiscountType discountType, Long basePrice) {
-        if (discount == null || discountType == null) {
+        // 둘 다 null이면 할인 없음 - 유효
+        if (discount == null && discountType == null) {
             return;
+        }
+
+        // 둘 중 하나만 null이면 오류
+        if (discount == null || discountType == null) {
+            throw new CoreException(ErrorType.BAD_REQUEST, "할인 금액과 할인 타입은 함께 설정되어야 합니다.");
+        }
+
+        // 음수 할인 검증
+        if (discount < 0) {
+            throw new CoreException(ErrorType.BAD_REQUEST, "할인 금액은 0 이상이어야 합니다.");
         }
 
         if (discountType == DiscountType.RATE && discount > 100) {
@@ -43,6 +58,12 @@ public class ProductValidator {
 
         if (discountType == DiscountType.PRICE && discount > basePrice) {
             throw new CoreException(ErrorType.BAD_REQUEST, "정액 할인은 기본 가격을 초과할 수 없습니다.");
+        }
+    }
+
+    public static void validateStatus(ProductStatus status) {
+        if (status == null) {
+            throw new CoreException(ErrorType.BAD_REQUEST, "상품 상태는 필수입니다.");
         }
     }
 }

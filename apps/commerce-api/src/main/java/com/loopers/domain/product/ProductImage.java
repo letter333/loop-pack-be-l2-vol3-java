@@ -16,6 +16,7 @@ public class ProductImage {
     private LocalDateTime updatedAt;
 
     public ProductImage(Long productId, ImageType type, String url, String altText) {
+        ProductImageValidator.validateType(type);
         ProductImageValidator.validateUrl(url);
 
         this.productId = productId;

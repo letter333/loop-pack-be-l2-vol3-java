@@ -57,6 +57,9 @@ public class ProductOption {
         if (quantity <= 0) {
             throw new CoreException(ErrorType.BAD_REQUEST, "증가 수량은 1 이상이어야 합니다.");
         }
+        if ((long) this.stockQuantity + quantity > Integer.MAX_VALUE) {
+            throw new CoreException(ErrorType.BAD_REQUEST, "재고 수량이 최대값을 초과합니다.");
+        }
         this.stockQuantity += quantity;
     }
 }

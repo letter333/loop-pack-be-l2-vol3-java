@@ -71,13 +71,12 @@ class ProductImageTest {
         }
 
         @Test
-        @DisplayName("type이 null이면 정상 생성된다")
-        void createsProductImage_whenTypeIsNull() {
-            // Arrange & Act
-            ProductImage image = new ProductImage(1L, null, "https://example.com/image.jpg", "상품 이미지");
-
-            // Assert
-            assertThat(image.getType()).isNull();
+        @DisplayName("type이 null이면 BAD_REQUEST 예외가 발생한다")
+        void throwsBadRequest_whenTypeIsNull() {
+            // Act & Assert
+            assertThatThrownBy(() -> new ProductImage(1L, null, "https://example.com/image.jpg", "상품 이미지"))
+                .isInstanceOf(CoreException.class)
+                .satisfies(ex -> assertThat(((CoreException) ex).getErrorType()).isEqualTo(ErrorType.BAD_REQUEST));
         }
     }
 }

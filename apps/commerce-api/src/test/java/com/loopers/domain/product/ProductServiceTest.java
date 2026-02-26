@@ -13,6 +13,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 
+import java.util.List;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertAll;
@@ -412,6 +414,174 @@ class ProductServiceTest {
             assertThatThrownBy(() -> productService.validateProduct(999L))
                 .isInstanceOf(CoreException.class)
                 .satisfies(ex -> assertThat(((CoreException) ex).getErrorType()).isEqualTo(ErrorType.NOT_FOUND));
+        }
+    }
+
+    @Nested
+    @DisplayName("increaseStock")
+    class IncreaseStock {
+
+        @Test
+        @DisplayName("재고를 정상적으로 증가시킨다")
+        void increasesStock() {
+            // Arrange
+            List<ProductOption> options = List.of(
+                new ProductOption(null, "BLACK_M", "블랙 / M", 5000L, 100)
+            );
+            Product saved = productRepository.save(new Product("아이폰 15", 1L, 1L, 1500000L, options, null));
+            Long optionId = saved.getOptions().get(0).getId();
+
+            // Act
+            productService.increaseStock(saved.getId(), optionId, 50);
+
+            // Assert
+            Product result = productService.getProduct(saved.getId());
+            assertThat(result.getOption(optionId).getStockQuantity()).isEqualTo(150);
+        }
+
+        @Test
+        @DisplayName("재고 증가 시 상한선을 초과하면 BAD_REQUEST 예외가 발생한다")
+        void throwsBadRequest_whenStockExceedsMaxValue() {
+            // Arrange
+            List<ProductOption> options = List.of(
+                new ProductOption(null, "BLACK_M", "블랙 / M", 5000L, Integer.MAX_VALUE - 10)
+            );
+            Product saved = productRepository.save(new Product("아이폰 15", 1L, 1L, 1500000L, options, null));
+            Long optionId = saved.getOptions().get(0).getId();
+
+            // Act & Assert
+            assertThatThrownBy(() -> productService.increaseStock(saved.getId(), optionId, 20))
+                .isInstanceOf(CoreException.class)
+                .satisfies(ex -> assertThat(((CoreException) ex).getErrorType()).isEqualTo(ErrorType.BAD_REQUEST));
+        }
+
+        @Test
+        @DisplayName("존재하지 않는 옵션의 재고를 증가시키면 NOT_FOUND 예외가 발생한다")
+        void throwsNotFound_whenOptionNotExists() {
+            // Arrange
+            Product saved = productRepository.save(new Product("아이폰 15", 1L, 1L, 1500000L));
+
+            // Act & Assert
+            assertThatThrownBy(() -> productService.increaseStock(saved.getId(), 999L, 10))
+                .isInstanceOf(CoreException.class)
+                .satisfies(ex -> assertThat(((CoreException) ex).getErrorType()).isEqualTo(ErrorType.NOT_FOUND));
+        }
+    }
+
+    @Nested
+    @DisplayName("decreaseStock")
+    class DecreaseStock {
+
+        @Test
+        @DisplayName("재고를 정상적으로 감소시킨다")
+        void decreasesStock() {
+            // Arrange
+            List<ProductOption> options = List.of(
+                new ProductOption(null, "BLACK_M", "블랙 / M", 5000L, 100)
+            );
+            Product saved = productRepository.save(new Product("아이폰 15", 1L, 1L, 1500000L, options, null));
+            Long optionId = saved.getOptions().get(0).getId();
+
+            // Act
+            productService.decreaseStock(saved.getId(), optionId, 30);
+
+            // Assert
+            Product result = productService.getProduct(saved.getId());
+            assertThat(result.getOption(optionId).getStockQuantity()).isEqualTo(70);
+        }
+
+        @Test
+        @DisplayName("재고가 부족하면 BAD_REQUEST 예외가 발생한다")
+        void throwsBadRequest_whenStockIsInsufficient() {
+            // Arrange
+            List<ProductOption> options = List.of(
+                new ProductOption(null, "BLACK_M", "블랙 / M", 5000L, 10)
+            );
+            Product saved = productRepository.save(new Product("아이폰 15", 1L, 1L, 1500000L, options, null));
+            Long optionId = saved.getOptions().get(0).getId();
+
+            // Act & Assert
+            assertThatThrownBy(() -> productService.decreaseStock(saved.getId(), optionId, 20))
+                .isInstanceOf(CoreException.class)
+                .satisfies(ex -> assertThat(((CoreException) ex).getErrorType()).isEqualTo(ErrorType.BAD_REQUEST));
+        }
+
+        @Test
+        @DisplayName("존재하지 않는 옵션의 재고를 감소시키면 NOT_FOUND 예외가 발생한다")
+        void throwsNotFound_whenOptionNotExists() {
+            // Arrange
+            Product saved = productRepository.save(new Product("아이폰 15", 1L, 1L, 1500000L));
+
+            // Act & Assert
+            assertThatThrownBy(() -> productService.decreaseStock(saved.getId(), 999L, 10))
+                .isInstanceOf(CoreException.class)
+                .satisfies(ex -> assertThat(((CoreException) ex).getErrorType()).isEqualTo(ErrorType.NOT_FOUND));
+        }
+    }
+
+    @Nested
+    @DisplayName("increaseLikeCount")
+    class IncreaseLikeCount {
+
+        @Test
+        @DisplayName("좋아요 수를 정상적으로 증가시킨다")
+        void increasesLikeCount() {
+            // Arrange
+            Product saved = productRepository.save(new Product("아이폰 15", 1L, 1L, 1500000L));
+
+            // Act
+            Long result = productService.increaseLikeCount(saved.getId());
+
+            // Assert
+            assertThat(result).isEqualTo(1L);
+        }
+
+        @Test
+        @DisplayName("좋아요 수를 여러 번 증가시키면 누적된다")
+        void accumulates_whenIncreasedMultipleTimes() {
+            // Arrange
+            Product saved = productRepository.save(new Product("아이폰 15", 1L, 1L, 1500000L));
+
+            // Act
+            productService.increaseLikeCount(saved.getId());
+            productService.increaseLikeCount(saved.getId());
+            Long result = productService.increaseLikeCount(saved.getId());
+
+            // Assert
+            assertThat(result).isEqualTo(3L);
+        }
+    }
+
+    @Nested
+    @DisplayName("decreaseLikeCount")
+    class DecreaseLikeCount {
+
+        @Test
+        @DisplayName("좋아요 수를 정상적으로 감소시킨다")
+        void decreasesLikeCount() {
+            // Arrange
+            Product saved = productRepository.save(new Product("아이폰 15", 1L, 1L, 1500000L));
+            productService.increaseLikeCount(saved.getId());
+            productService.increaseLikeCount(saved.getId());
+
+            // Act
+            Long result = productService.decreaseLikeCount(saved.getId());
+
+            // Assert
+            assertThat(result).isEqualTo(1L);
+        }
+
+        @Test
+        @DisplayName("좋아요 수가 0이면 0 미만으로 감소하지 않는다")
+        void doesNotGoBelowZero() {
+            // Arrange
+            Product saved = productRepository.save(new Product("아이폰 15", 1L, 1L, 1500000L));
+
+            // Act
+            Long result = productService.decreaseLikeCount(saved.getId());
+
+            // Assert
+            assertThat(result).isEqualTo(0L);
         }
     }
 }
