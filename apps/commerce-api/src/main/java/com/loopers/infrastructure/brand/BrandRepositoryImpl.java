@@ -39,6 +39,16 @@ public class BrandRepositoryImpl implements BrandRepository {
     }
 
     @Override
+    public List<Brand> findAllActiveByIds(List<Long> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return List.of();
+        }
+        return brandJpaRepository.findAllActiveByIdIn(ids).stream()
+            .map(BrandEntity::toDomain)
+            .toList();
+    }
+
+    @Override
     public Brand save(Brand brand) {
         BrandEntity entity;
         if (brand.getId() != null) {

@@ -37,6 +37,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
 @ExtendWith(MockitoExtension.class)
@@ -322,6 +323,27 @@ class OrderFacadeTest {
                 .extracting("errorType")
                 .isEqualTo(ErrorType.BAD_REQUEST);
         }
+
+        @Test
+        @DisplayName("재고 복구 실패 시 주문 취소도 롤백되어야 한다 - 재고 복구가 먼저 수행됨")
+        void rollsBackCancellation_whenStockRestoreFails() {
+            // arrange
+            Member member = createMember();
+            Order order = createOrderWithProducts(ORDER_ID, MEMBER_ID, OrderStatus.PENDING);
+            given(memberService.authenticate(LOGIN_ID, PASSWORD)).willReturn(member);
+            given(orderService.getOrder(ORDER_ID)).willReturn(order);
+            doThrow(new CoreException(ErrorType.INTERNAL_ERROR, "재고 복구 실패"))
+                .when(productService).increaseStock(eq(1L), eq(10L), eq(2));
+
+            // act & assert
+            assertThatThrownBy(() -> orderFacade.cancelOrder(LOGIN_ID, PASSWORD, ORDER_ID))
+                .isInstanceOf(CoreException.class)
+                .extracting("errorType")
+                .isEqualTo(ErrorType.INTERNAL_ERROR);
+
+            // 재고 복구가 먼저 수행되므로 cancelOrder가 호출되지 않음
+            verify(orderService, never()).cancelOrder(ORDER_ID);
+        }
     }
 
     @DisplayName("Admin 주문 조회")
@@ -362,6 +384,46 @@ class OrderFacadeTest {
                 () -> assertThat(result.id()).isEqualTo(ORDER_ID),
                 () -> assertThat(result.memberId()).isEqualTo(MEMBER_ID)
             );
+        }
+
+        @Test
+        @DisplayName("Admin이 주문 상태를 CANCELLED로 변경하면 재고가 복구된다")
+        void restoresStock_whenAdminCancelsOrder() {
+            // arrange
+            Order order = createOrderWithProducts(ORDER_ID, MEMBER_ID, OrderStatus.PENDING);
+            Order cancelledOrder = createOrderWithProducts(ORDER_ID, MEMBER_ID, OrderStatus.CANCELLED);
+            doNothing().when(adminValidator).validate(ADMIN_LDAP);
+            given(orderService.getOrder(ORDER_ID)).willReturn(order);
+            given(orderService.changeStatus(ORDER_ID, OrderStatus.CANCELLED)).willReturn(cancelledOrder);
+
+            // act
+            OrderAdminDetailInfo result = orderFacade.changeOrderStatusForAdmin(ADMIN_LDAP, ORDER_ID, OrderStatus.CANCELLED);
+
+            // assert
+            assertAll(
+                () -> assertThat(result.status()).isEqualTo(OrderStatus.CANCELLED),
+                () -> verify(productService).increaseStock(1L, 10L, 2)
+            );
+        }
+
+        @Test
+        @DisplayName("Admin 주문 취소 시 재고 복구 실패하면 상태 변경도 롤백된다 - 재고 복구가 먼저 수행됨")
+        void rollsBackStatusChange_whenStockRestoreFails() {
+            // arrange
+            Order order = createOrderWithProducts(ORDER_ID, MEMBER_ID, OrderStatus.PENDING);
+            doNothing().when(adminValidator).validate(ADMIN_LDAP);
+            given(orderService.getOrder(ORDER_ID)).willReturn(order);
+            doThrow(new CoreException(ErrorType.INTERNAL_ERROR, "재고 복구 실패"))
+                .when(productService).increaseStock(eq(1L), eq(10L), eq(2));
+
+            // act & assert
+            assertThatThrownBy(() -> orderFacade.changeOrderStatusForAdmin(ADMIN_LDAP, ORDER_ID, OrderStatus.CANCELLED))
+                .isInstanceOf(CoreException.class)
+                .extracting("errorType")
+                .isEqualTo(ErrorType.INTERNAL_ERROR);
+
+            // 재고 복구가 먼저 수행되므로 changeStatus가 호출되지 않음
+            verify(orderService, never()).changeStatus(ORDER_ID, OrderStatus.CANCELLED);
         }
     }
 

@@ -14,6 +14,9 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
+import java.util.Map;
+
 @Component
 @RequiredArgsConstructor
 public class ProductFacade {
@@ -33,9 +36,21 @@ public class ProductFacade {
     @Transactional(readOnly = true)
     public Page<ProductInfo> getProducts(Long categoryId, String keyword, ProductSortType sort, Pageable pageable) {
         Page<Product> products = productService.getProducts(categoryId, keyword, sort, pageable);
+
+        // 1. 모든 brandId 수집 (중복 제거)
+        List<Long> brandIds = products.getContent().stream()
+            .map(Product::getBrandId)
+            .distinct()
+            .toList();
+
+        // 2. 한 번의 쿼리로 모든 브랜드 조회
+        Map<Long, Brand> brandMap = brandService.getActiveBrandsByIds(brandIds);
+
+        // 3. 매핑
         return products.map(product -> {
-            Brand brand = brandService.getActiveBrand(product.getBrandId());
-            return ProductInfo.from(product, BrandInfo.from(brand), product.getLikeCount());
+            Brand brand = brandMap.get(product.getBrandId());
+            BrandInfo brandInfo = brand != null ? BrandInfo.from(brand) : null;
+            return ProductInfo.from(product, brandInfo, product.getLikeCount());
         });
     }
 

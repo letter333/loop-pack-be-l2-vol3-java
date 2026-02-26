@@ -17,6 +17,9 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 
+import java.util.List;
+import java.util.Map;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertAll;
@@ -331,6 +334,93 @@ class BrandServiceTest {
             assertThatThrownBy(() -> brandService.validateBrand(saved.getId()))
                 .isInstanceOf(CoreException.class)
                 .satisfies(ex -> assertThat(((CoreException) ex).getErrorType()).isEqualTo(ErrorType.NOT_FOUND));
+        }
+    }
+
+    @Nested
+    @DisplayName("getActiveBrandsByIds")
+    class GetActiveBrandsByIds {
+
+        @Test
+        @DisplayName("여러 브랜드 ID로 한 번에 조회한다")
+        void returnsBrands_whenIdsProvided() {
+            // Arrange
+            Brand nike = brandRepository.save(new Brand("Nike", "스포츠 브랜드", "https://nike.png"));
+            Brand adidas = brandRepository.save(new Brand("Adidas", "독일 브랜드", "https://adidas.png"));
+            Brand puma = brandRepository.save(new Brand("Puma", "유럽 브랜드", "https://puma.png"));
+            List<Long> brandIds = List.of(nike.getId(), adidas.getId(), puma.getId());
+
+            // Act
+            Map<Long, Brand> result = brandService.getActiveBrandsByIds(brandIds);
+
+            // Assert
+            assertAll(
+                () -> assertThat(result).hasSize(3),
+                () -> assertThat(result.get(nike.getId()).getName()).isEqualTo("Nike"),
+                () -> assertThat(result.get(adidas.getId()).getName()).isEqualTo("Adidas"),
+                () -> assertThat(result.get(puma.getId()).getName()).isEqualTo("Puma")
+            );
+        }
+
+        @Test
+        @DisplayName("삭제된 브랜드는 결과에 포함되지 않는다")
+        void excludesDeletedBrands() {
+            // Arrange
+            Brand nike = brandRepository.save(new Brand("Nike", "스포츠 브랜드", "https://nike.png"));
+            Brand adidas = brandRepository.save(new Brand("Adidas", "독일 브랜드", "https://adidas.png"));
+            brandService.deleteBrand(adidas.getId());
+            List<Long> brandIds = List.of(nike.getId(), adidas.getId());
+
+            // Act
+            Map<Long, Brand> result = brandService.getActiveBrandsByIds(brandIds);
+
+            // Assert
+            assertAll(
+                () -> assertThat(result).hasSize(1),
+                () -> assertThat(result.containsKey(nike.getId())).isTrue(),
+                () -> assertThat(result.containsKey(adidas.getId())).isFalse()
+            );
+        }
+
+        @Test
+        @DisplayName("빈 ID 목록이면 빈 Map을 반환한다")
+        void returnsEmptyMap_whenIdsIsEmpty() {
+            // Arrange
+            List<Long> emptyIds = List.of();
+
+            // Act
+            Map<Long, Brand> result = brandService.getActiveBrandsByIds(emptyIds);
+
+            // Assert
+            assertThat(result).isEmpty();
+        }
+
+        @Test
+        @DisplayName("null ID 목록이면 빈 Map을 반환한다")
+        void returnsEmptyMap_whenIdsIsNull() {
+            // Act
+            Map<Long, Brand> result = brandService.getActiveBrandsByIds(null);
+
+            // Assert
+            assertThat(result).isEmpty();
+        }
+
+        @Test
+        @DisplayName("존재하지 않는 ID는 결과에 포함되지 않는다")
+        void excludesNonExistentIds() {
+            // Arrange
+            Brand nike = brandRepository.save(new Brand("Nike", "스포츠 브랜드", "https://nike.png"));
+            List<Long> brandIds = List.of(nike.getId(), 9999L);
+
+            // Act
+            Map<Long, Brand> result = brandService.getActiveBrandsByIds(brandIds);
+
+            // Assert
+            assertAll(
+                () -> assertThat(result).hasSize(1),
+                () -> assertThat(result.containsKey(nike.getId())).isTrue(),
+                () -> assertThat(result.containsKey(9999L)).isFalse()
+            );
         }
     }
 }

@@ -14,6 +14,8 @@ public interface BrandRepository {
 
     Page<Brand> findAllActive(Pageable pageable);
 
+    List<Brand> findAllActiveByIds(List<Long> ids);
+
     Brand save(Brand brand);
 
     Brand update(Long id, Brand brand);

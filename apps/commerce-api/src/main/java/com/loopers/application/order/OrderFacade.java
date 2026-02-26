@@ -99,11 +99,8 @@ public class OrderFacade {
         Order order = orderService.getOrder(orderId);
         orderService.validateOwnership(member.getId(), order);
 
-        List<OrderProduct> orderProducts = order.getOrderProducts();
-
-        Order cancelledOrder = orderService.cancelOrder(orderId);
-
-        for (OrderProduct orderProduct : orderProducts) {
+        // 1. 재고 복구 (먼저 - 실패 시 전체 롤백)
+        for (OrderProduct orderProduct : order.getOrderProducts()) {
             productService.increaseStock(
                 orderProduct.getProductId(),
                 orderProduct.getProductOptionId(),
@@ -111,6 +108,8 @@ public class OrderFacade {
             );
         }
 
+        // 2. 주문 취소 (이후)
+        Order cancelledOrder = orderService.cancelOrder(orderId);
         return OrderDetailInfo.from(cancelledOrder);
     }
 
@@ -136,16 +135,15 @@ public class OrderFacade {
         adminValidator.validate(ldap);
         Order order = orderService.getOrder(orderId);
 
-        boolean needsStockRestore = (newStatus == OrderStatus.CANCELLED);
-        List<OrderProduct> orderProducts = needsStockRestore ? order.getOrderProducts() : List.of();
-
-        Order updatedOrder = orderService.changeStatus(orderId, newStatus);
-
-        if (needsStockRestore) {
-            for (OrderProduct op : orderProducts) {
+        // 1. 취소 시 재고 복구 (먼저 - 실패 시 전체 롤백)
+        if (newStatus == OrderStatus.CANCELLED) {
+            for (OrderProduct op : order.getOrderProducts()) {
                 productService.increaseStock(op.getProductId(), op.getProductOptionId(), op.getQuantity());
             }
         }
+
+        // 2. 상태 변경 (이후)
+        Order updatedOrder = orderService.changeStatus(orderId, newStatus);
         return OrderAdminDetailInfo.from(updatedOrder);
     }
 

@@ -10,6 +10,10 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
 @Component
 @RequiredArgsConstructor
 public class BrandService {
@@ -59,6 +63,16 @@ public class BrandService {
     @Transactional(readOnly = true, propagation = Propagation.SUPPORTS)
     public Brand validateBrand(Long brandId) {
         return getActiveBrand(brandId);
+    }
+
+    @Transactional(readOnly = true, propagation = Propagation.SUPPORTS)
+    public Map<Long, Brand> getActiveBrandsByIds(List<Long> brandIds) {
+        if (brandIds == null || brandIds.isEmpty()) {
+            return Map.of();
+        }
+        List<Brand> brands = brandRepository.findAllActiveByIds(brandIds);
+        return brands.stream()
+            .collect(Collectors.toMap(Brand::getId, brand -> brand));
     }
 
     @Transactional(propagation = Propagation.REQUIRED)
