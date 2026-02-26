@@ -113,7 +113,7 @@ public class Product {
     }
 
     public void applyDiscount(Long discount, DiscountType discountType) {
-        ProductValidator.validateDiscount(discount, discountType);
+        ProductValidator.validateDiscount(discount, discountType, this.basePrice);
         this.discount = discount;
         this.discountType = discountType;
     }
@@ -126,6 +126,7 @@ public class Product {
     public void update(String name, Long categoryId, Long basePrice,
                        Long discount, DiscountType discountType, ProductStatus status) {
         ProductValidator.validateName(name);
+        ProductValidator.validateDiscount(discount, discountType, basePrice);
         this.name = name;
         this.categoryId = categoryId;
         this.basePrice = basePrice;

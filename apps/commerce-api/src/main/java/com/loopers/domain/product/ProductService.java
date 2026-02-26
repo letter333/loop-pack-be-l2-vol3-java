@@ -75,7 +75,11 @@ public class ProductService {
 
     @Transactional(readOnly = true, propagation = Propagation.SUPPORTS)
     public Product validateProduct(Long productId) {
-        return getActiveProduct(productId);
+        Product product = getActiveProduct(productId);
+        if (!product.isAvailable()) {
+            throw new CoreException(ErrorType.BAD_REQUEST, "판매 중인 상품만 주문 가능합니다.");
+        }
+        return product;
     }
 
     @Transactional(propagation = Propagation.REQUIRED)

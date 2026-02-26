@@ -158,17 +158,15 @@ class ProductTest {
         }
 
         @Test
-        @DisplayName("PRICE 타입: 할인가가 기본가보다 크면 0원을 반환한다")
-        void returnsZero_whenPriceDiscountExceedsBasePrice() {
+        @DisplayName("PRICE 타입: 할인가가 기본가보다 크면 예외가 발생한다")
+        void throwsException_whenPriceDiscountExceedsBasePrice() {
             // Arrange
             Product product = new Product("저가 상품", 1L, 1L, 50000L);
-            product.applyDiscount(100000L, DiscountType.PRICE);
 
-            // Act
-            Long discountedPrice = product.calculateDiscountedPrice();
-
-            // Assert
-            assertThat(discountedPrice).isEqualTo(0L);
+            // Act & Assert
+            assertThatThrownBy(() -> product.applyDiscount(100000L, DiscountType.PRICE))
+                .isInstanceOf(CoreException.class)
+                .satisfies(ex -> assertThat(((CoreException) ex).getErrorType()).isEqualTo(ErrorType.BAD_REQUEST));
         }
     }
 
@@ -186,6 +184,35 @@ class ProductTest {
             assertThatThrownBy(() -> product.applyDiscount(101L, DiscountType.RATE))
                 .isInstanceOf(CoreException.class)
                 .satisfies(ex -> assertThat(((CoreException) ex).getErrorType()).isEqualTo(ErrorType.BAD_REQUEST));
+        }
+
+        @Test
+        @DisplayName("PRICE 타입에서 discount가 basePrice 초과이면 예외가 발생한다")
+        void throwsException_whenPriceDiscountExceedsBasePrice() {
+            // Arrange
+            Product product = new Product("아이폰 15", 1L, 1L, 100000L);
+
+            // Act & Assert
+            assertThatThrownBy(() -> product.applyDiscount(150000L, DiscountType.PRICE))
+                .isInstanceOf(CoreException.class)
+                .satisfies(ex -> assertThat(((CoreException) ex).getErrorType()).isEqualTo(ErrorType.BAD_REQUEST));
+        }
+
+        @Test
+        @DisplayName("PRICE 타입에서 discount가 basePrice와 같으면 정상 적용된다 (100% 할인)")
+        void appliesDiscount_whenPriceDiscountEqualsBasePrice() {
+            // Arrange
+            Product product = new Product("아이폰 15", 1L, 1L, 100000L);
+
+            // Act
+            product.applyDiscount(100000L, DiscountType.PRICE);
+
+            // Assert
+            assertAll(
+                () -> assertThat(product.getDiscount()).isEqualTo(100000L),
+                () -> assertThat(product.getDiscountType()).isEqualTo(DiscountType.PRICE),
+                () -> assertThat(product.calculateDiscountedPrice()).isEqualTo(0L)
+            );
         }
 
         @Test

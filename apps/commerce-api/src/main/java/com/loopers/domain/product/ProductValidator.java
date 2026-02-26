@@ -32,9 +32,17 @@ public class ProductValidator {
         }
     }
 
-    public static void validateDiscount(Long discount, DiscountType discountType) {
+    public static void validateDiscount(Long discount, DiscountType discountType, Long basePrice) {
+        if (discount == null || discountType == null) {
+            return;
+        }
+
         if (discountType == DiscountType.RATE && discount > 100) {
             throw new CoreException(ErrorType.BAD_REQUEST, "정률 할인은 100%를 초과할 수 없습니다.");
+        }
+
+        if (discountType == DiscountType.PRICE && discount > basePrice) {
+            throw new CoreException(ErrorType.BAD_REQUEST, "정액 할인은 기본 가격을 초과할 수 없습니다.");
         }
     }
 }

@@ -339,4 +339,79 @@ class ProductServiceTest {
             );
         }
     }
+
+    @Nested
+    @DisplayName("validateProduct")
+    class ValidateProduct {
+
+        @Test
+        @DisplayName("SALE 상태 상품은 검증을 통과한다")
+        void passesValidation_whenProductIsSale() {
+            // Arrange
+            Product saved = productRepository.save(new Product("아이폰 15", 1L, 1L, 1500000L));
+
+            // Act
+            Product result = productService.validateProduct(saved.getId());
+
+            // Assert
+            assertAll(
+                () -> assertThat(result.getId()).isEqualTo(saved.getId()),
+                () -> assertThat(result.getStatus()).isEqualTo(ProductStatus.SALE)
+            );
+        }
+
+        @Test
+        @DisplayName("STOP 상태 상품은 BAD_REQUEST 예외가 발생한다")
+        void throwsBadRequest_whenProductIsStop() {
+            // Arrange
+            Product saved = productRepository.save(new Product("아이폰 15", 1L, 1L, 1500000L));
+            productService.updateProduct(
+                saved.getId(), "아이폰 15", 1L, 1500000L,
+                null, null, ProductStatus.STOP
+            );
+
+            // Act & Assert
+            assertThatThrownBy(() -> productService.validateProduct(saved.getId()))
+                .isInstanceOf(CoreException.class)
+                .satisfies(ex -> assertThat(((CoreException) ex).getErrorType()).isEqualTo(ErrorType.BAD_REQUEST));
+        }
+
+        @Test
+        @DisplayName("SOLDOUT 상태 상품은 BAD_REQUEST 예외가 발생한다")
+        void throwsBadRequest_whenProductIsSoldout() {
+            // Arrange
+            Product saved = productRepository.save(new Product("아이폰 15", 1L, 1L, 1500000L));
+            productService.updateProduct(
+                saved.getId(), "아이폰 15", 1L, 1500000L,
+                null, null, ProductStatus.SOLDOUT
+            );
+
+            // Act & Assert
+            assertThatThrownBy(() -> productService.validateProduct(saved.getId()))
+                .isInstanceOf(CoreException.class)
+                .satisfies(ex -> assertThat(((CoreException) ex).getErrorType()).isEqualTo(ErrorType.BAD_REQUEST));
+        }
+
+        @Test
+        @DisplayName("삭제된 상품은 NOT_FOUND 예외가 발생한다")
+        void throwsNotFound_whenProductIsDeleted() {
+            // Arrange
+            Product saved = productRepository.save(new Product("아이폰 15", 1L, 1L, 1500000L));
+            productService.deleteProduct(saved.getId());
+
+            // Act & Assert
+            assertThatThrownBy(() -> productService.validateProduct(saved.getId()))
+                .isInstanceOf(CoreException.class)
+                .satisfies(ex -> assertThat(((CoreException) ex).getErrorType()).isEqualTo(ErrorType.NOT_FOUND));
+        }
+
+        @Test
+        @DisplayName("존재하지 않는 상품은 NOT_FOUND 예외가 발생한다")
+        void throwsNotFound_whenProductNotExists() {
+            // Act & Assert
+            assertThatThrownBy(() -> productService.validateProduct(999L))
+                .isInstanceOf(CoreException.class)
+                .satisfies(ex -> assertThat(((CoreException) ex).getErrorType()).isEqualTo(ErrorType.NOT_FOUND));
+        }
+    }
 }

@@ -2,6 +2,8 @@ package com.loopers.application.product;
 
 import com.loopers.domain.brand.Brand;
 import com.loopers.domain.brand.BrandRepository;
+import com.loopers.domain.category.Category;
+import com.loopers.domain.category.CategoryRepository;
 import com.loopers.domain.product.ImageType;
 import com.loopers.domain.product.Product;
 import com.loopers.domain.product.ProductImage;
@@ -43,13 +45,18 @@ class ProductFacadeTest {
     private BrandRepository brandRepository;
 
     @Autowired
+    private CategoryRepository categoryRepository;
+
+    @Autowired
     private DatabaseCleanUp databaseCleanUp;
 
     private Brand savedBrand;
+    private Category savedCategory;
 
     @BeforeEach
     void setUp() {
         savedBrand = brandRepository.save(new Brand("Apple", "애플", "https://example.com/apple.png"));
+        savedCategory = categoryRepository.save(new Category("전자제품"));
     }
 
     @AfterEach
@@ -179,7 +186,7 @@ class ProductFacadeTest {
         void createsProduct() {
             // Arrange
             ProductCommand.Create command = new ProductCommand.Create(
-                "아이폰 15", savedBrand.getId(), 1L, 1500000L
+                "아이폰 15", savedBrand.getId(), savedCategory.getId(), 1500000L
             );
 
             // Act
@@ -201,13 +208,41 @@ class ProductFacadeTest {
         void throwsForbidden_whenNotAdmin() {
             // Arrange
             ProductCommand.Create command = new ProductCommand.Create(
-                "아이폰 15", savedBrand.getId(), 1L, 1500000L
+                "아이폰 15", savedBrand.getId(), savedCategory.getId(), 1500000L
             );
 
             // Act & Assert
             assertThatThrownBy(() -> productFacade.createProduct("invalid.ldap", command))
                 .isInstanceOf(CoreException.class)
                 .satisfies(ex -> assertThat(((CoreException) ex).getErrorType()).isEqualTo(ErrorType.FORBIDDEN));
+        }
+
+        @Test
+        @DisplayName("존재하지 않는 브랜드로 상품 생성 시 NOT_FOUND 예외가 발생한다")
+        void throwsNotFound_whenBrandNotExists() {
+            // Arrange
+            ProductCommand.Create command = new ProductCommand.Create(
+                "아이폰 15", 99999L, savedCategory.getId(), 1500000L
+            );
+
+            // Act & Assert
+            assertThatThrownBy(() -> productFacade.createProduct("loopers.admin", command))
+                .isInstanceOf(CoreException.class)
+                .satisfies(ex -> assertThat(((CoreException) ex).getErrorType()).isEqualTo(ErrorType.NOT_FOUND));
+        }
+
+        @Test
+        @DisplayName("존재하지 않는 카테고리로 상품 생성 시 NOT_FOUND 예외가 발생한다")
+        void throwsNotFound_whenCategoryNotExists() {
+            // Arrange
+            ProductCommand.Create command = new ProductCommand.Create(
+                "아이폰 15", savedBrand.getId(), 99999L, 1500000L
+            );
+
+            // Act & Assert
+            assertThatThrownBy(() -> productFacade.createProduct("loopers.admin", command))
+                .isInstanceOf(CoreException.class)
+                .satisfies(ex -> assertThat(((CoreException) ex).getErrorType()).isEqualTo(ErrorType.NOT_FOUND));
         }
     }
 

@@ -3,6 +3,7 @@ package com.loopers.application.product;
 import com.loopers.application.brand.BrandInfo;
 import com.loopers.domain.brand.Brand;
 import com.loopers.domain.brand.BrandService;
+import com.loopers.domain.category.CategoryService;
 import com.loopers.domain.product.Product;
 import com.loopers.domain.product.ProductService;
 import com.loopers.domain.product.ProductSortType;
@@ -19,6 +20,7 @@ public class ProductFacade {
 
     private final ProductService productService;
     private final BrandService brandService;
+    private final CategoryService categoryService;
     private final AdminValidator adminValidator;
 
     @Transactional(readOnly = true)
@@ -47,6 +49,8 @@ public class ProductFacade {
     @Transactional
     public ProductAdminDetailInfo createProduct(String ldap, ProductCommand.Create command) {
         adminValidator.validate(ldap);
+        brandService.validateBrand(command.brandId());
+        categoryService.validateCategory(command.categoryId());
         Product product = productService.createProduct(
             command.name(), command.brandId(), command.categoryId(), command.basePrice()
         );
