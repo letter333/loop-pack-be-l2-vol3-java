@@ -240,6 +240,66 @@ class ProductV1ApiE2ETest {
                 () -> assertThat(brand.get("name")).isEqualTo("Apple")
             );
         }
+
+        @Test
+        @DisplayName("좋아요 많은순으로 정렬하여 조회한다")
+        void returnsProductsSortedByLikesDesc() {
+            // Arrange
+            Product product1 = productRepository.save(new Product("아이폰 15", savedBrand.getId(), 1L, 1500000L));
+            Product product2 = productRepository.save(new Product("갤럭시 S24", savedBrand2.getId(), 1L, 1400000L));
+            Product product3 = productRepository.save(new Product("맥북 프로", savedBrand.getId(), 2L, 3000000L));
+
+            // 좋아요 수 설정: product2(5) > product1(3) > product3(1)
+            for (int i = 0; i < 3; i++) productService.increaseLikeCount(product1.getId());
+            for (int i = 0; i < 5; i++) productService.increaseLikeCount(product2.getId());
+            productService.increaseLikeCount(product3.getId());
+
+            // Act
+            ResponseEntity<ApiResponse<Map<String, Object>>> response =
+                testRestTemplate.exchange(ENDPOINT + "?sort=LIKES_DESC", HttpMethod.GET, null,
+                    new ParameterizedTypeReference<>() {});
+
+            // Assert
+            @SuppressWarnings("unchecked")
+            List<Map<String, Object>> content = (List<Map<String, Object>>) response.getBody().data().get("content");
+            assertAll(
+                () -> assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK),
+                () -> assertThat(content).hasSize(3),
+                () -> assertThat(((Number) content.get(0).get("likeCount")).longValue()).isEqualTo(5L),
+                () -> assertThat(((Number) content.get(1).get("likeCount")).longValue()).isEqualTo(3L),
+                () -> assertThat(((Number) content.get(2).get("likeCount")).longValue()).isEqualTo(1L)
+            );
+        }
+
+        @Test
+        @DisplayName("좋아요 수가 동일하면 최신순으로 정렬한다")
+        void returnsProductsSortedByCreatedAtDesc_whenLikeCountSame() {
+            // Arrange
+            Product product1 = productRepository.save(new Product("아이폰 15", savedBrand.getId(), 1L, 1500000L));
+            Product product2 = productRepository.save(new Product("갤럭시 S24", savedBrand2.getId(), 1L, 1400000L));
+            Product product3 = productRepository.save(new Product("맥북 프로", savedBrand.getId(), 2L, 3000000L));
+
+            // 모든 상품 좋아요 수 동일하게 설정 (각 1개)
+            productService.increaseLikeCount(product1.getId());
+            productService.increaseLikeCount(product2.getId());
+            productService.increaseLikeCount(product3.getId());
+
+            // Act
+            ResponseEntity<ApiResponse<Map<String, Object>>> response =
+                testRestTemplate.exchange(ENDPOINT + "?sort=LIKES_DESC", HttpMethod.GET, null,
+                    new ParameterizedTypeReference<>() {});
+
+            // Assert - 좋아요 수 동일하면 최신순 (product3 > product2 > product1)
+            @SuppressWarnings("unchecked")
+            List<Map<String, Object>> content = (List<Map<String, Object>>) response.getBody().data().get("content");
+            assertAll(
+                () -> assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK),
+                () -> assertThat(content).hasSize(3),
+                () -> assertThat(content.get(0).get("name")).isEqualTo("맥북 프로"),
+                () -> assertThat(content.get(1).get("name")).isEqualTo("갤럭시 S24"),
+                () -> assertThat(content.get(2).get("name")).isEqualTo("아이폰 15")
+            );
+        }
     }
 
     @Nested

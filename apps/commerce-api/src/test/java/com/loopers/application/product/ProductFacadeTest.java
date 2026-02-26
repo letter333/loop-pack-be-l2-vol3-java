@@ -176,6 +176,79 @@ class ProductFacadeTest {
                 () -> assertThat(result.hasNext()).isTrue()
             );
         }
+
+        @Test
+        @DisplayName("좋아요 많은순으로 정렬하여 조회한다")
+        void returnsProducts_sortedByLikesDesc() {
+            // Arrange
+            Product product1 = productRepository.save(new Product("아이폰 15", savedBrand.getId(), 1L, 1500000L));
+            Product product2 = productRepository.save(new Product("갤럭시 S24", savedBrand.getId(), 1L, 1400000L));
+            Product product3 = productRepository.save(new Product("맥북 프로", savedBrand.getId(), 2L, 3000000L));
+
+            // 좋아요 수 설정: product2(5) > product1(3) > product3(1)
+            product1.increaseLikeCount();
+            product1.increaseLikeCount();
+            product1.increaseLikeCount();
+            productRepository.save(product1);
+
+            product2.increaseLikeCount();
+            product2.increaseLikeCount();
+            product2.increaseLikeCount();
+            product2.increaseLikeCount();
+            product2.increaseLikeCount();
+            productRepository.save(product2);
+
+            product3.increaseLikeCount();
+            productRepository.save(product3);
+
+            Pageable pageable = PageRequest.of(0, 10);
+
+            // Act
+            Page<ProductInfo> result = productFacade.getProducts(null, null, ProductSortType.LIKES_DESC, pageable);
+
+            // Assert
+            assertAll(
+                () -> assertThat(result.getContent()).hasSize(3),
+                () -> assertThat(result.getContent().get(0).id()).isEqualTo(product2.getId()),
+                () -> assertThat(result.getContent().get(0).likeCount()).isEqualTo(5L),
+                () -> assertThat(result.getContent().get(1).id()).isEqualTo(product1.getId()),
+                () -> assertThat(result.getContent().get(1).likeCount()).isEqualTo(3L),
+                () -> assertThat(result.getContent().get(2).id()).isEqualTo(product3.getId()),
+                () -> assertThat(result.getContent().get(2).likeCount()).isEqualTo(1L)
+            );
+        }
+
+        @Test
+        @DisplayName("좋아요 수가 동일하면 최신순으로 정렬한다")
+        void returnsProducts_sortedByCreatedAtDesc_whenLikeCountSame() {
+            // Arrange
+            Product product1 = productRepository.save(new Product("아이폰 15", savedBrand.getId(), 1L, 1500000L));
+            Product product2 = productRepository.save(new Product("갤럭시 S24", savedBrand.getId(), 1L, 1400000L));
+            Product product3 = productRepository.save(new Product("맥북 프로", savedBrand.getId(), 2L, 3000000L));
+
+            // 모든 상품 좋아요 수 동일하게 설정 (각 1개)
+            product1.increaseLikeCount();
+            productRepository.save(product1);
+
+            product2.increaseLikeCount();
+            productRepository.save(product2);
+
+            product3.increaseLikeCount();
+            productRepository.save(product3);
+
+            Pageable pageable = PageRequest.of(0, 10);
+
+            // Act
+            Page<ProductInfo> result = productFacade.getProducts(null, null, ProductSortType.LIKES_DESC, pageable);
+
+            // Assert - 좋아요 수 동일하면 최신순 (product3 > product2 > product1)
+            assertAll(
+                () -> assertThat(result.getContent()).hasSize(3),
+                () -> assertThat(result.getContent().get(0).id()).isEqualTo(product3.getId()),
+                () -> assertThat(result.getContent().get(1).id()).isEqualTo(product2.getId()),
+                () -> assertThat(result.getContent().get(2).id()).isEqualTo(product1.getId())
+            );
+        }
     }
 
     @Nested

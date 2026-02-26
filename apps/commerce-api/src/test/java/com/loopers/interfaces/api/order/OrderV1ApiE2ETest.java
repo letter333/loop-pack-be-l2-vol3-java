@@ -12,6 +12,7 @@ import com.loopers.domain.order.OrderStatus;
 import com.loopers.domain.product.Product;
 import com.loopers.domain.product.ProductOption;
 import com.loopers.domain.product.ProductRepository;
+import com.loopers.domain.product.ProductStatus;
 import com.loopers.interfaces.api.ApiResponse;
 import com.loopers.utils.DatabaseCleanUp;
 import org.junit.jupiter.api.AfterEach;
@@ -474,6 +475,188 @@ class OrderV1ApiE2ETest {
                 HttpMethod.PATCH,
                 new HttpEntity<>(headers),
                 new ParameterizedTypeReference<>() {}
+            );
+        }
+    }
+
+    @DisplayName("주문-재고 연계 및 SOLDOUT 상태 전환")
+    @Nested
+    class StockAndSoldoutIntegration {
+
+        private Member member;
+        private Address address;
+        private Brand brand;
+        private Category category;
+
+        @BeforeEach
+        void setUp() {
+            member = saveMember("user1", "Password123!");
+            address = saveAddress(member.getId());
+            brand = saveBrand("Nike");
+            category = saveCategory("의류");
+        }
+
+        @Test
+        @DisplayName("재고가 전부 소진되면 상품이 SOLDOUT 상태로 전환된다")
+        void changesProductStatusToSoldout_whenStockIsExhaustedByOrder() {
+            // Arrange: 재고가 딱 5개인 상품 생성
+            ProductOption option = new ProductOption(null, "M", "M 사이즈", 0L, 5);
+            Product product = saveProductWithOption("테스트 상품", brand.getId(), category.getId(), 10000L, option);
+            Long optionId = product.getOptions().get(0).getId();
+
+            // 상품이 SALE 상태인지 확인
+            Product beforeProduct = productRepository.findById(product.getId()).orElseThrow();
+            assertThat(beforeProduct.getStatus()).isEqualTo(ProductStatus.SALE);
+
+            // Act: 재고 전체를 주문
+            OrderV1Dto.CreateOrderRequest request = new OrderV1Dto.CreateOrderRequest(
+                address.getId(), null,
+                List.of(new OrderV1Dto.OrderItemRequest(product.getId(), optionId, 5))
+            );
+
+            HttpHeaders headers = createAuthHeaders(member.getLoginId(), "Password123!");
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            testRestTemplate.exchange(
+                "/api/v1/orders",
+                HttpMethod.POST,
+                new HttpEntity<>(request, headers),
+                new ParameterizedTypeReference<ApiResponse<OrderV1Dto.OrderDetailResponse>>() {}
+            );
+
+            // Assert: 상품이 SOLDOUT 상태로 변경되었는지 확인
+            Product afterProduct = productRepository.findById(product.getId()).orElseThrow();
+            assertAll(
+                () -> assertThat(afterProduct.getStatus()).isEqualTo(ProductStatus.SOLDOUT),
+                () -> assertThat(afterProduct.getTotalStockQuantity()).isEqualTo(0)
+            );
+        }
+
+        @Test
+        @DisplayName("다중 옵션 상품의 모든 옵션 재고가 소진되면 SOLDOUT 상태로 전환된다")
+        void changesProductStatusToSoldout_whenAllOptionsExhausted() {
+            // Arrange: 2개의 옵션을 가진 상품 생성 (M: 재고 3, L: 재고 2)
+            ProductOption optionM = new ProductOption(null, "M", "M 사이즈", 0L, 3);
+            ProductOption optionL = new ProductOption(null, "L", "L 사이즈", 1000L, 2);
+            Product product = new Product("테스트 상품", brand.getId(), category.getId(), 10000L,
+                List.of(optionM, optionL), List.of());
+            product = productRepository.save(product);
+
+            Long optionMId = product.getOptions().get(0).getId();
+            Long optionLId = product.getOptions().get(1).getId();
+
+            // 상품이 SALE 상태인지 확인
+            assertThat(product.getStatus()).isEqualTo(ProductStatus.SALE);
+
+            // Act: M 사이즈 전체 주문
+            OrderV1Dto.CreateOrderRequest requestM = new OrderV1Dto.CreateOrderRequest(
+                address.getId(), null,
+                List.of(new OrderV1Dto.OrderItemRequest(product.getId(), optionMId, 3))
+            );
+            HttpHeaders headers = createAuthHeaders(member.getLoginId(), "Password123!");
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            testRestTemplate.exchange(
+                "/api/v1/orders",
+                HttpMethod.POST,
+                new HttpEntity<>(requestM, headers),
+                new ParameterizedTypeReference<ApiResponse<OrderV1Dto.OrderDetailResponse>>() {}
+            );
+
+            // M 사이즈만 소진된 상태에서는 SALE 유지
+            Product afterMOrder = productRepository.findById(product.getId()).orElseThrow();
+            assertThat(afterMOrder.getStatus()).isEqualTo(ProductStatus.SALE);
+
+            // Act: L 사이즈 전체 주문
+            OrderV1Dto.CreateOrderRequest requestL = new OrderV1Dto.CreateOrderRequest(
+                address.getId(), null,
+                List.of(new OrderV1Dto.OrderItemRequest(product.getId(), optionLId, 2))
+            );
+            testRestTemplate.exchange(
+                "/api/v1/orders",
+                HttpMethod.POST,
+                new HttpEntity<>(requestL, headers),
+                new ParameterizedTypeReference<ApiResponse<OrderV1Dto.OrderDetailResponse>>() {}
+            );
+
+            // Assert: 모든 옵션 재고가 소진되어 SOLDOUT 상태로 변경
+            Product afterAllOrder = productRepository.findById(product.getId()).orElseThrow();
+            assertAll(
+                () -> assertThat(afterAllOrder.getStatus()).isEqualTo(ProductStatus.SOLDOUT),
+                () -> assertThat(afterAllOrder.getTotalStockQuantity()).isEqualTo(0)
+            );
+        }
+
+        @Test
+        @DisplayName("재고가 남아있으면 SALE 상태를 유지한다")
+        void keepsProductStatusSale_whenStockRemains() {
+            // Arrange: 재고가 10개인 상품 생성
+            ProductOption option = new ProductOption(null, "M", "M 사이즈", 0L, 10);
+            Product product = saveProductWithOption("테스트 상품", brand.getId(), category.getId(), 10000L, option);
+            Long optionId = product.getOptions().get(0).getId();
+
+            // Act: 재고의 일부만 주문 (5개)
+            OrderV1Dto.CreateOrderRequest request = new OrderV1Dto.CreateOrderRequest(
+                address.getId(), null,
+                List.of(new OrderV1Dto.OrderItemRequest(product.getId(), optionId, 5))
+            );
+
+            HttpHeaders headers = createAuthHeaders(member.getLoginId(), "Password123!");
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            testRestTemplate.exchange(
+                "/api/v1/orders",
+                HttpMethod.POST,
+                new HttpEntity<>(request, headers),
+                new ParameterizedTypeReference<ApiResponse<OrderV1Dto.OrderDetailResponse>>() {}
+            );
+
+            // Assert: 상품이 SALE 상태를 유지하는지 확인
+            Product afterProduct = productRepository.findById(product.getId()).orElseThrow();
+            assertAll(
+                () -> assertThat(afterProduct.getStatus()).isEqualTo(ProductStatus.SALE),
+                () -> assertThat(afterProduct.getTotalStockQuantity()).isEqualTo(5)
+            );
+        }
+
+        @Test
+        @DisplayName("SOLDOUT 상품의 주문이 취소되면 SALE 상태로 복구된다")
+        void changesProductStatusToSale_whenSoldoutOrderCancelled() {
+            // Arrange: 재고가 딱 5개인 상품 생성
+            ProductOption option = new ProductOption(null, "M", "M 사이즈", 0L, 5);
+            Product product = saveProductWithOption("테스트 상품", brand.getId(), category.getId(), 10000L, option);
+            Long optionId = product.getOptions().get(0).getId();
+
+            // 재고 전체를 주문하여 SOLDOUT 만들기
+            OrderV1Dto.CreateOrderRequest request = new OrderV1Dto.CreateOrderRequest(
+                address.getId(), null,
+                List.of(new OrderV1Dto.OrderItemRequest(product.getId(), optionId, 5))
+            );
+
+            HttpHeaders headers = createAuthHeaders(member.getLoginId(), "Password123!");
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            ResponseEntity<ApiResponse<OrderV1Dto.OrderDetailResponse>> createResponse = testRestTemplate.exchange(
+                "/api/v1/orders",
+                HttpMethod.POST,
+                new HttpEntity<>(request, headers),
+                new ParameterizedTypeReference<>() {}
+            );
+            Long orderId = createResponse.getBody().data().id();
+
+            // SOLDOUT 상태 확인
+            Product soldoutProduct = productRepository.findById(product.getId()).orElseThrow();
+            assertThat(soldoutProduct.getStatus()).isEqualTo(ProductStatus.SOLDOUT);
+
+            // Act: 주문 취소
+            testRestTemplate.exchange(
+                "/api/v1/orders/" + orderId + "/cancel",
+                HttpMethod.PATCH,
+                new HttpEntity<>(headers),
+                new ParameterizedTypeReference<ApiResponse<OrderV1Dto.OrderDetailResponse>>() {}
+            );
+
+            // Assert: 상품이 SALE 상태로 복구되고 재고도 복구되었는지 확인
+            Product afterCancelProduct = productRepository.findById(product.getId()).orElseThrow();
+            assertAll(
+                () -> assertThat(afterCancelProduct.getStatus()).isEqualTo(ProductStatus.SALE),
+                () -> assertThat(afterCancelProduct.getTotalStockQuantity()).isEqualTo(5)
             );
         }
     }
