@@ -1,0 +1,23 @@
+### 상품 좋아요 토글
+POST {{host}}/api/v1/products/1/like
+Content-Type: application/json
+X-Loopers-LoginId: user1
+X-Loopers-LoginPw: password123
+
+### 상품 좋아요 토글 (두 번째 호출 - 취소)
+POST {{host}}/api/v1/products/1/like
+Content-Type: application/json
+X-Loopers-LoginId: user1
+X-Loopers-LoginPw: password123
+
+### 브랜드 좋아요 토글
+POST {{host}}/api/v1/brands/1/like
+Content-Type: application/json
+X-Loopers-LoginId: user1
+X-Loopers-LoginPw: password123
+
+### 브랜드 좋아요 토글 (두 번째 호출 - 취소)
+POST {{host}}/api/v1/brands/1/like
+Content-Type: application/json
+X-Loopers-LoginId: user1
+X-Loopers-LoginPw: password123
