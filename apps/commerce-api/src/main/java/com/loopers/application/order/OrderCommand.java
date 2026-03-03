@@ -7,7 +7,8 @@ public class OrderCommand {
     public record Create(
         Long addressId,
         String shippingMemo,
-        List<OrderItem> items
+        List<OrderItem> items,
+        Long memberCouponId
     ) {
     }
 

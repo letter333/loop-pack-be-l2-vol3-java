@@ -107,7 +107,8 @@ class OrderV1ApiE2ETest {
             OrderV1Dto.CreateOrderRequest request = new OrderV1Dto.CreateOrderRequest(
                 address.getId(),
                 "문 앞에 놓아주세요",
-                List.of(new OrderV1Dto.OrderItemRequest(product.getId(), product.getOptions().get(0).getId(), 2))
+                List.of(new OrderV1Dto.OrderItemRequest(product.getId(), product.getOptions().get(0).getId(), 2)),
+                null
             );
 
             // act
@@ -129,7 +130,8 @@ class OrderV1ApiE2ETest {
             // arrange
             OrderV1Dto.CreateOrderRequest request = new OrderV1Dto.CreateOrderRequest(
                 address.getId(), null,
-                List.of(new OrderV1Dto.OrderItemRequest(product.getId(), product.getOptions().get(0).getId(), 1))
+                List.of(new OrderV1Dto.OrderItemRequest(product.getId(), product.getOptions().get(0).getId(), 1)),
+                null
             );
 
             // act
@@ -147,7 +149,8 @@ class OrderV1ApiE2ETest {
             // arrange
             OrderV1Dto.CreateOrderRequest request = new OrderV1Dto.CreateOrderRequest(
                 999L, null,
-                List.of(new OrderV1Dto.OrderItemRequest(product.getId(), product.getOptions().get(0).getId(), 1))
+                List.of(new OrderV1Dto.OrderItemRequest(product.getId(), product.getOptions().get(0).getId(), 1)),
+                null
             );
 
             // act
@@ -165,7 +168,8 @@ class OrderV1ApiE2ETest {
             // arrange
             OrderV1Dto.CreateOrderRequest request = new OrderV1Dto.CreateOrderRequest(
                 address.getId(), null,
-                List.of(new OrderV1Dto.OrderItemRequest(product.getId(), product.getOptions().get(0).getId(), 200))
+                List.of(new OrderV1Dto.OrderItemRequest(product.getId(), product.getOptions().get(0).getId(), 200)),
+                null
             );
 
             // act
@@ -260,7 +264,8 @@ class OrderV1ApiE2ETest {
             headers.setContentType(MediaType.APPLICATION_JSON);
             OrderV1Dto.CreateOrderRequest request = new OrderV1Dto.CreateOrderRequest(
                 address.getId(), null,
-                List.of(new OrderV1Dto.OrderItemRequest(product.getId(), product.getOptions().get(0).getId(), 1))
+                List.of(new OrderV1Dto.OrderItemRequest(product.getId(), product.getOptions().get(0).getId(), 1)),
+                null
             );
             testRestTemplate.exchange(
                 "/api/v1/orders",
@@ -348,7 +353,8 @@ class OrderV1ApiE2ETest {
             headers.setContentType(MediaType.APPLICATION_JSON);
             OrderV1Dto.CreateOrderRequest request = new OrderV1Dto.CreateOrderRequest(
                 address.getId(), null,
-                List.of(new OrderV1Dto.OrderItemRequest(product.getId(), product.getOptions().get(0).getId(), 1))
+                List.of(new OrderV1Dto.OrderItemRequest(product.getId(), product.getOptions().get(0).getId(), 1)),
+                null
             );
             ResponseEntity<ApiResponse<OrderV1Dto.OrderDetailResponse>> response = testRestTemplate.exchange(
                 "/api/v1/orders",
@@ -432,7 +438,8 @@ class OrderV1ApiE2ETest {
             headers.setContentType(MediaType.APPLICATION_JSON);
             OrderV1Dto.CreateOrderRequest request = new OrderV1Dto.CreateOrderRequest(
                 address.getId(), null,
-                List.of(new OrderV1Dto.OrderItemRequest(product.getId(), product.getOptions().get(0).getId(), orderedQuantity))
+                List.of(new OrderV1Dto.OrderItemRequest(product.getId(), product.getOptions().get(0).getId(), orderedQuantity)),
+                null
             );
             ResponseEntity<ApiResponse<OrderV1Dto.OrderDetailResponse>> createResponse = testRestTemplate.exchange(
                 "/api/v1/orders",
@@ -461,7 +468,8 @@ class OrderV1ApiE2ETest {
             headers.setContentType(MediaType.APPLICATION_JSON);
             OrderV1Dto.CreateOrderRequest request = new OrderV1Dto.CreateOrderRequest(
                 address.getId(), null,
-                List.of(new OrderV1Dto.OrderItemRequest(product.getId(), product.getOptions().get(0).getId(), 1))
+                List.of(new OrderV1Dto.OrderItemRequest(product.getId(), product.getOptions().get(0).getId(), 1)),
+                null
             );
             ResponseEntity<ApiResponse<OrderV1Dto.OrderDetailResponse>> response = testRestTemplate.exchange(
                 "/api/v1/orders",
@@ -517,7 +525,8 @@ class OrderV1ApiE2ETest {
             // Act: 재고 전체를 주문
             OrderV1Dto.CreateOrderRequest request = new OrderV1Dto.CreateOrderRequest(
                 address.getId(), null,
-                List.of(new OrderV1Dto.OrderItemRequest(product.getId(), optionId, 5))
+                List.of(new OrderV1Dto.OrderItemRequest(product.getId(), optionId, 5)),
+                null
             );
 
             HttpHeaders headers = createAuthHeaders(member.getLoginId(), "Password123!");
@@ -557,7 +566,8 @@ class OrderV1ApiE2ETest {
             // Act: M 사이즈 전체 주문
             OrderV1Dto.CreateOrderRequest requestM = new OrderV1Dto.CreateOrderRequest(
                 address.getId(), null,
-                List.of(new OrderV1Dto.OrderItemRequest(product.getId(), optionMId, 3))
+                List.of(new OrderV1Dto.OrderItemRequest(product.getId(), optionMId, 3)),
+                null
             );
             HttpHeaders headers = createAuthHeaders(member.getLoginId(), "Password123!");
             headers.setContentType(MediaType.APPLICATION_JSON);
@@ -576,7 +586,8 @@ class OrderV1ApiE2ETest {
             // Act: L 사이즈 전체 주문
             OrderV1Dto.CreateOrderRequest requestL = new OrderV1Dto.CreateOrderRequest(
                 address.getId(), null,
-                List.of(new OrderV1Dto.OrderItemRequest(product.getId(), optionLId, 2))
+                List.of(new OrderV1Dto.OrderItemRequest(product.getId(), optionLId, 2)),
+                null
             );
             testRestTemplate.exchange(
                 "/api/v1/orders",
@@ -605,7 +616,8 @@ class OrderV1ApiE2ETest {
             // Act: 재고의 일부만 주문 (5개)
             OrderV1Dto.CreateOrderRequest request = new OrderV1Dto.CreateOrderRequest(
                 address.getId(), null,
-                List.of(new OrderV1Dto.OrderItemRequest(product.getId(), optionId, 5))
+                List.of(new OrderV1Dto.OrderItemRequest(product.getId(), optionId, 5)),
+                null
             );
 
             HttpHeaders headers = createAuthHeaders(member.getLoginId(), "Password123!");
@@ -637,7 +649,8 @@ class OrderV1ApiE2ETest {
             // 재고 전체를 주문하여 SOLDOUT 만들기
             OrderV1Dto.CreateOrderRequest request = new OrderV1Dto.CreateOrderRequest(
                 address.getId(), null,
-                List.of(new OrderV1Dto.OrderItemRequest(product.getId(), optionId, 5))
+                List.of(new OrderV1Dto.OrderItemRequest(product.getId(), optionId, 5)),
+                null
             );
 
             HttpHeaders headers = createAuthHeaders(member.getLoginId(), "Password123!");

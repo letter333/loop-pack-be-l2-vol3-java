@@ -84,6 +84,22 @@ public class Order {
         this.discountAmount = discountAmount;
     }
 
+    public void applyCouponDiscount(Long discountAmount) {
+        if (discountAmount == null || discountAmount < 0) {
+            throw new CoreException(ErrorType.BAD_REQUEST, "유효하지 않은 할인 금액입니다.");
+        }
+        if (discountAmount > this.totalAmount) {
+            throw new CoreException(ErrorType.BAD_REQUEST, "할인 금액이 주문 금액을 초과할 수 없습니다.");
+        }
+        this.discountAmount = discountAmount;
+        this.paymentAmount = this.totalAmount + this.shippingFee - this.discountAmount;
+    }
+
+    public void removeCouponDiscount() {
+        this.discountAmount = 0L;
+        this.paymentAmount = this.totalAmount + this.shippingFee;
+    }
+
     public void calculateAmounts() {
         this.totalAmount = orderProducts.stream()
             .mapToLong(OrderProduct::calculateTotalPrice)
