@@ -106,7 +106,7 @@ class CouponV1ApiE2ETest {
             type,
             discountValue,
             10000L,
-            type == CouponType.PERCENTAGE ? 5000L : null,
+            type == CouponType.RATE ? 5000L : null,
             1000,
             LocalDateTime.now().minusDays(1),
             LocalDateTime.now().plusDays(30)
@@ -117,7 +117,7 @@ class CouponV1ApiE2ETest {
         return new Coupon(
             name,
             "만료된 쿠폰",
-            CouponType.FIXED_AMOUNT,
+            CouponType.FIXED,
             5000L,
             10000L,
             null,
@@ -135,8 +135,8 @@ class CouponV1ApiE2ETest {
         @DisplayName("로그인한 사용자가 발급 가능한 쿠폰 목록을 조회하면 200 OK를 반환한다")
         void returnsOk_whenAuthenticatedUserRequests() {
             // Arrange
-            couponRepository.save(createIssuableCoupon("신규 가입 쿠폰", CouponType.FIXED_AMOUNT, 5000L));
-            couponRepository.save(createIssuableCoupon("VIP 할인 쿠폰", CouponType.PERCENTAGE, 10L));
+            couponRepository.save(createIssuableCoupon("신규 가입 쿠폰", CouponType.FIXED, 5000L));
+            couponRepository.save(createIssuableCoupon("VIP 할인 쿠폰", CouponType.RATE, 10L));
 
             // Act
             ParameterizedTypeReference<ApiResponse<List<Map<String, Object>>>> responseType = new ParameterizedTypeReference<>() {};
@@ -174,7 +174,7 @@ class CouponV1ApiE2ETest {
         @DisplayName("발급 기간이 지난 쿠폰은 목록에 포함되지 않는다")
         void excludesExpiredCoupons() {
             // Arrange
-            couponRepository.save(createIssuableCoupon("발급 가능 쿠폰", CouponType.FIXED_AMOUNT, 5000L));
+            couponRepository.save(createIssuableCoupon("발급 가능 쿠폰", CouponType.FIXED, 5000L));
             couponRepository.save(createExpiredCoupon("만료된 쿠폰"));
 
             // Act
@@ -198,7 +198,7 @@ class CouponV1ApiE2ETest {
         @DisplayName("이미 발급받은 쿠폰은 isIssued가 true로 표시된다")
         void showsIsIssuedTrue_whenAlreadyIssued() {
             // Arrange
-            Coupon coupon = couponRepository.save(createIssuableCoupon("테스트 쿠폰", CouponType.FIXED_AMOUNT, 5000L));
+            Coupon coupon = couponRepository.save(createIssuableCoupon("테스트 쿠폰", CouponType.FIXED, 5000L));
             MemberCoupon memberCoupon = new MemberCoupon(
                 testMember.getId(),
                 coupon.getId(),
@@ -233,7 +233,7 @@ class CouponV1ApiE2ETest {
         @DisplayName("로그인한 사용자가 쿠폰을 발급받으면 201 Created를 반환한다")
         void returnsCreated_whenSuccessfullyIssued() {
             // Arrange
-            Coupon coupon = couponRepository.save(createIssuableCoupon("신규 가입 쿠폰", CouponType.FIXED_AMOUNT, 5000L));
+            Coupon coupon = couponRepository.save(createIssuableCoupon("신규 가입 쿠폰", CouponType.FIXED, 5000L));
 
             // Act
             ParameterizedTypeReference<ApiResponse<Map<String, Object>>> responseType = new ParameterizedTypeReference<>() {};
@@ -257,7 +257,7 @@ class CouponV1ApiE2ETest {
         @DisplayName("쿠폰 발급 시 랜덤 코드가 XXXX-XXXX-XXXX 형식으로 생성된다")
         void generatesCouponCodeInCorrectFormat() {
             // Arrange
-            Coupon coupon = couponRepository.save(createIssuableCoupon("테스트 쿠폰", CouponType.FIXED_AMOUNT, 5000L));
+            Coupon coupon = couponRepository.save(createIssuableCoupon("테스트 쿠폰", CouponType.FIXED, 5000L));
 
             // Act
             ParameterizedTypeReference<ApiResponse<Map<String, Object>>> responseType = new ParameterizedTypeReference<>() {};
@@ -277,7 +277,7 @@ class CouponV1ApiE2ETest {
         @DisplayName("인증되지 않은 사용자가 발급하면 401 Unauthorized를 반환한다")
         void returnsUnauthorized_whenUnauthenticatedUserRequests() {
             // Arrange
-            Coupon coupon = couponRepository.save(createIssuableCoupon("테스트 쿠폰", CouponType.FIXED_AMOUNT, 5000L));
+            Coupon coupon = couponRepository.save(createIssuableCoupon("테스트 쿠폰", CouponType.FIXED, 5000L));
 
             // Act
             ParameterizedTypeReference<ApiResponse<Object>> responseType = new ParameterizedTypeReference<>() {};
@@ -312,7 +312,7 @@ class CouponV1ApiE2ETest {
         @DisplayName("이미 발급받은 쿠폰을 다시 발급하면 409 Conflict를 반환한다")
         void returnsConflict_whenAlreadyIssued() {
             // Arrange
-            Coupon coupon = couponRepository.save(createIssuableCoupon("테스트 쿠폰", CouponType.FIXED_AMOUNT, 5000L));
+            Coupon coupon = couponRepository.save(createIssuableCoupon("테스트 쿠폰", CouponType.FIXED, 5000L));
             MemberCoupon memberCoupon = new MemberCoupon(
                 testMember.getId(),
                 coupon.getId(),
@@ -362,8 +362,8 @@ class CouponV1ApiE2ETest {
         @DisplayName("로그인한 사용자가 내 쿠폰 목록을 조회하면 200 OK를 반환한다")
         void returnsOk_whenAuthenticatedUserRequests() {
             // Arrange
-            Coupon coupon1 = couponRepository.save(createIssuableCoupon("쿠폰1", CouponType.FIXED_AMOUNT, 5000L));
-            Coupon coupon2 = couponRepository.save(createIssuableCoupon("쿠폰2", CouponType.PERCENTAGE, 10L));
+            Coupon coupon1 = couponRepository.save(createIssuableCoupon("쿠폰1", CouponType.FIXED, 5000L));
+            Coupon coupon2 = couponRepository.save(createIssuableCoupon("쿠폰2", CouponType.RATE, 10L));
             memberCouponRepository.save(new MemberCoupon(testMember.getId(), coupon1.getId(), "AAAA-1111-BBBB", coupon1.getValidUntil()));
             memberCouponRepository.save(new MemberCoupon(testMember.getId(), coupon2.getId(), "CCCC-2222-DDDD", coupon2.getValidUntil()));
 
@@ -403,8 +403,8 @@ class CouponV1ApiE2ETest {
         @DisplayName("status 파라미터로 AVAILABLE 쿠폰만 필터링할 수 있다")
         void filtersAvailableCoupons() {
             // Arrange
-            Coupon coupon1 = couponRepository.save(createIssuableCoupon("쿠폰1", CouponType.FIXED_AMOUNT, 5000L));
-            Coupon coupon2 = couponRepository.save(createIssuableCoupon("쿠폰2", CouponType.FIXED_AMOUNT, 3000L));
+            Coupon coupon1 = couponRepository.save(createIssuableCoupon("쿠폰1", CouponType.FIXED, 5000L));
+            Coupon coupon2 = couponRepository.save(createIssuableCoupon("쿠폰2", CouponType.FIXED, 3000L));
             MemberCoupon mc1 = memberCouponRepository.save(new MemberCoupon(testMember.getId(), coupon1.getId(), "AAAA-1111-BBBB", coupon1.getValidUntil()));
             MemberCoupon mc2 = memberCouponRepository.save(new MemberCoupon(testMember.getId(), coupon2.getId(), "CCCC-2222-DDDD", coupon2.getValidUntil()));
 

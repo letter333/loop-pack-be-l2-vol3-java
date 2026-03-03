@@ -68,4 +68,15 @@ public interface CouponAdminV1ApiSpec {
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "쿠폰 없음")
     })
     ApiResponse<Object> deleteCoupon(String ldap, Long couponId);
+
+    @Operation(
+        summary = "쿠폰 발급 내역 조회 (Admin)",
+        description = "특정 쿠폰의 발급 내역을 페이징하여 조회합니다."
+    )
+    @ApiResponses(value = {
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "조회 성공"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "관리자 권한 필요"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "쿠폰 없음")
+    })
+    ApiResponse<Page<CouponAdminV1Dto.CouponIssueResponse>> getCouponIssues(String ldap, Long couponId, Pageable pageable);
 }

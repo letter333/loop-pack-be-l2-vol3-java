@@ -1,6 +1,8 @@
 package com.loopers.infrastructure.coupon;
 
 import com.loopers.domain.coupon.MemberCouponStatus;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -40,4 +42,6 @@ public interface MemberCouponJpaRepository extends JpaRepository<MemberCouponEnt
         @Param("memberId") Long memberId,
         @Param("status") MemberCouponStatus status
     );
+
+    Page<MemberCouponEntity> findAllByCouponId(Long couponId, Pageable pageable);
 }

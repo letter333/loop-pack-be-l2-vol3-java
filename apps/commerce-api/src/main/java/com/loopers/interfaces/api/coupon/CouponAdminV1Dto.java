@@ -1,7 +1,9 @@
 package com.loopers.interfaces.api.coupon;
 
 import com.loopers.application.coupon.CouponDetailInfo;
+import com.loopers.application.coupon.CouponIssueInfo;
 import com.loopers.domain.coupon.CouponType;
+import com.loopers.domain.coupon.MemberCouponStatus;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
@@ -108,6 +110,28 @@ public class CouponAdminV1Dto {
                 info.validUntil(),
                 info.createdAt(),
                 info.updatedAt()
+            );
+        }
+    }
+
+    public record CouponIssueResponse(
+        Long id,
+        Long memberId,
+        String couponCode,
+        MemberCouponStatus status,
+        LocalDateTime issuedAt,
+        LocalDateTime usedAt,
+        Long usedOrderId
+    ) {
+        public static CouponIssueResponse from(CouponIssueInfo info) {
+            return new CouponIssueResponse(
+                info.id(),
+                info.memberId(),
+                info.couponCode(),
+                info.status(),
+                info.issuedAt(),
+                info.usedAt(),
+                info.usedOrderId()
             );
         }
     }

@@ -30,7 +30,7 @@ public final class CouponValidator {
         if (discountValue <= 0) {
             throw new CoreException(ErrorType.BAD_REQUEST, "할인값은 0보다 커야 합니다.");
         }
-        if (couponType == CouponType.PERCENTAGE && (discountValue < 1 || discountValue > 100)) {
+        if (couponType == CouponType.RATE && (discountValue < 1 || discountValue > 100)) {
             throw new CoreException(ErrorType.BAD_REQUEST, "정률 할인은 1~100 사이여야 합니다.");
         }
     }

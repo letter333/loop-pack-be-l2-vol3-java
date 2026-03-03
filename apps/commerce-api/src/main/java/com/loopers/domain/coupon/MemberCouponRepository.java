@@ -1,5 +1,8 @@
 package com.loopers.domain.coupon;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+
 import java.util.List;
 import java.util.Optional;
 
@@ -22,4 +25,6 @@ public interface MemberCouponRepository {
     MemberCoupon save(MemberCoupon memberCoupon);
 
     boolean existsByMemberIdAndCouponId(Long memberId, Long couponId);
+
+    Page<MemberCoupon> findAllByCouponId(Long couponId, Pageable pageable);
 }

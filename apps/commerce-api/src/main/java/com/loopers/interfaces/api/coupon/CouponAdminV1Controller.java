@@ -3,6 +3,7 @@ package com.loopers.interfaces.api.coupon;
 import com.loopers.application.coupon.CouponCommand;
 import com.loopers.application.coupon.CouponDetailInfo;
 import com.loopers.application.coupon.CouponFacade;
+import com.loopers.application.coupon.CouponIssueInfo;
 import com.loopers.interfaces.api.ApiResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -103,5 +104,17 @@ public class CouponAdminV1Controller implements CouponAdminV1ApiSpec {
     ) {
         couponFacade.deleteCoupon(ldap, couponId);
         return ApiResponse.success();
+    }
+
+    @GetMapping("/{couponId}/issues")
+    @Override
+    public ApiResponse<Page<CouponAdminV1Dto.CouponIssueResponse>> getCouponIssues(
+        @RequestHeader("X-Loopers-Ldap") String ldap,
+        @PathVariable Long couponId,
+        Pageable pageable
+    ) {
+        Page<CouponIssueInfo> infos = couponFacade.getCouponIssues(ldap, couponId, pageable);
+        Page<CouponAdminV1Dto.CouponIssueResponse> response = infos.map(CouponAdminV1Dto.CouponIssueResponse::from);
+        return ApiResponse.success(response);
     }
 }

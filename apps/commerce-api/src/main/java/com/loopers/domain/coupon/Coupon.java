@@ -106,11 +106,11 @@ public class Coupon {
         }
 
         long discount = switch (couponType) {
-            case FIXED_AMOUNT -> discountValue;
-            case PERCENTAGE -> orderAmount * discountValue / 100;
+            case FIXED -> discountValue;
+            case RATE -> orderAmount * discountValue / 100;
         };
 
-        if (couponType == CouponType.PERCENTAGE && maxDiscountAmount != null) {
+        if (couponType == CouponType.RATE && maxDiscountAmount != null) {
             discount = Math.min(discount, maxDiscountAmount);
         }
 

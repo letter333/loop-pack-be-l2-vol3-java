@@ -6,6 +6,8 @@ import com.loopers.domain.coupon.MemberCouponStatus;
 import com.loopers.support.error.CoreException;
 import com.loopers.support.error.ErrorType;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -81,5 +83,11 @@ public class MemberCouponRepositoryImpl implements MemberCouponRepository {
     @Override
     public boolean existsByMemberIdAndCouponId(Long memberId, Long couponId) {
         return memberCouponJpaRepository.existsByMemberIdAndCouponId(memberId, couponId);
+    }
+
+    @Override
+    public Page<MemberCoupon> findAllByCouponId(Long couponId, Pageable pageable) {
+        return memberCouponJpaRepository.findAllByCouponId(couponId, pageable)
+            .map(MemberCouponEntity::toDomain);
     }
 }
