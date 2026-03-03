@@ -13,6 +13,9 @@ import java.util.concurrent.ThreadLocalRandom;
 @Getter
 public class Order {
 
+    private static final long DEFAULT_SHIPPING_FEE = 3_000L;
+    private static final long FREE_SHIPPING_THRESHOLD = 50_000L;
+
     private Long id;
     private Long memberId;
     private String orderNumber;
@@ -76,12 +79,15 @@ public class Order {
         calculateAmounts();
     }
 
-    public void setShippingFee(Long shippingFee) {
-        this.shippingFee = shippingFee;
-    }
-
-    public void setDiscountAmount(Long discountAmount) {
+    public void applyCouponDiscount(Long discountAmount) {
+        if (discountAmount == null || discountAmount < 0) {
+            throw new CoreException(ErrorType.BAD_REQUEST, "유효하지 않은 할인 금액입니다.");
+        }
+        if (discountAmount > this.totalAmount) {
+            throw new CoreException(ErrorType.BAD_REQUEST, "할인 금액이 주문 금액을 초과할 수 없습니다.");
+        }
         this.discountAmount = discountAmount;
+        this.paymentAmount = this.totalAmount + this.shippingFee - this.discountAmount;
     }
 
     public void applyCouponDiscount(Long discountAmount) {
@@ -104,7 +110,12 @@ public class Order {
         this.totalAmount = orderProducts.stream()
             .mapToLong(OrderProduct::calculateTotalPrice)
             .sum();
+        this.shippingFee = calculateShippingFee();
         this.paymentAmount = this.totalAmount + this.shippingFee - this.discountAmount;
+    }
+
+    private long calculateShippingFee() {
+        return this.totalAmount >= FREE_SHIPPING_THRESHOLD ? 0L : DEFAULT_SHIPPING_FEE;
     }
 
     public boolean canCancel() {
