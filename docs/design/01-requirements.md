@@ -88,6 +88,7 @@
 | ADR-010 | 로그인 필수 | 401 Unauthorized |
 | ADR-011 | 필수 항목(recipientName, phone, address) 누락 불가 | 400 Bad Request |
 | ADR-012 | 첫 배송지 등록 시 자동으로 기본 배송지 설정 | - |
+| ADR-013 | 회원당 최대 5개까지만 등록 가능 | 400 Bad Request |
 
 ---
 
@@ -123,7 +124,8 @@
 | ADR-030 | 로그인 필수 | 401 Unauthorized |
 | ADR-031 | 본인의 배송지만 삭제 가능 | 403 Forbidden |
 | ADR-032 | 존재하지 않는 배송지는 삭제 불가 | 404 Not Found |
-| ADR-033 | Soft Delete 적용 (deleted_at 설정) | - |
+| ADR-033 | Hard Delete 적용 (물리적 삭제) | - |
+| ADR-034 | 삭제 후 남은 배송지가 1개이면 자동으로 기본 배송지 설정 | - |
 
 ---
 
@@ -158,8 +160,26 @@
 
 | 규칙 ID | 설명 | 위반 시 |
 |---------|------|---------|
-| CAT-001 | 활성화(active=true) 상태의 카테고리만 조회 | - |
+| CAT-001 | 삭제되지 않은 카테고리만 조회 | - |
 | CAT-002 | 계층 구조(parent-child)로 반환 | - |
+
+---
+
+### 3.2 카테고리 삭제 (Admin)
+
+| 항목 | 내용 |
+|------|------|
+| **Actor** | 관리자 |
+| **목적** | 카테고리를 삭제한다 |
+
+**비즈니스 규칙**
+
+| 규칙 ID | 설명 | 위반 시 |
+|---------|------|---------|
+| CAT-010 | 관리자 권한 필수 | 403 Forbidden |
+| CAT-011 | 존재하지 않는 카테고리는 삭제 불가 | 404 Not Found |
+| CAT-012 | 하위 카테고리도 함께 Soft Delete 처리 | - |
+| CAT-013 | 해당 카테고리 및 하위 카테고리에 속한 상품도 함께 Soft Delete 처리 | - |
 
 ---
 
@@ -177,7 +197,7 @@
 | 규칙 ID | 설명 | 위반 시 |
 |---------|------|---------|
 | BRD-001 | 존재하지 않는 브랜드는 조회 불가 | 404 Not Found |
-| BRD-002 | 미사용(active=false) 상태의 브랜드는 조회 불가 | 404 Not Found |
+| BRD-002 | 삭제된 브랜드는 조회 불가 | 404 Not Found |
 
 ---
 
@@ -195,7 +215,7 @@
 | 규칙 ID | 설명 | 위반 시 |
 |---------|------|---------|
 | PRD-001 | 존재하지 않는 카테고리의 상품 목록 조회 불가 | 404 Not Found |
-| PRD-002 | 삭제되거나 비공개(active=false) 상품은 목록에서 제외 | - |
+| PRD-002 | 삭제된 상품은 목록에서 제외 | - |
 | PRD-003 | 정렬: 최신순(기본), 가격순, 좋아요순 | - |
 | PRD-004 | 페이징: 20(기본), 30, 50 | - |
 
@@ -213,7 +233,7 @@
 | 규칙 ID | 설명 | 위반 시 |
 |---------|------|---------|
 | PRD-010 | 존재하지 않는 상품은 조회 불가 | 404 Not Found |
-| PRD-011 | 삭제되거나 비공개 상품은 조회 불가 | 404 Not Found |
+| PRD-011 | 삭제된 상품은 조회 불가 | 404 Not Found |
 
 ---
 
@@ -332,7 +352,7 @@
 |---------|------|---------|
 | ADM-060 | 관리자 권한 필수 | 403 Forbidden |
 | ADM-061 | 존재하지 않는 상품은 조회 불가 | 404 Not Found |
-| ADM-062 | 비공개/품절 상품도 조회 가능 | - |
+| ADM-062 | 품절/판매중지 상품도 조회 가능 | - |
 
 ---
 
@@ -352,6 +372,8 @@
 | ADM-072 | 필수 항목(name, brandId, categoryId, basePrice, images) 누락 불가 | 400 Bad Request |
 | ADM-073 | basePrice는 0 이상이어야 함 | 400 Bad Request |
 | ADM-074 | discountType이 `RATE`인 경우 discount는 0~100 사이 | 400 Bad Request |
+| ADM-075 | product_code는 등록일 기반으로 자동 생성 ({YYYYMMDD}-{5자리 순번}, 예: 20240101-00001) | - |
+| ADM-076 | discountType이 `PRICE`인 경우 discount는 basePrice 이하이어야 함 | 400 Bad Request |
 
 ---
 
@@ -372,6 +394,7 @@
 | ADM-083 | **브랜드는 수정 불가** | 400 Bad Request |
 | ADM-084 | basePrice는 0 이상이어야 함 | 400 Bad Request |
 | ADM-085 | discountType이 `RATE`인 경우 discount는 0~100 사이 | 400 Bad Request |
+| ADM-086 | discountType이 `PRICE`인 경우 discount는 basePrice 이하이어야 함 | 400 Bad Request |
 
 ---
 
@@ -411,6 +434,23 @@
 
 ---
 
+### 7.2 브랜드 좋아요 토글
+
+| 항목 | 내용 |
+|------|------|
+| **Actor** | 로그인 사용자 |
+| **목적** | 관심 브랜드를 좋아요 등록/취소한다 |
+
+**비즈니스 규칙**
+
+| 규칙 ID | 설명 | 위반 시 |
+|---------|------|---------|
+| LIK-010 | 로그인 필수 | 401 Unauthorized |
+| LIK-011 | 존재하지 않거나 삭제된 브랜드는 좋아요 불가 | 404 Not Found |
+| LIK-012 | 이미 좋아요한 브랜드는 좋아요 취소 | - |
+
+---
+
 ## 8. 주문 (Order) - 사용자
 
 ### 8.1 주문 요청
@@ -425,11 +465,10 @@
 | 규칙 ID | 설명 | 위반 시 |
 |---------|------|---------|
 | ORD-001 | 로그인 필수 | 401 Unauthorized |
-| ORD-002 | 판매중이 아니거나 비공개 상품은 주문 불가 | 400 Bad Request |
-| ORD-003 | 주문 수량 > 재고 수량인 경우 주문 불가 (unlimited=false) | 400 Bad Request |
-| ORD-004 | 배송 필수 정보(recipientName, phone, address) 누락 시 주문 불가 | 400 Bad Request |
-| ORD-005 | 주문 수량은 minOrderQuantity ~ maxOrderQuantity 범위 내 | 400 Bad Request |
-| ORD-006 | 주문 시 재고 차감 (stock_quantity 감소) | - |
+| ORD-002 | 판매중이 아니거나 삭제된 상품은 주문 불가 | 400 Bad Request |
+| ORD-003 | 주문 수량 > 옵션 재고 수량인 경우 주문 불가 | 400 Bad Request |
+| ORD-004 | 존재하지 않는 배송지(addressId)로 주문 불가 | 404 Not Found |
+| ORD-005 | 주문 시 옵션 재고 차감 (product_options.stock_quantity 감소) | - |
 
 ---
 
@@ -467,6 +506,27 @@
 
 ---
 
+### 8.4 주문 취소
+
+| 항목 | 내용 |
+|------|------|
+| **Actor** | 로그인 사용자 |
+| **목적** | 주문을 취소하고 재고를 복구한다 |
+
+**비즈니스 규칙**
+
+| 규칙 ID | 설명 | 위반 시 |
+|---------|------|---------|
+| ORD-030 | 로그인 필수 | 401 Unauthorized |
+| ORD-031 | 본인의 주문이 아니면 취소 불가 | 403 Forbidden |
+| ORD-032 | 존재하지 않는 주문은 취소 불가 | 404 Not Found |
+| ORD-033 | PENDING, PAID 상태에서만 취소 가능 | 400 Bad Request |
+| ORD-034 | 취소 시 주문 상품의 옵션 재고 복구 (stock_quantity 증가) | - |
+| ORD-035 | 취소 완료 시 주문 상태를 CANCELLED로 변경 | - |
+| ORD-036 | 취소 시 주문 상품(order_products)의 상태도 CANCELLED로 변경 | - |
+
+---
+
 ## 9. 주문 관리 (Order Admin)
 
 ### 9.1 주문 목록 조회 (Admin)
@@ -499,6 +559,7 @@
 | OAD-010 | 관리자 권한 필수 | 403 Forbidden |
 | OAD-011 | 존재하지 않는 주문은 조회 불가 | 404 Not Found |
 | OAD-012 | 상태 변경 및 취소/환불 처리 가능 | - |
+| OAD-013 | 주문 취소(CANCELLED) 시 주문 상품의 옵션 재고 복구 (stock_quantity 증가) | - |
 
 ---
 
