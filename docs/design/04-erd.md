@@ -142,4 +142,39 @@ orders ||--|{ order_products: "주문 상품"
 order_products }o--|| products: "상품 참조"
 order_products }o--|| product_options: "옵션 참조"
 members ||--o{ member_addresses: "배송지 주소록"
+
+coupons {
+    bigint id PK
+    varchar(100) name "NOT NULL | 쿠폰 템플릿명"
+    varchar(500) description "쿠폰 설명"
+    enum coupon_type "NOT NULL | 할인 타입 (FIXED_AMOUNT, PERCENTAGE)"
+    bigint discount_value "NOT NULL | 할인값 (금액 또는 %)"
+    bigint min_order_amount "최소 주문 금액 (기본값: 0)"
+    bigint max_discount_amount "최대 할인 금액 (정률 시)"
+    int total_quantity "NOT NULL | 총 발급 가능 수량"
+    int issued_quantity "NOT NULL | 발급된 수량 (기본값: 0)"
+    datetime valid_from "NOT NULL | 발급 가능 시작일"
+    datetime valid_until "NOT NULL | 쿠폰 만료일"
+    datetime created_at
+    datetime updated_at
+    datetime deleted_at
+}
+
+member_coupons {
+    bigint id PK
+    bigint member_id FK "NOT NULL | 회원 ID"
+    bigint coupon_id FK "NOT NULL | 쿠폰 템플릿 ID"
+    varchar(20) coupon_code UK "NOT NULL | 랜덤 쿠폰 코드 (XXXX-XXXX-XXXX)"
+    enum status "NOT NULL | 상태 (AVAILABLE, USED, EXPIRED)"
+    bigint used_order_id FK "사용한 주문 ID"
+    datetime used_at "사용일시"
+    datetime issued_at "NOT NULL | 발급일시"
+    datetime expired_at "NOT NULL | 만료일시"
+    datetime created_at
+    datetime updated_at
+}
+
+members ||--o{ member_coupons : "보유 쿠폰"
+coupons ||--o{ member_coupons : "발급된 쿠폰"
+orders ||--o| member_coupons : "사용된 쿠폰"
 ```

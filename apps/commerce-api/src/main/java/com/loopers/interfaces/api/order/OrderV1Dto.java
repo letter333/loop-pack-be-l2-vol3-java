@@ -21,13 +21,14 @@ public class OrderV1Dto {
         String shippingMemo,
         @NotEmpty(message = "주문 상품은 1개 이상이어야 합니다.")
         @Valid
-        List<OrderItemRequest> items
+        List<OrderItemRequest> items,
+        Long memberCouponId
     ) {
         public OrderCommand.Create toCommand() {
             List<OrderCommand.OrderItem> orderItems = items.stream()
                 .map(item -> new OrderCommand.OrderItem(item.productId(), item.productOptionId(), item.quantity()))
                 .toList();
-            return new OrderCommand.Create(addressId, shippingMemo, orderItems);
+            return new OrderCommand.Create(addressId, shippingMemo, orderItems, memberCouponId);
         }
     }
 

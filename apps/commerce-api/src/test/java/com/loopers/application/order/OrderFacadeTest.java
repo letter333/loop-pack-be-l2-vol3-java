@@ -1,5 +1,6 @@
 package com.loopers.application.order;
 
+import com.loopers.application.coupon.CouponFacade;
 import com.loopers.domain.address.Address;
 import com.loopers.domain.address.AddressService;
 import com.loopers.domain.member.Member;
@@ -58,6 +59,9 @@ class OrderFacadeTest {
     @Mock
     private AdminValidator adminValidator;
 
+    @Mock
+    private CouponFacade couponFacade;
+
     @InjectMocks
     private OrderFacade orderFacade;
 
@@ -84,7 +88,8 @@ class OrderFacadeTest {
             OrderCommand.Create command = new OrderCommand.Create(
                 ADDRESS_ID,
                 "문 앞에 놓아주세요",
-                List.of(new OrderCommand.OrderItem(1L, 10L, 2))
+                List.of(new OrderCommand.OrderItem(1L, 10L, 2)),
+                null
             );
 
             given(memberService.authenticate(LOGIN_ID, PASSWORD)).willReturn(member);
@@ -109,7 +114,7 @@ class OrderFacadeTest {
             // arrange
             Member member = createMember();
             OrderCommand.Create command = new OrderCommand.Create(
-                999L, null, List.of(new OrderCommand.OrderItem(1L, 10L, 1))
+                999L, null, List.of(new OrderCommand.OrderItem(1L, 10L, 1)), null
             );
 
             given(memberService.authenticate(LOGIN_ID, PASSWORD)).willReturn(member);
@@ -129,7 +134,7 @@ class OrderFacadeTest {
             Member member = createMember();
             Address address = createAddress(ADDRESS_ID, MEMBER_ID);
             OrderCommand.Create command = new OrderCommand.Create(
-                ADDRESS_ID, null, List.of(new OrderCommand.OrderItem(1L, 10L, 1))
+                ADDRESS_ID, null, List.of(new OrderCommand.OrderItem(1L, 10L, 1)), null
             );
 
             given(memberService.authenticate(LOGIN_ID, PASSWORD)).willReturn(member);
@@ -153,7 +158,7 @@ class OrderFacadeTest {
             Product product = createProduct(1L, "테스트 상품", 10000L);
             ProductOption option = createProductOption(10L, 1L, 1000L, 100);
             OrderCommand.Create command = new OrderCommand.Create(
-                ADDRESS_ID, null, List.of(new OrderCommand.OrderItem(1L, 10L, 200))
+                ADDRESS_ID, null, List.of(new OrderCommand.OrderItem(1L, 10L, 200)), null
             );
 
             given(memberService.authenticate(LOGIN_ID, PASSWORD)).willReturn(member);

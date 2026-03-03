@@ -1,5 +1,6 @@
 package com.loopers.application.order;
 
+import com.loopers.application.coupon.CouponFacade;
 import com.loopers.domain.address.Address;
 import com.loopers.domain.address.AddressService;
 import com.loopers.domain.member.Member;
@@ -32,6 +33,7 @@ public class OrderFacade {
     private final MemberService memberService;
     private final AddressService addressService;
     private final ProductService productService;
+    private final CouponFacade couponFacade;
     private final AdminValidator adminValidator;
 
     @Transactional
@@ -71,7 +73,21 @@ public class OrderFacade {
             productService.decreaseStock(item.productId(), item.productOptionId(), item.quantity());
         }
 
+        // 쿠폰 적용
+        if (command.memberCouponId() != null) {
+            Long discountAmount = couponFacade.calculateCouponDiscount(
+                command.memberCouponId(), member.getId(), order.getTotalAmount()
+            );
+            order.applyCouponDiscount(discountAmount);
+        }
+
         Order savedOrder = orderService.createOrder(order);
+
+        // 주문 저장 후 쿠폰 사용 처리
+        if (command.memberCouponId() != null) {
+            couponFacade.applyCoupon(command.memberCouponId(), savedOrder.getId());
+        }
+
         return OrderDetailInfo.from(savedOrder);
     }
 
@@ -108,7 +124,10 @@ public class OrderFacade {
             );
         }
 
-        // 2. 주문 취소 (이후)
+        // 2. 쿠폰 사용 취소
+        couponFacade.cancelCouponUsage(orderId);
+
+        // 3. 주문 취소 (이후)
         Order cancelledOrder = orderService.cancelOrder(orderId);
         return OrderDetailInfo.from(cancelledOrder);
     }
@@ -140,6 +159,8 @@ public class OrderFacade {
             for (OrderProduct op : order.getOrderProducts()) {
                 productService.increaseStock(op.getProductId(), op.getProductOptionId(), op.getQuantity());
             }
+            // 쿠폰 사용 취소
+            couponFacade.cancelCouponUsage(orderId);
         }
 
         // 2. 상태 변경 (이후)
