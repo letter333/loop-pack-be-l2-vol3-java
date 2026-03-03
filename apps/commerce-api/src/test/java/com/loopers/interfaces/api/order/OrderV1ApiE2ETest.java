@@ -32,6 +32,8 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
+import jakarta.persistence.EntityManager;
+
 import java.time.LocalDate;
 import java.util.List;
 
@@ -49,6 +51,7 @@ class OrderV1ApiE2ETest {
     private final CategoryRepository categoryRepository;
     private final PasswordEncoder passwordEncoder;
     private final DatabaseCleanUp databaseCleanUp;
+    private final EntityManager entityManager;
 
     @Autowired
     public OrderV1ApiE2ETest(
@@ -59,7 +62,8 @@ class OrderV1ApiE2ETest {
         BrandRepository brandRepository,
         CategoryRepository categoryRepository,
         PasswordEncoder passwordEncoder,
-        DatabaseCleanUp databaseCleanUp
+        DatabaseCleanUp databaseCleanUp,
+        EntityManager entityManager
     ) {
         this.testRestTemplate = testRestTemplate;
         this.memberRepository = memberRepository;
@@ -69,6 +73,7 @@ class OrderV1ApiE2ETest {
         this.categoryRepository = categoryRepository;
         this.passwordEncoder = passwordEncoder;
         this.databaseCleanUp = databaseCleanUp;
+        this.entityManager = entityManager;
     }
 
     @AfterEach
@@ -441,6 +446,7 @@ class OrderV1ApiE2ETest {
             cancelOrder(newOrderId, member.getLoginId(), "Password123!");
 
             // assert
+            entityManager.clear();
             Product updatedProduct = productRepository.findById(product.getId()).orElseThrow();
             int finalStock = updatedProduct.getOptions().stream()
                 .filter(o -> o.getId().equals(product.getOptions().get(0).getId()))
@@ -524,6 +530,7 @@ class OrderV1ApiE2ETest {
             );
 
             // Assert: 상품이 SOLDOUT 상태로 변경되었는지 확인
+            entityManager.clear();
             Product afterProduct = productRepository.findById(product.getId()).orElseThrow();
             assertAll(
                 () -> assertThat(afterProduct.getStatus()).isEqualTo(ProductStatus.SOLDOUT),
@@ -562,6 +569,7 @@ class OrderV1ApiE2ETest {
             );
 
             // M 사이즈만 소진된 상태에서는 SALE 유지
+            entityManager.clear();
             Product afterMOrder = productRepository.findById(product.getId()).orElseThrow();
             assertThat(afterMOrder.getStatus()).isEqualTo(ProductStatus.SALE);
 
@@ -578,6 +586,7 @@ class OrderV1ApiE2ETest {
             );
 
             // Assert: 모든 옵션 재고가 소진되어 SOLDOUT 상태로 변경
+            entityManager.clear();
             Product afterAllOrder = productRepository.findById(product.getId()).orElseThrow();
             assertAll(
                 () -> assertThat(afterAllOrder.getStatus()).isEqualTo(ProductStatus.SOLDOUT),
@@ -609,6 +618,7 @@ class OrderV1ApiE2ETest {
             );
 
             // Assert: 상품이 SALE 상태를 유지하는지 확인
+            entityManager.clear();
             Product afterProduct = productRepository.findById(product.getId()).orElseThrow();
             assertAll(
                 () -> assertThat(afterProduct.getStatus()).isEqualTo(ProductStatus.SALE),
@@ -641,6 +651,7 @@ class OrderV1ApiE2ETest {
             Long orderId = createResponse.getBody().data().id();
 
             // SOLDOUT 상태 확인
+            entityManager.clear();
             Product soldoutProduct = productRepository.findById(product.getId()).orElseThrow();
             assertThat(soldoutProduct.getStatus()).isEqualTo(ProductStatus.SOLDOUT);
 
@@ -653,6 +664,7 @@ class OrderV1ApiE2ETest {
             );
 
             // Assert: 상품이 SALE 상태로 복구되고 재고도 복구되었는지 확인
+            entityManager.clear();
             Product afterCancelProduct = productRepository.findById(product.getId()).orElseThrow();
             assertAll(
                 () -> assertThat(afterCancelProduct.getStatus()).isEqualTo(ProductStatus.SALE),
