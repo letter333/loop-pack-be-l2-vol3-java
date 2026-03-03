@@ -140,15 +140,118 @@ class OrderTest {
             Order order = new Order(1L, "홍길동", "010-1234-5678", null, "서울시", null, null);
             OrderProduct orderProduct = new OrderProduct(1L, 10L, "상품1", "옵션1", 10000L, 0L, 1, null);
             order.addOrderProduct(orderProduct);
-            order.setShippingFee(3000L);
-            order.setDiscountAmount(1000L);
+            order.applyCouponDiscount(1000L);
+
+            // act & assert
+            // 10000 + 3000(shippingFee, 50000원 미만) - 1000 = 12000
+            assertThat(order.getPaymentAmount()).isEqualTo(12000L);
+        }
+    }
+
+    @DisplayName("배송비 계산")
+    @Nested
+    class ShippingFee {
+
+        @Test
+        @DisplayName("50,000원 미만 주문 시 배송비 3,000원이 적용된다")
+        void appliesDefaultShippingFee_whenUnderThreshold() {
+            // arrange
+            Order order = new Order(1L, "홍길동", "010-1234-5678", null, "서울시", null, null);
+            OrderProduct orderProduct = new OrderProduct(1L, 10L, "상품1", "옵션1", 40000L, 0L, 1, null);
 
             // act
-            order.calculateAmounts();
+            order.addOrderProduct(orderProduct);
 
             // assert
-            // 10000 + 3000 - 1000 = 12000
-            assertThat(order.getPaymentAmount()).isEqualTo(12000L);
+            assertAll(
+                () -> assertThat(order.getTotalAmount()).isEqualTo(40000L),
+                () -> assertThat(order.getShippingFee()).isEqualTo(3000L),
+                () -> assertThat(order.getPaymentAmount()).isEqualTo(43000L)
+            );
+        }
+
+        @Test
+        @DisplayName("49,999원 주문 시 배송비 3,000원이 적용된다 (경계값)")
+        void appliesDefaultShippingFee_whenJustBelowThreshold() {
+            // arrange
+            Order order = new Order(1L, "홍길동", "010-1234-5678", null, "서울시", null, null);
+            OrderProduct orderProduct = new OrderProduct(1L, 10L, "상품1", "옵션1", 49999L, 0L, 1, null);
+
+            // act
+            order.addOrderProduct(orderProduct);
+
+            // assert
+            assertThat(order.getShippingFee()).isEqualTo(3000L);
+        }
+
+        @Test
+        @DisplayName("50,000원 이상 주문 시 무료배송이 적용된다 (경계값)")
+        void appliesFreeShipping_whenAtThreshold() {
+            // arrange
+            Order order = new Order(1L, "홍길동", "010-1234-5678", null, "서울시", null, null);
+            OrderProduct orderProduct = new OrderProduct(1L, 10L, "상품1", "옵션1", 50000L, 0L, 1, null);
+
+            // act
+            order.addOrderProduct(orderProduct);
+
+            // assert
+            assertAll(
+                () -> assertThat(order.getTotalAmount()).isEqualTo(50000L),
+                () -> assertThat(order.getShippingFee()).isEqualTo(0L),
+                () -> assertThat(order.getPaymentAmount()).isEqualTo(50000L)
+            );
+        }
+
+        @Test
+        @DisplayName("50,000원 초과 주문 시 무료배송이 적용된다")
+        void appliesFreeShipping_whenAboveThreshold() {
+            // arrange
+            Order order = new Order(1L, "홍길동", "010-1234-5678", null, "서울시", null, null);
+            OrderProduct orderProduct = new OrderProduct(1L, 10L, "상품1", "옵션1", 60000L, 0L, 1, null);
+
+            // act
+            order.addOrderProduct(orderProduct);
+
+            // assert
+            assertThat(order.getShippingFee()).isEqualTo(0L);
+        }
+
+        @Test
+        @DisplayName("쿠폰 할인 적용 후에도 배송비는 totalAmount 기준으로 유지된다")
+        void maintainsShippingFee_afterCouponDiscount() {
+            // arrange
+            Order order = new Order(1L, "홍길동", "010-1234-5678", null, "서울시", null, null);
+            OrderProduct orderProduct = new OrderProduct(1L, 10L, "상품1", "옵션1", 30000L, 0L, 1, null);
+            order.addOrderProduct(orderProduct);
+
+            // act
+            order.applyCouponDiscount(5000L);
+
+            // assert
+            assertAll(
+                () -> assertThat(order.getTotalAmount()).isEqualTo(30000L),
+                () -> assertThat(order.getShippingFee()).isEqualTo(3000L),
+                () -> assertThat(order.getPaymentAmount()).isEqualTo(28000L)  // 30000 + 3000 - 5000
+            );
+        }
+
+        @Test
+        @DisplayName("무료배송 조건 충족 시 쿠폰 할인 적용해도 무료배송 유지")
+        void maintainsFreeShipping_afterCouponDiscount() {
+            // arrange
+            Order order = new Order(1L, "홍길동", "010-1234-5678", null, "서울시", null, null);
+            OrderProduct orderProduct = new OrderProduct(1L, 10L, "상품1", "옵션1", 50000L, 0L, 1, null);
+            order.addOrderProduct(orderProduct);
+
+            // act
+            order.applyCouponDiscount(10000L);
+
+            // assert
+            assertAll(
+                () -> assertThat(order.getTotalAmount()).isEqualTo(50000L),
+                () -> assertThat(order.getShippingFee()).isEqualTo(0L),
+                () -> assertThat(order.getPaymentAmount()).isEqualTo(40000L)  // 50000 + 0 - 10000
+            );
         }
     }
 
