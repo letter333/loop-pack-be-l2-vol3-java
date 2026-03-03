@@ -1575,3 +1575,481 @@ classDiagram
 | **Product 도메인 비대화** | Product 변경 시 여러 도메인에 영향 | 이벤트 기반 느슨한 결합 또는 인터페이스 분리 |
 | **OrderProduct 스냅샷 의존** | Product/Option 삭제 시 참조 무결성 | Soft Delete 강제 + FK 제약조건 완화 |
 | **Category 자기 참조 깊이** | 무한 깊이 허용 시 조회 성능 저하 | depth 제한 (예: 최대 3단계) 정책 |
+
+---
+
+## 쿠폰 (Coupon)
+
+### 왜 필요한가?
+
+쿠폰 도메인의 클래스 다이어그램으로 다음을 검증한다:
+- **할인 정책 캡슐화**: 정액/정률 할인 계산 로직이 도메인 객체에 응집되어 있는가?
+- **발급 제약 검증**: 발급 기간, 수량 제한 등이 도메인 레벨에서 검증되는가?
+- **주문 연동**: 주문 시 쿠폰 적용 및 취소 시 복구 흐름이 명확한가?
+
+### 클래스 다이어그램
+
+```mermaid
+classDiagram
+    direction TB
+
+    %% Interfaces Layer - Admin
+    class CouponAdminV1Controller {
+        -CouponFacade couponFacade
+        +getCoupons(ldap, pageable) ApiResponse~Page~
+        +getCoupon(ldap, couponId) ApiResponse~CouponDetailResponse~
+        +createCoupon(ldap, CreateCouponRequest) ApiResponse~CouponDetailResponse~
+        +updateCoupon(ldap, couponId, UpdateCouponRequest) ApiResponse~CouponDetailResponse~
+        +deleteCoupon(ldap, couponId) ApiResponse~Object~
+    }
+
+    class CreateCouponRequest {
+        +String name
+        +String description
+        +CouponType couponType
+        +Long discountValue
+        +Long minOrderAmount
+        +Long maxDiscountAmount
+        +Integer totalQuantity
+        +LocalDateTime validFrom
+        +LocalDateTime validUntil
+    }
+
+    class UpdateCouponRequest {
+        +String name
+        +String description
+        +CouponType couponType
+        +Long discountValue
+        +Long minOrderAmount
+        +Long maxDiscountAmount
+        +Integer totalQuantity
+        +LocalDateTime validFrom
+        +LocalDateTime validUntil
+    }
+
+    class CouponDetailResponse {
+        +Long id
+        +String name
+        +String description
+        +CouponType couponType
+        +Long discountValue
+        +Long minOrderAmount
+        +Long maxDiscountAmount
+        +Integer totalQuantity
+        +Integer issuedQuantity
+        +LocalDateTime validFrom
+        +LocalDateTime validUntil
+        +LocalDateTime createdAt
+        +LocalDateTime updatedAt
+    }
+
+    %% Interfaces Layer - User
+    class CouponV1Controller {
+        -CouponFacade couponFacade
+        +getIssuableCoupons(loginId, loginPw) ApiResponse~List~
+        +issueCoupon(loginId, loginPw, couponId) ApiResponse~MemberCouponResponse~
+        +getMyCoupons(loginId, loginPw, status) ApiResponse~MemberCouponListResponse~
+    }
+
+    class CouponResponse {
+        +Long id
+        +String name
+        +String description
+        +CouponType couponType
+        +Long discountValue
+        +Long minOrderAmount
+        +Long maxDiscountAmount
+        +Integer remainingQuantity
+        +LocalDateTime validFrom
+        +LocalDateTime validUntil
+        +Boolean alreadyIssued
+    }
+
+    class MemberCouponResponse {
+        +Long id
+        +String couponCode
+        +MemberCouponStatus status
+        +LocalDateTime issuedAt
+        +LocalDateTime expiredAt
+        +CouponResponse coupon
+    }
+
+    class MemberCouponListResponse {
+        +List~MemberCouponResponse~ coupons
+        +Long totalCount
+        +Long availableCount
+        +Long usedCount
+        +Long expiredCount
+    }
+
+    %% Application Layer
+    class CouponFacade {
+        -CouponService couponService
+        -MemberCouponService memberCouponService
+        -MemberService memberService
+        -AdminValidator adminValidator
+        +getCouponsForAdmin(ldap, pageable) Page~CouponDetailInfo~
+        +getCouponDetail(ldap, couponId) CouponDetailInfo
+        +createCoupon(ldap, command) CouponDetailInfo
+        +updateCoupon(ldap, couponId, command) CouponDetailInfo
+        +deleteCoupon(ldap, couponId) void
+        +getIssuableCoupons(loginId, loginPw) List~CouponInfo~
+        +issueCoupon(loginId, loginPw, couponId) MemberCouponInfo
+        +getMyCoupons(loginId, loginPw, status) MemberCouponListInfo
+        +calculateCouponDiscount(memberCouponId, memberId, orderAmount) Long
+        +applyCoupon(memberCouponId, orderId) void
+        +cancelCouponUsage(orderId) void
+    }
+
+    class CouponDetailInfo {
+        +Long id
+        +String name
+        +String description
+        +CouponType couponType
+        +Long discountValue
+        +Long minOrderAmount
+        +Long maxDiscountAmount
+        +Integer totalQuantity
+        +Integer issuedQuantity
+        +LocalDateTime validFrom
+        +LocalDateTime validUntil
+        +LocalDateTime createdAt
+        +LocalDateTime updatedAt
+    }
+
+    class CouponInfo {
+        +Long id
+        +String name
+        +String description
+        +CouponType couponType
+        +Long discountValue
+        +Long minOrderAmount
+        +Long maxDiscountAmount
+        +Integer remainingQuantity
+        +LocalDateTime validFrom
+        +LocalDateTime validUntil
+        +Boolean alreadyIssued
+    }
+
+    class MemberCouponInfo {
+        +Long id
+        +String couponCode
+        +MemberCouponStatus status
+        +LocalDateTime issuedAt
+        +LocalDateTime expiredAt
+        +CouponInfo coupon
+    }
+
+    class MemberCouponListInfo {
+        +List~MemberCouponInfo~ coupons
+        +Long totalCount
+        +Long availableCount
+        +Long usedCount
+        +Long expiredCount
+    }
+
+    class CouponCommand {
+        <<record>>
+    }
+
+    class CouponCommand_Create {
+        +String name
+        +String description
+        +CouponType couponType
+        +Long discountValue
+        +Long minOrderAmount
+        +Long maxDiscountAmount
+        +Integer totalQuantity
+        +LocalDateTime validFrom
+        +LocalDateTime validUntil
+    }
+
+    class CouponCommand_Update {
+        +String name
+        +String description
+        +CouponType couponType
+        +Long discountValue
+        +Long minOrderAmount
+        +Long maxDiscountAmount
+        +Integer totalQuantity
+        +LocalDateTime validFrom
+        +LocalDateTime validUntil
+    }
+
+    %% Domain Layer
+    class Coupon {
+        -Long id
+        -String name
+        -String description
+        -CouponType couponType
+        -Long discountValue
+        -Long minOrderAmount
+        -Long maxDiscountAmount
+        -Integer totalQuantity
+        -Integer issuedQuantity
+        -LocalDateTime validFrom
+        -LocalDateTime validUntil
+        -LocalDateTime createdAt
+        -LocalDateTime updatedAt
+        -LocalDateTime deletedAt
+        +isDeleted() boolean
+        +isWithinIssuePeriod() boolean
+        +hasRemainingQuantity() boolean
+        +canIssue() boolean
+        +issue() void
+        +calculateDiscount(orderAmount) Long
+        +update(...) void
+        +delete() void
+    }
+
+    class CouponType {
+        <<enumeration>>
+        FIXED_AMOUNT
+        PERCENTAGE
+    }
+
+    class MemberCoupon {
+        -Long id
+        -Long memberId
+        -Long couponId
+        -String couponCode
+        -MemberCouponStatus status
+        -Long usedOrderId
+        -LocalDateTime usedAt
+        -LocalDateTime issuedAt
+        -LocalDateTime expiredAt
+        -LocalDateTime createdAt
+        -LocalDateTime updatedAt
+        -Coupon coupon
+        +isExpired() boolean
+        +isAvailable() boolean
+        +isOwnedBy(memberId) boolean
+        +use(orderId) void
+        +cancelUse() void
+        +expire() void
+        +setCoupon(coupon) void
+    }
+
+    class MemberCouponStatus {
+        <<enumeration>>
+        AVAILABLE
+        USED
+        EXPIRED
+    }
+
+    class CouponValidator {
+        +validateName(name)$ void
+        +validateCouponType(couponType)$ void
+        +validateDiscountValue(discountValue, couponType)$ void
+        +validateMinOrderAmount(minOrderAmount)$ void
+        +validateTotalQuantity(totalQuantity)$ void
+        +validateValidPeriod(validFrom, validUntil)$ void
+    }
+
+    class CouponCodeGenerator {
+        -SecureRandom random
+        +generate() String
+    }
+
+    class CouponService {
+        -CouponRepository couponRepository
+        +getCoupon(couponId) Coupon
+        +getActiveCoupon(couponId) Coupon
+        +getIssuableCoupons() List~Coupon~
+        +getCouponsForAdmin(pageable) Page~Coupon~
+        +createCoupon(...) Coupon
+        +updateCoupon(couponId, ...) Coupon
+        +deleteCoupon(couponId) void
+        +issueCoupon(couponId) Coupon
+    }
+
+    class MemberCouponService {
+        -MemberCouponRepository memberCouponRepository
+        -CouponRepository couponRepository
+        -CouponCodeGenerator couponCodeGenerator
+        +getMemberCoupon(memberCouponId) MemberCoupon
+        +getMemberCouponWithCoupon(memberCouponId) MemberCoupon
+        +getMemberCoupons(memberId) List~MemberCoupon~
+        +getMemberCouponsByStatus(memberId, status) List~MemberCoupon~
+        +getIssuedCouponIds(memberId) List~Long~
+        +issueCoupon(memberId, couponId) MemberCoupon
+        +useCoupon(memberCouponId, orderId) void
+        +cancelCouponUsage(orderId) void
+        +validateCouponOwnership(memberCouponId, memberId) void
+    }
+
+    %% Infrastructure Layer
+    class CouponRepository {
+        <<interface>>
+        +findById(couponId) Optional~Coupon~
+        +findAllIssuable() List~Coupon~
+        +findAllActive(pageable) Page~Coupon~
+        +save(coupon) Coupon
+    }
+
+    class MemberCouponRepository {
+        <<interface>>
+        +findById(memberCouponId) Optional~MemberCoupon~
+        +findByIdWithCoupon(memberCouponId) Optional~MemberCoupon~
+        +findAllByMemberId(memberId) List~MemberCoupon~
+        +findAllByMemberIdAndStatus(memberId, status) List~MemberCoupon~
+        +findIssuedCouponIdsByMemberId(memberId) List~Long~
+        +findByUsedOrderId(orderId) Optional~MemberCoupon~
+        +existsByMemberIdAndCouponId(memberId, couponId) boolean
+        +save(memberCoupon) MemberCoupon
+    }
+
+    class CouponEntity {
+        -Long id
+        -String name
+        -String description
+        -CouponType couponType
+        -Long discountValue
+        -Long minOrderAmount
+        -Long maxDiscountAmount
+        -Integer totalQuantity
+        -Integer issuedQuantity
+        -LocalDateTime validFrom
+        -LocalDateTime validUntil
+        -LocalDateTime createdAt
+        -LocalDateTime updatedAt
+        -LocalDateTime deletedAt
+        +toDomain() Coupon
+        +from(coupon)$ CouponEntity
+    }
+
+    class MemberCouponEntity {
+        -Long id
+        -Long memberId
+        -Long couponId
+        -String couponCode
+        -MemberCouponStatus status
+        -Long usedOrderId
+        -LocalDateTime usedAt
+        -LocalDateTime issuedAt
+        -LocalDateTime expiredAt
+        -LocalDateTime createdAt
+        -LocalDateTime updatedAt
+        -CouponEntity couponEntity
+        +toDomain() MemberCoupon
+        +from(memberCoupon)$ MemberCouponEntity
+    }
+
+    class CouponRepositoryImpl {
+        -CouponJpaRepository jpaRepository
+    }
+
+    class MemberCouponRepositoryImpl {
+        -MemberCouponJpaRepository jpaRepository
+    }
+
+    %% Relationships
+    CouponAdminV1Controller --> CouponFacade
+    CouponAdminV1Controller ..> CreateCouponRequest
+    CouponAdminV1Controller ..> UpdateCouponRequest
+    CouponAdminV1Controller ..> CouponDetailResponse
+
+    CouponV1Controller --> CouponFacade
+    CouponV1Controller ..> CouponResponse
+    CouponV1Controller ..> MemberCouponResponse
+    CouponV1Controller ..> MemberCouponListResponse
+
+    CouponFacade --> CouponService
+    CouponFacade --> MemberCouponService
+    CouponFacade --> MemberService : 인증
+    CouponFacade --> AdminValidator : 관리자 검증
+    CouponFacade ..> CouponDetailInfo
+    CouponFacade ..> CouponInfo
+    CouponFacade ..> MemberCouponInfo
+    CouponFacade ..> MemberCouponListInfo
+
+    CouponCommand --> CouponCommand_Create
+    CouponCommand --> CouponCommand_Update
+
+    CouponService --> CouponRepository
+    CouponService --> Coupon
+    Coupon --> CouponType
+    Coupon --> CouponValidator : uses
+
+    MemberCouponService --> MemberCouponRepository
+    MemberCouponService --> CouponRepository
+    MemberCouponService --> CouponCodeGenerator
+    MemberCouponService --> MemberCoupon
+
+    MemberCoupon --> MemberCouponStatus
+    MemberCoupon --> Coupon : has
+
+    CouponRepositoryImpl ..|> CouponRepository
+    CouponRepositoryImpl --> CouponEntity
+
+    MemberCouponRepositoryImpl ..|> MemberCouponRepository
+    MemberCouponRepositoryImpl --> MemberCouponEntity
+
+    MemberCouponEntity --> CouponEntity : references
+```
+
+### 핵심 포인트
+
+1. **할인 계산 로직 캡슐화**: `Coupon.calculateDiscount(orderAmount)`에서 정액/정률 할인 및 최대 할인액 제한 처리
+2. **발급 제약 도메인 검증**: `Coupon.canIssue()`로 삭제 여부, 발급 기간, 잔여 수량을 한 번에 검증
+3. **중복 발급 방지**: `MemberCouponRepository.existsByMemberIdAndCouponId()`로 중복 체크
+4. **쿠폰 코드 생성**: `CouponCodeGenerator`가 12자리 랜덤 코드(XXXX-XXXX-XXXX) 생성
+5. **주문 연동**: `CouponFacade.applyCoupon()`, `cancelCouponUsage()`로 주문 시 쿠폰 적용/복구 처리
+
+### 잠재 리스크
+
+| 리스크 | 영향 | 대안 |
+|--------|------|------|
+| **쿠폰 발급 동시성** | 동시 발급 요청 시 발급 수량 초과 가능 | 비관적 락 또는 Redis 분산 락 적용 |
+| **쿠폰 코드 충돌** | 12자리 랜덤 코드 충돌 가능성 (극히 낮음) | UNIQUE 제약조건 + 재시도 로직 |
+| **만료 쿠폰 상태 동기화** | 만료일 지났으나 상태가 AVAILABLE인 쿠폰 존재 | 배치 처리 또는 조회 시 실시간 상태 확인 |
+
+---
+
+## 쿠폰 - 주문 연동
+
+### 왜 필요한가?
+
+주문과 쿠폰의 연동 구조를 검증한다:
+- **할인 적용**: 주문 생성 시 쿠폰 할인액이 올바르게 계산되는가?
+- **쿠폰 상태 관리**: 주문 시 쿠폰이 USED로 변경되고, 취소 시 복구되는가?
+- **의존 방향**: OrderFacade가 CouponFacade를 통해 쿠폰 기능을 사용하는가?
+
+### 연동 클래스 다이어그램
+
+```mermaid
+classDiagram
+    direction LR
+
+    class OrderFacade {
+        -CouponFacade couponFacade
+        +createOrder(command with memberCouponId) OrderDetailInfo
+        +cancelOrder(orderId) void
+    }
+
+    class CouponFacade {
+        +calculateCouponDiscount(memberCouponId, memberId, orderAmount) Long
+        +applyCoupon(memberCouponId, orderId) void
+        +cancelCouponUsage(orderId) void
+    }
+
+    class Order {
+        -Long discountAmount
+        -Long memberCouponId
+    }
+
+    class MemberCoupon {
+        -Long usedOrderId
+        -MemberCouponStatus status
+    }
+
+    OrderFacade --> CouponFacade : 할인 계산, 쿠폰 적용/취소
+    OrderFacade --> Order
+    CouponFacade --> MemberCoupon
+```
+
+### 핵심 포인트
+
+1. **할인 계산 분리**: OrderFacade는 CouponFacade에 할인 계산을 위임, 직접 쿠폰 도메인을 참조하지 않음
+2. **트랜잭션 경계**: 주문 생성과 쿠폰 적용이 동일 트랜잭션에서 처리되어 원자성 보장
+3. **취소 복구 자동화**: 주문 취소 시 `CouponFacade.cancelCouponUsage(orderId)`가 해당 주문에 적용된 쿠폰을 자동 복구
