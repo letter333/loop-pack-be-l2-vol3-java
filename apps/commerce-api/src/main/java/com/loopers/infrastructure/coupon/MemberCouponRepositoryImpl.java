@@ -1,0 +1,85 @@
+package com.loopers.infrastructure.coupon;
+
+import com.loopers.domain.coupon.MemberCoupon;
+import com.loopers.domain.coupon.MemberCouponRepository;
+import com.loopers.domain.coupon.MemberCouponStatus;
+import com.loopers.support.error.CoreException;
+import com.loopers.support.error.ErrorType;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Component;
+
+import java.util.List;
+import java.util.Optional;
+
+@Component
+@RequiredArgsConstructor
+public class MemberCouponRepositoryImpl implements MemberCouponRepository {
+
+    private final MemberCouponJpaRepository memberCouponJpaRepository;
+
+    @Override
+    public Optional<MemberCoupon> findById(Long id) {
+        return memberCouponJpaRepository.findById(id)
+            .map(MemberCouponEntity::toDomain);
+    }
+
+    @Override
+    public Optional<MemberCoupon> findByIdWithCoupon(Long id) {
+        return memberCouponJpaRepository.findByIdWithCoupon(id)
+            .map(MemberCouponEntity::toDomainWithCoupon);
+    }
+
+    @Override
+    public Optional<MemberCoupon> findByMemberIdAndCouponId(Long memberId, Long couponId) {
+        return memberCouponJpaRepository.findByMemberIdAndCouponId(memberId, couponId)
+            .map(MemberCouponEntity::toDomain);
+    }
+
+    @Override
+    public Optional<MemberCoupon> findByUsedOrderId(Long orderId) {
+        return memberCouponJpaRepository.findByUsedOrderId(orderId)
+            .map(MemberCouponEntity::toDomain);
+    }
+
+    @Override
+    public List<MemberCoupon> findAllByMemberId(Long memberId) {
+        return memberCouponJpaRepository.findAllByMemberIdWithCoupon(memberId).stream()
+            .map(MemberCouponEntity::toDomainWithCoupon)
+            .toList();
+    }
+
+    @Override
+    public List<MemberCoupon> findAllByMemberIdAndStatus(Long memberId, MemberCouponStatus status) {
+        return memberCouponJpaRepository.findAllByMemberIdAndStatusWithCoupon(memberId, status).stream()
+            .map(MemberCouponEntity::toDomainWithCoupon)
+            .toList();
+    }
+
+    @Override
+    public List<Long> findIssuedCouponIdsByMemberId(Long memberId) {
+        return memberCouponJpaRepository.findCouponIdsByMemberId(memberId);
+    }
+
+    @Override
+    public MemberCoupon save(MemberCoupon memberCoupon) {
+        MemberCouponEntity entity;
+        if (memberCoupon.getId() != null) {
+            entity = memberCouponJpaRepository.findById(memberCoupon.getId())
+                .orElseThrow(() -> new CoreException(ErrorType.NOT_FOUND, "발급된 쿠폰을 찾을 수 없습니다."));
+            entity.update(
+                memberCoupon.getStatus(),
+                memberCoupon.getUsedOrderId(),
+                memberCoupon.getUsedAt()
+            );
+        } else {
+            entity = MemberCouponEntity.from(memberCoupon);
+        }
+        MemberCouponEntity saved = memberCouponJpaRepository.save(entity);
+        return saved.toDomain();
+    }
+
+    @Override
+    public boolean existsByMemberIdAndCouponId(Long memberId, Long couponId) {
+        return memberCouponJpaRepository.existsByMemberIdAndCouponId(memberId, couponId);
+    }
+}
