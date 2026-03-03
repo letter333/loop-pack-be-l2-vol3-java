@@ -557,8 +557,12 @@ class OrderV1ApiE2ETest {
                 List.of(optionM, optionL), List.of());
             product = productRepository.save(product);
 
-            Long optionMId = product.getOptions().get(0).getId();
-            Long optionLId = product.getOptions().get(1).getId();
+            Long optionMId = product.getOptions().stream()
+                .filter(opt -> "M".equals(opt.getOptionValue()))
+                .findFirst().orElseThrow().getId();
+            Long optionLId = product.getOptions().stream()
+                .filter(opt -> "L".equals(opt.getOptionValue()))
+                .findFirst().orElseThrow().getId();
 
             // 상품이 SALE 상태인지 확인
             assertThat(product.getStatus()).isEqualTo(ProductStatus.SALE);
