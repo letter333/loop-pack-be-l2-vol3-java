@@ -611,9 +611,9 @@ class CouponAdminV1ApiE2ETest {
         void returnsOk_whenAdminRequests() {
             // Arrange
             Coupon coupon = couponRepository.save(createTestCoupon("테스트 쿠폰", CouponType.FIXED, 5000L));
-            memberCouponRepository.save(new MemberCoupon(1L, coupon.getId(), "AAAA-1111-BBBB", coupon.getValidUntil()));
-            memberCouponRepository.save(new MemberCoupon(2L, coupon.getId(), "CCCC-2222-DDDD", coupon.getValidUntil()));
-            memberCouponRepository.save(new MemberCoupon(3L, coupon.getId(), "EEEE-3333-FFFF", coupon.getValidUntil()));
+            memberCouponRepository.save(new MemberCoupon(1L, coupon.getId(), "AAAA-1111-BBBB", coupon.getValidUntil(), coupon));
+            memberCouponRepository.save(new MemberCoupon(2L, coupon.getId(), "CCCC-2222-DDDD", coupon.getValidUntil(), coupon));
+            memberCouponRepository.save(new MemberCoupon(3L, coupon.getId(), "EEEE-3333-FFFF", coupon.getValidUntil(), coupon));
 
             // Act
             ParameterizedTypeReference<ApiResponse<Map<String, Object>>> responseType = new ParameterizedTypeReference<>() {};
@@ -676,7 +676,8 @@ class CouponAdminV1ApiE2ETest {
                     (long) (i + 1),
                     coupon.getId(),
                     String.format("TEST-%04d-CODE", i),
-                    coupon.getValidUntil()
+                    coupon.getValidUntil(),
+                    coupon
                 ));
             }
 
@@ -703,7 +704,7 @@ class CouponAdminV1ApiE2ETest {
         void includesUsageInformation() {
             // Arrange
             Coupon coupon = couponRepository.save(createTestCoupon("테스트 쿠폰", CouponType.FIXED, 5000L));
-            MemberCoupon memberCoupon = new MemberCoupon(1L, coupon.getId(), "AAAA-1111-BBBB", coupon.getValidUntil());
+            MemberCoupon memberCoupon = new MemberCoupon(1L, coupon.getId(), "AAAA-1111-BBBB", coupon.getValidUntil(), coupon);
             memberCoupon.use(100L);
             memberCouponRepository.save(memberCoupon);
 

@@ -203,7 +203,8 @@ class CouponV1ApiE2ETest {
                 testMember.getId(),
                 coupon.getId(),
                 "ABCD-1234-EFGH",
-                coupon.getValidUntil()
+                coupon.getValidUntil(),
+                coupon
             );
             memberCouponRepository.save(memberCoupon);
 
@@ -317,7 +318,8 @@ class CouponV1ApiE2ETest {
                 testMember.getId(),
                 coupon.getId(),
                 "ABCD-1234-EFGH",
-                coupon.getValidUntil()
+                coupon.getValidUntil(),
+                coupon
             );
             memberCouponRepository.save(memberCoupon);
 
@@ -364,8 +366,8 @@ class CouponV1ApiE2ETest {
             // Arrange
             Coupon coupon1 = couponRepository.save(createIssuableCoupon("쿠폰1", CouponType.FIXED, 5000L));
             Coupon coupon2 = couponRepository.save(createIssuableCoupon("쿠폰2", CouponType.RATE, 10L));
-            memberCouponRepository.save(new MemberCoupon(testMember.getId(), coupon1.getId(), "AAAA-1111-BBBB", coupon1.getValidUntil()));
-            memberCouponRepository.save(new MemberCoupon(testMember.getId(), coupon2.getId(), "CCCC-2222-DDDD", coupon2.getValidUntil()));
+            memberCouponRepository.save(new MemberCoupon(testMember.getId(), coupon1.getId(), "AAAA-1111-BBBB", coupon1.getValidUntil(), coupon1));
+            memberCouponRepository.save(new MemberCoupon(testMember.getId(), coupon2.getId(), "CCCC-2222-DDDD", coupon2.getValidUntil(), coupon2));
 
             // Act
             ParameterizedTypeReference<ApiResponse<Map<String, Object>>> responseType = new ParameterizedTypeReference<>() {};
@@ -405,8 +407,8 @@ class CouponV1ApiE2ETest {
             // Arrange
             Coupon coupon1 = couponRepository.save(createIssuableCoupon("쿠폰1", CouponType.FIXED, 5000L));
             Coupon coupon2 = couponRepository.save(createIssuableCoupon("쿠폰2", CouponType.FIXED, 3000L));
-            MemberCoupon mc1 = memberCouponRepository.save(new MemberCoupon(testMember.getId(), coupon1.getId(), "AAAA-1111-BBBB", coupon1.getValidUntil()));
-            MemberCoupon mc2 = memberCouponRepository.save(new MemberCoupon(testMember.getId(), coupon2.getId(), "CCCC-2222-DDDD", coupon2.getValidUntil()));
+            MemberCoupon mc1 = memberCouponRepository.save(new MemberCoupon(testMember.getId(), coupon1.getId(), "AAAA-1111-BBBB", coupon1.getValidUntil(), coupon1));
+            MemberCoupon mc2 = memberCouponRepository.save(new MemberCoupon(testMember.getId(), coupon2.getId(), "CCCC-2222-DDDD", coupon2.getValidUntil(), coupon2));
 
             // 두 번째 쿠폰 사용 처리
             mc2.use(1L);

@@ -1,5 +1,6 @@
 package com.loopers.infrastructure.coupon;
 
+import com.loopers.domain.coupon.Coupon;
 import com.loopers.domain.coupon.MemberCoupon;
 import com.loopers.domain.coupon.MemberCouponStatus;
 import jakarta.persistence.Column;
@@ -116,16 +117,27 @@ public class MemberCouponEntity {
             issuedAt,
             expiredAt,
             createdAt != null ? createdAt.toLocalDateTime() : null,
-            updatedAt != null ? updatedAt.toLocalDateTime() : null
+            updatedAt != null ? updatedAt.toLocalDateTime() : null,
+            null
         );
     }
 
     public MemberCoupon toDomainWithCoupon() {
-        MemberCoupon memberCoupon = toDomain();
-        if (coupon != null) {
-            memberCoupon.setCoupon(coupon.toDomain());
-        }
-        return memberCoupon;
+        Coupon domainCoupon = coupon != null ? coupon.toDomain() : null;
+        return new MemberCoupon(
+            id,
+            memberId,
+            couponId,
+            couponCode,
+            status,
+            usedOrderId,
+            usedAt,
+            issuedAt,
+            expiredAt,
+            createdAt != null ? createdAt.toLocalDateTime() : null,
+            updatedAt != null ? updatedAt.toLocalDateTime() : null,
+            domainCoupon
+        );
     }
 
     public void update(MemberCouponStatus status, Long usedOrderId, LocalDateTime usedAt) {

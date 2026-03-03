@@ -105,8 +105,6 @@ public class CouponFacade {
     public MemberCouponInfo issueCoupon(String loginId, String loginPw, Long couponId) {
         var member = memberService.authenticate(loginId, loginPw);
         MemberCoupon memberCoupon = memberCouponService.issueCoupon(member.getId(), couponId);
-        Coupon coupon = couponService.getCoupon(couponId);
-        memberCoupon.setCoupon(coupon);
         return MemberCouponInfo.from(memberCoupon);
     }
 

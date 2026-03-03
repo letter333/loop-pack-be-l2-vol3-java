@@ -23,7 +23,7 @@ public class MemberCoupon {
 
     private Coupon coupon;
 
-    public MemberCoupon(Long memberId, Long couponId, String couponCode, LocalDateTime expiredAt) {
+    public MemberCoupon(Long memberId, Long couponId, String couponCode, LocalDateTime expiredAt, Coupon coupon) {
         validateMemberId(memberId);
         validateCouponId(couponId);
         validateCouponCode(couponCode);
@@ -35,12 +35,14 @@ public class MemberCoupon {
         this.status = MemberCouponStatus.AVAILABLE;
         this.issuedAt = LocalDateTime.now();
         this.expiredAt = expiredAt;
+        this.coupon = coupon;
     }
 
     public MemberCoupon(Long id, Long memberId, Long couponId, String couponCode,
                         MemberCouponStatus status, Long usedOrderId, LocalDateTime usedAt,
                         LocalDateTime issuedAt, LocalDateTime expiredAt,
-                        LocalDateTime createdAt, LocalDateTime updatedAt) {
+                        LocalDateTime createdAt, LocalDateTime updatedAt,
+                        Coupon coupon) {
         this.id = id;
         this.memberId = memberId;
         this.couponId = couponId;
@@ -52,9 +54,6 @@ public class MemberCoupon {
         this.expiredAt = expiredAt;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
-    }
-
-    public void setCoupon(Coupon coupon) {
         this.coupon = coupon;
     }
 

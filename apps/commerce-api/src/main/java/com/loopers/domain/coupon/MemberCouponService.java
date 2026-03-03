@@ -63,7 +63,7 @@ public class MemberCouponService {
 
         String couponCode = couponCodeGenerator.generate();
         MemberCoupon memberCoupon = new MemberCoupon(
-            memberId, couponId, couponCode, coupon.getValidUntil()
+            memberId, couponId, couponCode, coupon.getValidUntil(), coupon
         );
 
         return memberCouponRepository.save(memberCoupon);
