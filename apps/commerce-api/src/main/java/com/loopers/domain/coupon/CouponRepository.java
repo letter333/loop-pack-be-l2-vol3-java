@@ -12,6 +12,8 @@ public interface CouponRepository {
 
     List<Coupon> findAllIssuable();
 
+    List<IssuableCoupon> findAllIssuableWithIssuedFlag(Long memberId);
+
     Page<Coupon> findAllActive(Pageable pageable);
 
     Coupon save(Coupon coupon);

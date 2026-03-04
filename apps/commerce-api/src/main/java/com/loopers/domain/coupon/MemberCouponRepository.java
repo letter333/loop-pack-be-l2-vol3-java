@@ -32,6 +32,8 @@ public interface MemberCouponRepository {
 
     long countExpiredByMemberId(Long memberId);
 
+    MemberCouponStatusCounts countStatusesByMemberId(Long memberId);
+
     MemberCoupon save(MemberCoupon memberCoupon);
 
     boolean existsByMemberIdAndCouponId(Long memberId, Long couponId);

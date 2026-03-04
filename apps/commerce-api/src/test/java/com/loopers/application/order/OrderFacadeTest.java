@@ -187,7 +187,7 @@ class OrderFacadeTest {
             given(addressService.getAddresses(MEMBER_ID)).willReturn(List.of(address));
             given(productService.validateProduct(1L)).willReturn(product);
             given(productService.getProductOption(1L, 10L)).willReturn(option);
-            given(memberCouponService.getMemberCouponWithCoupon(memberCouponId)).willReturn(memberCoupon);
+            given(memberCouponService.validateAndCalculateDiscount(eq(memberCouponId), eq(MEMBER_ID), any(Long.class))).willReturn(5000L);
             given(orderService.createOrder(any(Order.class))).willReturn(savedOrder);
 
             // act
@@ -196,7 +196,7 @@ class OrderFacadeTest {
             // assert
             assertAll(
                 () -> assertThat(result.id()).isEqualTo(ORDER_ID),
-                () -> verify(memberCouponService).getMemberCouponWithCoupon(memberCouponId),
+                () -> verify(memberCouponService).validateAndCalculateDiscount(eq(memberCouponId), eq(MEMBER_ID), any(Long.class)),
                 () -> verify(memberCouponService).useCoupon(memberCouponId, ORDER_ID)
             );
         }
@@ -211,13 +211,6 @@ class OrderFacadeTest {
             ProductOption option = createProductOption(10L, 1L, 0L, 100);
 
             Long memberCouponId = 100L;
-            Long otherMemberId = 999L;
-            Coupon coupon = new Coupon(1L, "테스트 쿠폰", "설명", CouponType.FIXED, 5000L, 10000L, null,
-                1000, 0, LocalDateTime.now().minusDays(1), LocalDateTime.now().plusDays(30),
-                null, null, null);
-            MemberCoupon memberCoupon = new MemberCoupon(memberCouponId, otherMemberId, 1L, "ABCD-1234-EFGH",
-                MemberCouponStatus.AVAILABLE, null, null, LocalDateTime.now(), LocalDateTime.now().plusDays(30),
-                null, null, coupon);
 
             OrderCommand.Create command = new OrderCommand.Create(
                 ADDRESS_ID, null,
@@ -229,7 +222,8 @@ class OrderFacadeTest {
             given(addressService.getAddresses(MEMBER_ID)).willReturn(List.of(address));
             given(productService.validateProduct(1L)).willReturn(product);
             given(productService.getProductOption(1L, 10L)).willReturn(option);
-            given(memberCouponService.getMemberCouponWithCoupon(memberCouponId)).willReturn(memberCoupon);
+            given(memberCouponService.validateAndCalculateDiscount(eq(memberCouponId), eq(MEMBER_ID), any(Long.class)))
+                .willThrow(new CoreException(ErrorType.FORBIDDEN, "해당 쿠폰에 대한 권한이 없습니다."));
 
             // act & assert
             assertThatThrownBy(() -> orderFacade.createOrder(LOGIN_ID, PASSWORD, command))
@@ -248,12 +242,6 @@ class OrderFacadeTest {
             ProductOption option = createProductOption(10L, 1L, 0L, 100);
 
             Long memberCouponId = 100L;
-            Coupon coupon = new Coupon(1L, "테스트 쿠폰", "설명", CouponType.FIXED, 5000L, 10000L, null,
-                1000, 0, LocalDateTime.now().minusDays(1), LocalDateTime.now().plusDays(30),
-                null, null, null);
-            MemberCoupon memberCoupon = new MemberCoupon(memberCouponId, MEMBER_ID, 1L, "ABCD-1234-EFGH",
-                MemberCouponStatus.USED, 1L, LocalDateTime.now(), LocalDateTime.now(), LocalDateTime.now().plusDays(30),
-                null, null, coupon);
 
             OrderCommand.Create command = new OrderCommand.Create(
                 ADDRESS_ID, null,
@@ -265,7 +253,8 @@ class OrderFacadeTest {
             given(addressService.getAddresses(MEMBER_ID)).willReturn(List.of(address));
             given(productService.validateProduct(1L)).willReturn(product);
             given(productService.getProductOption(1L, 10L)).willReturn(option);
-            given(memberCouponService.getMemberCouponWithCoupon(memberCouponId)).willReturn(memberCoupon);
+            given(memberCouponService.validateAndCalculateDiscount(eq(memberCouponId), eq(MEMBER_ID), any(Long.class)))
+                .willThrow(new CoreException(ErrorType.BAD_REQUEST, "사용할 수 없는 쿠폰입니다."));
 
             // act & assert
             assertThatThrownBy(() -> orderFacade.createOrder(LOGIN_ID, PASSWORD, command))

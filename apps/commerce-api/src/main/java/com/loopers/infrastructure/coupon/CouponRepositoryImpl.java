@@ -2,18 +2,19 @@ package com.loopers.infrastructure.coupon;
 
 import com.loopers.domain.coupon.Coupon;
 import com.loopers.domain.coupon.CouponRepository;
+import com.loopers.domain.coupon.IssuableCoupon;
 import com.loopers.support.error.CoreException;
 import com.loopers.support.error.ErrorType;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
-@Component
+@Repository
 @RequiredArgsConstructor
 public class CouponRepositoryImpl implements CouponRepository {
 
@@ -29,6 +30,17 @@ public class CouponRepositoryImpl implements CouponRepository {
     public List<Coupon> findAllIssuable() {
         return couponJpaRepository.findAllIssuable(LocalDateTime.now()).stream()
             .map(CouponEntity::toDomain)
+            .toList();
+    }
+
+    @Override
+    public List<IssuableCoupon> findAllIssuableWithIssuedFlag(Long memberId) {
+        return couponJpaRepository.findAllIssuableWithIssuedFlag(memberId, LocalDateTime.now()).stream()
+            .map(row -> {
+                CouponEntity entity = (CouponEntity) row[0];
+                boolean issued = Boolean.TRUE.equals(row[1]);
+                return new IssuableCoupon(entity.toDomain(), issued);
+            })
             .toList();
     }
 

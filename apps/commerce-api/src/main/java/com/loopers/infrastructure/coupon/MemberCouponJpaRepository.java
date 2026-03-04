@@ -72,4 +72,11 @@ public interface MemberCouponJpaRepository extends JpaRepository<MemberCouponEnt
     long countExpiredByMemberId(@Param("memberId") Long memberId);
 
     Page<MemberCouponEntity> findAllByCouponId(Long couponId, Pageable pageable);
+
+    @Query("SELECT " +
+           "SUM(CASE WHEN mc.status = 'AVAILABLE' AND mc.expiredAt > CURRENT_TIMESTAMP THEN 1 ELSE 0 END), " +
+           "SUM(CASE WHEN mc.status = 'USED' THEN 1 ELSE 0 END), " +
+           "SUM(CASE WHEN mc.status = 'EXPIRED' OR (mc.status = 'AVAILABLE' AND mc.expiredAt <= CURRENT_TIMESTAMP) THEN 1 ELSE 0 END) " +
+           "FROM MemberCouponEntity mc WHERE mc.memberId = :memberId")
+    List<Object[]> countStatusesByMemberId(@Param("memberId") Long memberId);
 }

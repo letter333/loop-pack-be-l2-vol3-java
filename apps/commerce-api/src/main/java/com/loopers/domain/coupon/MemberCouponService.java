@@ -5,13 +5,13 @@ import com.loopers.support.error.ErrorType;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
-@Component
+@Service
 @RequiredArgsConstructor
 public class MemberCouponService {
 
@@ -57,6 +57,11 @@ public class MemberCouponService {
     }
 
     @Transactional(readOnly = true, propagation = Propagation.SUPPORTS)
+    public MemberCouponStatusCounts getStatusCounts(Long memberId) {
+        return memberCouponRepository.countStatusesByMemberId(memberId);
+    }
+
+    @Transactional(readOnly = true, propagation = Propagation.SUPPORTS)
     public List<Long> getIssuedCouponIds(Long memberId) {
         return memberCouponRepository.findIssuedCouponIdsByMemberId(memberId);
     }
@@ -82,6 +87,25 @@ public class MemberCouponService {
         );
 
         return memberCouponRepository.save(memberCoupon);
+    }
+
+    @Transactional(readOnly = true, propagation = Propagation.SUPPORTS)
+    public Long validateAndCalculateDiscount(Long memberCouponId, Long memberId, Long orderAmount) {
+        MemberCoupon memberCoupon = getMemberCouponWithCoupon(memberCouponId);
+
+        if (!memberCoupon.isOwnedBy(memberId)) {
+            throw new CoreException(ErrorType.FORBIDDEN, "해당 쿠폰에 대한 권한이 없습니다.");
+        }
+        if (!memberCoupon.isAvailable()) {
+            throw new CoreException(ErrorType.BAD_REQUEST, "사용할 수 없는 쿠폰입니다.");
+        }
+
+        Coupon coupon = memberCoupon.getCoupon();
+        if (coupon == null) {
+            throw new CoreException(ErrorType.NOT_FOUND, "쿠폰 정보를 찾을 수 없습니다.");
+        }
+
+        return coupon.calculateDiscount(orderAmount);
     }
 
     @Transactional(propagation = Propagation.REQUIRED)

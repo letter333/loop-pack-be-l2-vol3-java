@@ -3,17 +3,18 @@ package com.loopers.infrastructure.coupon;
 import com.loopers.domain.coupon.MemberCoupon;
 import com.loopers.domain.coupon.MemberCouponRepository;
 import com.loopers.domain.coupon.MemberCouponStatus;
+import com.loopers.domain.coupon.MemberCouponStatusCounts;
 import com.loopers.support.error.CoreException;
 import com.loopers.support.error.ErrorType;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.Optional;
 
-@Component
+@Repository
 @RequiredArgsConstructor
 public class MemberCouponRepositoryImpl implements MemberCouponRepository {
 
@@ -87,6 +88,16 @@ public class MemberCouponRepositoryImpl implements MemberCouponRepository {
     @Override
     public long countExpiredByMemberId(Long memberId) {
         return memberCouponJpaRepository.countExpiredByMemberId(memberId);
+    }
+
+    @Override
+    public MemberCouponStatusCounts countStatusesByMemberId(Long memberId) {
+        List<Object[]> results = memberCouponJpaRepository.countStatusesByMemberId(memberId);
+        Object[] row = results.get(0);
+        long available = row[0] != null ? ((Number) row[0]).longValue() : 0L;
+        long used = row[1] != null ? ((Number) row[1]).longValue() : 0L;
+        long expired = row[2] != null ? ((Number) row[2]).longValue() : 0L;
+        return new MemberCouponStatusCounts(available, used, expired);
     }
 
     @Override

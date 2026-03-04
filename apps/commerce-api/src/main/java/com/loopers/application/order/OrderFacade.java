@@ -2,8 +2,6 @@ package com.loopers.application.order;
 
 import com.loopers.domain.address.Address;
 import com.loopers.domain.address.AddressService;
-import com.loopers.domain.coupon.Coupon;
-import com.loopers.domain.coupon.MemberCoupon;
 import com.loopers.domain.coupon.MemberCouponService;
 import com.loopers.domain.member.Member;
 import com.loopers.domain.member.MemberService;
@@ -77,21 +75,8 @@ public class OrderFacade {
 
         // 쿠폰 적용
         if (command.memberCouponId() != null) {
-            MemberCoupon memberCoupon = memberCouponService.getMemberCouponWithCoupon(command.memberCouponId());
-
-            if (!memberCoupon.isOwnedBy(member.getId())) {
-                throw new CoreException(ErrorType.FORBIDDEN, "해당 쿠폰에 대한 권한이 없습니다.");
-            }
-            if (!memberCoupon.isAvailable()) {
-                throw new CoreException(ErrorType.BAD_REQUEST, "사용할 수 없는 쿠폰입니다.");
-            }
-
-            Coupon coupon = memberCoupon.getCoupon();
-            if (coupon == null) {
-                throw new CoreException(ErrorType.NOT_FOUND, "쿠폰 정보를 찾을 수 없습니다.");
-            }
-
-            Long discountAmount = coupon.calculateDiscount(order.getTotalAmount());
+            Long discountAmount = memberCouponService.validateAndCalculateDiscount(
+                command.memberCouponId(), member.getId(), order.getTotalAmount());
             order.applyCouponDiscount(discountAmount);
         }
 
