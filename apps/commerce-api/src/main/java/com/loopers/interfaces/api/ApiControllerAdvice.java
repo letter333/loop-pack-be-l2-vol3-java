@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.exc.MismatchedInputException;
 import com.loopers.support.error.CoreException;
 import com.loopers.support.error.ErrorType;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.PessimisticLockingFailureException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -118,6 +119,12 @@ public class ApiControllerAdvice {
         } else {
             return failureResponse(ErrorType.BAD_REQUEST, null);
         }
+    }
+
+    @ExceptionHandler
+    public ResponseEntity<ApiResponse<?>> handlePessimisticLock(PessimisticLockingFailureException e) {
+        log.warn("PessimisticLockingFailureException : {}", e.getMessage(), e);
+        return failureResponse(ErrorType.CONFLICT, "다른 요청 처리 중입니다. 잠시 후 다시 시도해주세요.");
     }
 
     @ExceptionHandler
