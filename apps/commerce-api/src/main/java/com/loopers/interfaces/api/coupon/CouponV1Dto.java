@@ -5,6 +5,7 @@ import com.loopers.application.coupon.MemberCouponInfo;
 import com.loopers.application.coupon.MemberCouponListInfo;
 import com.loopers.domain.coupon.CouponType;
 import com.loopers.domain.coupon.MemberCouponStatus;
+import org.springframework.data.domain.Page;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -78,16 +79,14 @@ public class CouponV1Dto {
     }
 
     public record MemberCouponListResponse(
-        List<MemberCouponResponse> coupons,
-        int totalCount,
-        int availableCount,
-        int usedCount,
-        int expiredCount
+        Page<MemberCouponResponse> coupons,
+        long availableCount,
+        long usedCount,
+        long expiredCount
     ) {
         public static MemberCouponListResponse from(MemberCouponListInfo info) {
             return new MemberCouponListResponse(
-                info.coupons().stream().map(MemberCouponResponse::from).toList(),
-                info.totalCount(),
+                info.coupons().map(MemberCouponResponse::from),
                 info.availableCount(),
                 info.usedCount(),
                 info.expiredCount()

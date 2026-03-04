@@ -379,9 +379,10 @@ class CouponV1ApiE2ETest {
             );
 
             // Assert
+            Map<String, Object> couponsPage = (Map<String, Object>) response.getBody().data().get("coupons");
             assertAll(
                 () -> assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK),
-                () -> assertThat(response.getBody().data().get("totalCount")).isEqualTo(2)
+                () -> assertThat(couponsPage.get("totalElements")).isEqualTo(2)
             );
         }
 
@@ -399,6 +400,70 @@ class CouponV1ApiE2ETest {
 
             // Assert
             assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+        }
+
+        @Test
+        @DisplayName("페이지네이션을 적용하여 내 쿠폰 목록을 조회할 수 있다")
+        void returnsPaginatedCoupons() {
+            // Arrange
+            Coupon coupon1 = couponRepository.save(createIssuableCoupon("쿠폰1", CouponType.FIXED, 5000L));
+            Coupon coupon2 = couponRepository.save(createIssuableCoupon("쿠폰2", CouponType.FIXED, 3000L));
+            Coupon coupon3 = couponRepository.save(createIssuableCoupon("쿠폰3", CouponType.RATE, 10L));
+            memberCouponRepository.save(new MemberCoupon(testMember.getId(), coupon1.getId(), "AAAA-1111-BBBB", coupon1.getValidUntil(), coupon1));
+            memberCouponRepository.save(new MemberCoupon(testMember.getId(), coupon2.getId(), "CCCC-2222-DDDD", coupon2.getValidUntil(), coupon2));
+            memberCouponRepository.save(new MemberCoupon(testMember.getId(), coupon3.getId(), "EEEE-3333-FFFF", coupon3.getValidUntil(), coupon3));
+
+            // Act
+            ParameterizedTypeReference<ApiResponse<Map<String, Object>>> responseType = new ParameterizedTypeReference<>() {};
+            ResponseEntity<ApiResponse<Map<String, Object>>> response = testRestTemplate.exchange(
+                ENDPOINT + "/my?page=0&size=2",
+                HttpMethod.GET,
+                new HttpEntity<>(createAuthHeaders()),
+                responseType
+            );
+
+            // Assert
+            Map<String, Object> couponsPage = (Map<String, Object>) response.getBody().data().get("coupons");
+            List<?> content = (List<?>) couponsPage.get("content");
+            assertAll(
+                () -> assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK),
+                () -> assertThat(content).hasSize(2),
+                () -> assertThat(couponsPage.get("totalElements")).isEqualTo(3),
+                () -> assertThat(couponsPage.get("totalPages")).isEqualTo(2),
+                () -> assertThat(response.getBody().data().get("availableCount")).isEqualTo(3),
+                () -> assertThat(response.getBody().data().get("usedCount")).isEqualTo(0),
+                () -> assertThat(response.getBody().data().get("expiredCount")).isEqualTo(0)
+            );
+        }
+
+        @Test
+        @DisplayName("두 번째 페이지를 조회하면 나머지 쿠폰이 반환된다")
+        void returnsSecondPage() {
+            // Arrange
+            Coupon coupon1 = couponRepository.save(createIssuableCoupon("쿠폰1", CouponType.FIXED, 5000L));
+            Coupon coupon2 = couponRepository.save(createIssuableCoupon("쿠폰2", CouponType.FIXED, 3000L));
+            Coupon coupon3 = couponRepository.save(createIssuableCoupon("쿠폰3", CouponType.RATE, 10L));
+            memberCouponRepository.save(new MemberCoupon(testMember.getId(), coupon1.getId(), "AAAA-1111-BBBB", coupon1.getValidUntil(), coupon1));
+            memberCouponRepository.save(new MemberCoupon(testMember.getId(), coupon2.getId(), "CCCC-2222-DDDD", coupon2.getValidUntil(), coupon2));
+            memberCouponRepository.save(new MemberCoupon(testMember.getId(), coupon3.getId(), "EEEE-3333-FFFF", coupon3.getValidUntil(), coupon3));
+
+            // Act
+            ParameterizedTypeReference<ApiResponse<Map<String, Object>>> responseType = new ParameterizedTypeReference<>() {};
+            ResponseEntity<ApiResponse<Map<String, Object>>> response = testRestTemplate.exchange(
+                ENDPOINT + "/my?page=1&size=2",
+                HttpMethod.GET,
+                new HttpEntity<>(createAuthHeaders()),
+                responseType
+            );
+
+            // Assert
+            Map<String, Object> couponsPage = (Map<String, Object>) response.getBody().data().get("coupons");
+            List<?> content = (List<?>) couponsPage.get("content");
+            assertAll(
+                () -> assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK),
+                () -> assertThat(content).hasSize(1),
+                () -> assertThat(couponsPage.get("totalElements")).isEqualTo(3)
+            );
         }
 
         @Test
@@ -424,10 +489,11 @@ class CouponV1ApiE2ETest {
             );
 
             // Assert
-            List<?> coupons = (List<?>) response.getBody().data().get("coupons");
+            Map<String, Object> couponsPage = (Map<String, Object>) response.getBody().data().get("coupons");
+            List<?> content = (List<?>) couponsPage.get("content");
             assertAll(
                 () -> assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK),
-                () -> assertThat(coupons).hasSize(1)
+                () -> assertThat(content).hasSize(1)
             );
         }
     }

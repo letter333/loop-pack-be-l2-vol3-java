@@ -22,6 +22,16 @@ public interface MemberCouponRepository {
 
     List<Long> findIssuedCouponIdsByMemberId(Long memberId);
 
+    Page<MemberCoupon> findAllByMemberId(Long memberId, Pageable pageable);
+
+    Page<MemberCoupon> findAllByMemberIdAndStatus(Long memberId, MemberCouponStatus status, Pageable pageable);
+
+    long countAvailableByMemberId(Long memberId);
+
+    long countByMemberIdAndStatus(Long memberId, MemberCouponStatus status);
+
+    long countExpiredByMemberId(Long memberId);
+
     MemberCoupon save(MemberCoupon memberCoupon);
 
     boolean existsByMemberIdAndCouponId(Long memberId, Long couponId);

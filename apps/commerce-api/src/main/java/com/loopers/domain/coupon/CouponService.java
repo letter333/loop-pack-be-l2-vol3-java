@@ -69,10 +69,4 @@ public class CouponService {
         couponRepository.save(coupon);
     }
 
-    @Transactional(propagation = Propagation.REQUIRED)
-    public Coupon issueCoupon(Long couponId) {
-        Coupon coupon = getActiveCoupon(couponId);
-        coupon.issue();
-        return couponRepository.save(coupon);
-    }
 }

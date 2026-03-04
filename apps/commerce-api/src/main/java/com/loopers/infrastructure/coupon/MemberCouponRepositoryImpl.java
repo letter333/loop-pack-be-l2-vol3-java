@@ -63,6 +63,33 @@ public class MemberCouponRepositoryImpl implements MemberCouponRepository {
     }
 
     @Override
+    public Page<MemberCoupon> findAllByMemberId(Long memberId, Pageable pageable) {
+        return memberCouponJpaRepository.findAllByMemberIdWithCoupon(memberId, pageable)
+            .map(MemberCouponEntity::toDomainWithCoupon);
+    }
+
+    @Override
+    public Page<MemberCoupon> findAllByMemberIdAndStatus(Long memberId, MemberCouponStatus status, Pageable pageable) {
+        return memberCouponJpaRepository.findAllByMemberIdAndStatusWithCoupon(memberId, status, pageable)
+            .map(MemberCouponEntity::toDomainWithCoupon);
+    }
+
+    @Override
+    public long countAvailableByMemberId(Long memberId) {
+        return memberCouponJpaRepository.countAvailableByMemberId(memberId);
+    }
+
+    @Override
+    public long countByMemberIdAndStatus(Long memberId, MemberCouponStatus status) {
+        return memberCouponJpaRepository.countByMemberIdAndStatus(memberId, status);
+    }
+
+    @Override
+    public long countExpiredByMemberId(Long memberId) {
+        return memberCouponJpaRepository.countExpiredByMemberId(memberId);
+    }
+
+    @Override
     public MemberCoupon save(MemberCoupon memberCoupon) {
         MemberCouponEntity entity;
         if (memberCoupon.getId() != null) {

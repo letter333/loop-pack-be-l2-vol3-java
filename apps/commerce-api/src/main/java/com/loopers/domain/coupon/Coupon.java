@@ -80,6 +80,10 @@ public class Coupon {
         return issuedQuantity < totalQuantity;
     }
 
+    public int getRemainingQuantity() {
+        return totalQuantity - issuedQuantity;
+    }
+
     public boolean canIssue() {
         return !isDeleted() && isWithinIssuePeriod() && hasRemainingQuantity();
     }

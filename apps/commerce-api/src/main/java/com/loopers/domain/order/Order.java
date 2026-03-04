@@ -90,11 +90,6 @@ public class Order {
         this.paymentAmount = this.totalAmount + this.shippingFee - this.discountAmount;
     }
 
-    public void removeCouponDiscount() {
-        this.discountAmount = 0L;
-        this.paymentAmount = this.totalAmount + this.shippingFee;
-    }
-
     public void calculateAmounts() {
         this.totalAmount = orderProducts.stream()
             .mapToLong(OrderProduct::calculateTotalPrice)

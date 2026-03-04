@@ -1,8 +1,10 @@
 package com.loopers.application.order;
 
-import com.loopers.application.coupon.CouponFacade;
 import com.loopers.domain.address.Address;
 import com.loopers.domain.address.AddressService;
+import com.loopers.domain.coupon.Coupon;
+import com.loopers.domain.coupon.MemberCoupon;
+import com.loopers.domain.coupon.MemberCouponService;
 import com.loopers.domain.member.Member;
 import com.loopers.domain.member.MemberService;
 import com.loopers.domain.order.Order;
@@ -33,7 +35,7 @@ public class OrderFacade {
     private final MemberService memberService;
     private final AddressService addressService;
     private final ProductService productService;
-    private final CouponFacade couponFacade;
+    private final MemberCouponService memberCouponService;
     private final AdminValidator adminValidator;
 
     @Transactional
@@ -75,9 +77,21 @@ public class OrderFacade {
 
         // 쿠폰 적용
         if (command.memberCouponId() != null) {
-            Long discountAmount = couponFacade.calculateCouponDiscount(
-                command.memberCouponId(), member.getId(), order.getTotalAmount()
-            );
+            MemberCoupon memberCoupon = memberCouponService.getMemberCouponWithCoupon(command.memberCouponId());
+
+            if (!memberCoupon.isOwnedBy(member.getId())) {
+                throw new CoreException(ErrorType.FORBIDDEN, "해당 쿠폰에 대한 권한이 없습니다.");
+            }
+            if (!memberCoupon.isAvailable()) {
+                throw new CoreException(ErrorType.BAD_REQUEST, "사용할 수 없는 쿠폰입니다.");
+            }
+
+            Coupon coupon = memberCoupon.getCoupon();
+            if (coupon == null) {
+                throw new CoreException(ErrorType.NOT_FOUND, "쿠폰 정보를 찾을 수 없습니다.");
+            }
+
+            Long discountAmount = coupon.calculateDiscount(order.getTotalAmount());
             order.applyCouponDiscount(discountAmount);
         }
 
@@ -85,7 +99,7 @@ public class OrderFacade {
 
         // 주문 저장 후 쿠폰 사용 처리
         if (command.memberCouponId() != null) {
-            couponFacade.applyCoupon(command.memberCouponId(), savedOrder.getId());
+            memberCouponService.useCoupon(command.memberCouponId(), savedOrder.getId());
         }
 
         return OrderDetailInfo.from(savedOrder);
@@ -125,7 +139,7 @@ public class OrderFacade {
         }
 
         // 2. 쿠폰 사용 취소
-        couponFacade.cancelCouponUsage(orderId);
+        memberCouponService.cancelCouponUsage(orderId);
 
         // 3. 주문 취소 (이후)
         Order cancelledOrder = orderService.cancelOrder(orderId);
@@ -160,7 +174,7 @@ public class OrderFacade {
                 productService.increaseStock(op.getProductId(), op.getProductOptionId(), op.getQuantity());
             }
             // 쿠폰 사용 취소
-            couponFacade.cancelCouponUsage(orderId);
+            memberCouponService.cancelCouponUsage(orderId);
         }
 
         // 2. 상태 변경 (이후)

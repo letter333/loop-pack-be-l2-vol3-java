@@ -7,6 +7,7 @@ import com.loopers.application.coupon.MemberCouponListInfo;
 import com.loopers.domain.coupon.MemberCouponStatus;
 import com.loopers.interfaces.api.ApiResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -57,9 +58,10 @@ public class CouponV1Controller implements CouponV1ApiSpec {
     public ApiResponse<CouponV1Dto.MemberCouponListResponse> getMyCoupons(
         @RequestHeader("X-Loopers-LoginId") String loginId,
         @RequestHeader("X-Loopers-LoginPw") String loginPw,
-        @RequestParam(required = false) MemberCouponStatus status
+        @RequestParam(required = false) MemberCouponStatus status,
+        Pageable pageable
     ) {
-        MemberCouponListInfo info = couponFacade.getMyCoupons(loginId, loginPw, status);
+        MemberCouponListInfo info = couponFacade.getMyCoupons(loginId, loginPw, status, pageable);
         CouponV1Dto.MemberCouponListResponse response = CouponV1Dto.MemberCouponListResponse.from(info);
         return ApiResponse.success(response);
     }

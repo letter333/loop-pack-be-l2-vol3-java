@@ -5,6 +5,7 @@ import com.loopers.interfaces.api.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import org.springframework.data.domain.Pageable;
 
 import java.util.List;
 
@@ -43,6 +44,6 @@ public interface CouponV1ApiSpec {
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 필요")
     })
     ApiResponse<CouponV1Dto.MemberCouponListResponse> getMyCoupons(
-        String loginId, String loginPw, MemberCouponStatus status
+        String loginId, String loginPw, MemberCouponStatus status, Pageable pageable
     );
 }

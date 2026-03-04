@@ -1,8 +1,12 @@
 package com.loopers.application.order;
 
-import com.loopers.application.coupon.CouponFacade;
 import com.loopers.domain.address.Address;
 import com.loopers.domain.address.AddressService;
+import com.loopers.domain.coupon.Coupon;
+import com.loopers.domain.coupon.CouponType;
+import com.loopers.domain.coupon.MemberCoupon;
+import com.loopers.domain.coupon.MemberCouponService;
+import com.loopers.domain.coupon.MemberCouponStatus;
 import com.loopers.domain.member.Member;
 import com.loopers.domain.member.MemberService;
 import com.loopers.domain.order.Order;
@@ -27,6 +31,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -57,10 +62,10 @@ class OrderFacadeTest {
     private ProductService productService;
 
     @Mock
-    private AdminValidator adminValidator;
+    private MemberCouponService memberCouponService;
 
     @Mock
-    private CouponFacade couponFacade;
+    private AdminValidator adminValidator;
 
     @InjectMocks
     private OrderFacade orderFacade;
@@ -141,6 +146,126 @@ class OrderFacadeTest {
             given(addressService.getAddresses(MEMBER_ID)).willReturn(List.of(address));
             given(productService.validateProduct(1L))
                 .willThrow(new CoreException(ErrorType.BAD_REQUEST, "판매중지된 상품입니다."));
+
+            // act & assert
+            assertThatThrownBy(() -> orderFacade.createOrder(LOGIN_ID, PASSWORD, command))
+                .isInstanceOf(CoreException.class)
+                .extracting("errorType")
+                .isEqualTo(ErrorType.BAD_REQUEST);
+        }
+
+        @Test
+        @DisplayName("쿠폰을 적용하여 주문을 생성한다")
+        void createsOrder_withCouponDiscount() {
+            // arrange
+            Member member = createMember();
+            Address address = createAddress(ADDRESS_ID, MEMBER_ID);
+            Product product = createProduct(1L, "테스트 상품", 30000L);
+            ProductOption option = createProductOption(10L, 1L, 0L, 100);
+
+            Long memberCouponId = 100L;
+            Coupon coupon = new Coupon(1L, "테스트 쿠폰", "설명", CouponType.FIXED, 5000L, 10000L, null,
+                1000, 0, LocalDateTime.now().minusDays(1), LocalDateTime.now().plusDays(30),
+                null, null, null);
+            MemberCoupon memberCoupon = new MemberCoupon(memberCouponId, MEMBER_ID, 1L, "ABCD-1234-EFGH",
+                MemberCouponStatus.AVAILABLE, null, null, LocalDateTime.now(), LocalDateTime.now().plusDays(30),
+                null, null, coupon);
+
+            Order savedOrder = new Order(
+                ORDER_ID, MEMBER_ID, "ORD20250225-0000001", "테스트 상품",
+                "홍길동", "010-1234-5678", "06234", "서울시 강남구", "101호", "문 앞에 놓아주세요",
+                OrderStatus.PENDING, 30000L, 3000L, 5000L, 28000L
+            );
+
+            OrderCommand.Create command = new OrderCommand.Create(
+                ADDRESS_ID, "문 앞에 놓아주세요",
+                List.of(new OrderCommand.OrderItem(1L, 10L, 1)),
+                memberCouponId
+            );
+
+            given(memberService.authenticate(LOGIN_ID, PASSWORD)).willReturn(member);
+            given(addressService.getAddresses(MEMBER_ID)).willReturn(List.of(address));
+            given(productService.validateProduct(1L)).willReturn(product);
+            given(productService.getProductOption(1L, 10L)).willReturn(option);
+            given(memberCouponService.getMemberCouponWithCoupon(memberCouponId)).willReturn(memberCoupon);
+            given(orderService.createOrder(any(Order.class))).willReturn(savedOrder);
+
+            // act
+            OrderDetailInfo result = orderFacade.createOrder(LOGIN_ID, PASSWORD, command);
+
+            // assert
+            assertAll(
+                () -> assertThat(result.id()).isEqualTo(ORDER_ID),
+                () -> verify(memberCouponService).getMemberCouponWithCoupon(memberCouponId),
+                () -> verify(memberCouponService).useCoupon(memberCouponId, ORDER_ID)
+            );
+        }
+
+        @Test
+        @DisplayName("타인의 쿠폰으로 주문하면 FORBIDDEN 예외가 발생한다")
+        void throwsException_whenCouponNotOwned() {
+            // arrange
+            Member member = createMember();
+            Address address = createAddress(ADDRESS_ID, MEMBER_ID);
+            Product product = createProduct(1L, "테스트 상품", 30000L);
+            ProductOption option = createProductOption(10L, 1L, 0L, 100);
+
+            Long memberCouponId = 100L;
+            Long otherMemberId = 999L;
+            Coupon coupon = new Coupon(1L, "테스트 쿠폰", "설명", CouponType.FIXED, 5000L, 10000L, null,
+                1000, 0, LocalDateTime.now().minusDays(1), LocalDateTime.now().plusDays(30),
+                null, null, null);
+            MemberCoupon memberCoupon = new MemberCoupon(memberCouponId, otherMemberId, 1L, "ABCD-1234-EFGH",
+                MemberCouponStatus.AVAILABLE, null, null, LocalDateTime.now(), LocalDateTime.now().plusDays(30),
+                null, null, coupon);
+
+            OrderCommand.Create command = new OrderCommand.Create(
+                ADDRESS_ID, null,
+                List.of(new OrderCommand.OrderItem(1L, 10L, 1)),
+                memberCouponId
+            );
+
+            given(memberService.authenticate(LOGIN_ID, PASSWORD)).willReturn(member);
+            given(addressService.getAddresses(MEMBER_ID)).willReturn(List.of(address));
+            given(productService.validateProduct(1L)).willReturn(product);
+            given(productService.getProductOption(1L, 10L)).willReturn(option);
+            given(memberCouponService.getMemberCouponWithCoupon(memberCouponId)).willReturn(memberCoupon);
+
+            // act & assert
+            assertThatThrownBy(() -> orderFacade.createOrder(LOGIN_ID, PASSWORD, command))
+                .isInstanceOf(CoreException.class)
+                .extracting("errorType")
+                .isEqualTo(ErrorType.FORBIDDEN);
+        }
+
+        @Test
+        @DisplayName("사용할 수 없는 쿠폰으로 주문하면 BAD_REQUEST 예외가 발생한다")
+        void throwsException_whenCouponNotAvailable() {
+            // arrange
+            Member member = createMember();
+            Address address = createAddress(ADDRESS_ID, MEMBER_ID);
+            Product product = createProduct(1L, "테스트 상품", 30000L);
+            ProductOption option = createProductOption(10L, 1L, 0L, 100);
+
+            Long memberCouponId = 100L;
+            Coupon coupon = new Coupon(1L, "테스트 쿠폰", "설명", CouponType.FIXED, 5000L, 10000L, null,
+                1000, 0, LocalDateTime.now().minusDays(1), LocalDateTime.now().plusDays(30),
+                null, null, null);
+            MemberCoupon memberCoupon = new MemberCoupon(memberCouponId, MEMBER_ID, 1L, "ABCD-1234-EFGH",
+                MemberCouponStatus.USED, 1L, LocalDateTime.now(), LocalDateTime.now(), LocalDateTime.now().plusDays(30),
+                null, null, coupon);
+
+            OrderCommand.Create command = new OrderCommand.Create(
+                ADDRESS_ID, null,
+                List.of(new OrderCommand.OrderItem(1L, 10L, 1)),
+                memberCouponId
+            );
+
+            given(memberService.authenticate(LOGIN_ID, PASSWORD)).willReturn(member);
+            given(addressService.getAddresses(MEMBER_ID)).willReturn(List.of(address));
+            given(productService.validateProduct(1L)).willReturn(product);
+            given(productService.getProductOption(1L, 10L)).willReturn(option);
+            given(memberCouponService.getMemberCouponWithCoupon(memberCouponId)).willReturn(memberCoupon);
 
             // act & assert
             assertThatThrownBy(() -> orderFacade.createOrder(LOGIN_ID, PASSWORD, command))

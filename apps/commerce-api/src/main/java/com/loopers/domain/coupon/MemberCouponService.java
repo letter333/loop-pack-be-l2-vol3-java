@@ -32,13 +32,28 @@ public class MemberCouponService {
     }
 
     @Transactional(readOnly = true, propagation = Propagation.SUPPORTS)
-    public List<MemberCoupon> getMemberCoupons(Long memberId) {
-        return memberCouponRepository.findAllByMemberId(memberId);
+    public Page<MemberCoupon> getMemberCoupons(Long memberId, Pageable pageable) {
+        return memberCouponRepository.findAllByMemberId(memberId, pageable);
     }
 
     @Transactional(readOnly = true, propagation = Propagation.SUPPORTS)
-    public List<MemberCoupon> getMemberCouponsByStatus(Long memberId, MemberCouponStatus status) {
-        return memberCouponRepository.findAllByMemberIdAndStatus(memberId, status);
+    public Page<MemberCoupon> getMemberCouponsByStatus(Long memberId, MemberCouponStatus status, Pageable pageable) {
+        return memberCouponRepository.findAllByMemberIdAndStatus(memberId, status, pageable);
+    }
+
+    @Transactional(readOnly = true, propagation = Propagation.SUPPORTS)
+    public long countAvailableByMemberId(Long memberId) {
+        return memberCouponRepository.countAvailableByMemberId(memberId);
+    }
+
+    @Transactional(readOnly = true, propagation = Propagation.SUPPORTS)
+    public long countUsedByMemberId(Long memberId) {
+        return memberCouponRepository.countByMemberIdAndStatus(memberId, MemberCouponStatus.USED);
+    }
+
+    @Transactional(readOnly = true, propagation = Propagation.SUPPORTS)
+    public long countExpiredByMemberId(Long memberId) {
+        return memberCouponRepository.countExpiredByMemberId(memberId);
     }
 
     @Transactional(readOnly = true, propagation = Propagation.SUPPORTS)
@@ -83,14 +98,6 @@ public class MemberCouponService {
                 memberCoupon.cancelUse();
                 memberCouponRepository.save(memberCoupon);
             });
-    }
-
-    @Transactional(readOnly = true, propagation = Propagation.SUPPORTS)
-    public void validateCouponOwnership(Long memberCouponId, Long memberId) {
-        MemberCoupon memberCoupon = getMemberCoupon(memberCouponId);
-        if (!memberCoupon.isOwnedBy(memberId)) {
-            throw new CoreException(ErrorType.FORBIDDEN, "해당 쿠폰에 대한 권한이 없습니다.");
-        }
     }
 
     private void validateNotAlreadyIssued(Long memberId, Long couponId) {

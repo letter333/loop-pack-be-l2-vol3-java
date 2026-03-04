@@ -7,8 +7,6 @@ import com.loopers.domain.coupon.MemberCouponService;
 import com.loopers.domain.coupon.MemberCouponStatus;
 import com.loopers.domain.member.MemberService;
 import com.loopers.support.auth.AdminValidator;
-import com.loopers.support.error.CoreException;
-import com.loopers.support.error.ErrorType;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -109,46 +107,22 @@ public class CouponFacade {
     }
 
     @Transactional(readOnly = true)
-    public MemberCouponListInfo getMyCoupons(String loginId, String loginPw, MemberCouponStatus status) {
+    public MemberCouponListInfo getMyCoupons(String loginId, String loginPw, MemberCouponStatus status, Pageable pageable) {
         var member = memberService.authenticate(loginId, loginPw);
+        Long memberId = member.getId();
 
-        List<MemberCoupon> memberCoupons;
+        Page<MemberCoupon> memberCoupons;
         if (status != null) {
-            memberCoupons = memberCouponService.getMemberCouponsByStatus(member.getId(), status);
+            memberCoupons = memberCouponService.getMemberCouponsByStatus(memberId, status, pageable);
         } else {
-            memberCoupons = memberCouponService.getMemberCoupons(member.getId());
+            memberCoupons = memberCouponService.getMemberCoupons(memberId, pageable);
         }
 
-        return MemberCouponListInfo.from(memberCoupons);
+        long availableCount = memberCouponService.countAvailableByMemberId(memberId);
+        long usedCount = memberCouponService.countUsedByMemberId(memberId);
+        long expiredCount = memberCouponService.countExpiredByMemberId(memberId);
+
+        return MemberCouponListInfo.of(memberCoupons, availableCount, usedCount, expiredCount);
     }
 
-    @Transactional(readOnly = true)
-    public Long calculateCouponDiscount(Long memberCouponId, Long memberId, Long orderAmount) {
-        MemberCoupon memberCoupon = memberCouponService.getMemberCouponWithCoupon(memberCouponId);
-
-        if (!memberCoupon.isOwnedBy(memberId)) {
-            throw new CoreException(ErrorType.FORBIDDEN, "해당 쿠폰에 대한 권한이 없습니다.");
-        }
-
-        if (!memberCoupon.isAvailable()) {
-            throw new CoreException(ErrorType.BAD_REQUEST, "사용할 수 없는 쿠폰입니다.");
-        }
-
-        Coupon coupon = memberCoupon.getCoupon();
-        if (coupon == null) {
-            throw new CoreException(ErrorType.NOT_FOUND, "쿠폰 정보를 찾을 수 없습니다.");
-        }
-
-        return coupon.calculateDiscount(orderAmount);
-    }
-
-    @Transactional
-    public void applyCoupon(Long memberCouponId, Long orderId) {
-        memberCouponService.useCoupon(memberCouponId, orderId);
-    }
-
-    @Transactional
-    public void cancelCouponUsage(Long orderId) {
-        memberCouponService.cancelCouponUsage(orderId);
-    }
 }

@@ -31,7 +31,7 @@ public record CouponInfo(
             coupon.getMaxDiscountAmount(),
             coupon.getTotalQuantity(),
             coupon.getIssuedQuantity(),
-            coupon.getTotalQuantity() - coupon.getIssuedQuantity(),
+            coupon.getRemainingQuantity(),
             coupon.getValidFrom(),
             coupon.getValidUntil(),
             isIssued

@@ -106,24 +106,15 @@ public class MemberCouponEntity {
     }
 
     public MemberCoupon toDomain() {
-        return new MemberCoupon(
-            id,
-            memberId,
-            couponId,
-            couponCode,
-            status,
-            usedOrderId,
-            usedAt,
-            issuedAt,
-            expiredAt,
-            createdAt != null ? createdAt.toLocalDateTime() : null,
-            updatedAt != null ? updatedAt.toLocalDateTime() : null,
-            null
-        );
+        return toDomainWithCoupon(null);
     }
 
     public MemberCoupon toDomainWithCoupon() {
         Coupon domainCoupon = coupon != null ? coupon.toDomain() : null;
+        return toDomainWithCoupon(domainCoupon);
+    }
+
+    private MemberCoupon toDomainWithCoupon(Coupon domainCoupon) {
         return new MemberCoupon(
             id,
             memberId,
