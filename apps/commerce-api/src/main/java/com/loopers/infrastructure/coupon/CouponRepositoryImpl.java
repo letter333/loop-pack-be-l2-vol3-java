@@ -27,13 +27,6 @@ public class CouponRepositoryImpl implements CouponRepository {
     }
 
     @Override
-    public List<Coupon> findAllIssuable() {
-        return couponJpaRepository.findAllIssuable(LocalDateTime.now()).stream()
-            .map(CouponEntity::toDomain)
-            .toList();
-    }
-
-    @Override
     public List<IssuableCoupon> findAllIssuableWithIssuedFlag(Long memberId) {
         return couponJpaRepository.findAllIssuableWithIssuedFlag(memberId, LocalDateTime.now()).stream()
             .map(row -> {

@@ -20,9 +20,6 @@ public interface MemberCouponJpaRepository extends JpaRepository<MemberCouponEnt
 
     List<MemberCouponEntity> findAllByMemberIdAndStatus(Long memberId, MemberCouponStatus status);
 
-    @Query("SELECT mc.couponId FROM MemberCouponEntity mc WHERE mc.memberId = :memberId")
-    List<Long> findCouponIdsByMemberId(@Param("memberId") Long memberId);
-
     boolean existsByMemberIdAndCouponId(Long memberId, Long couponId);
 
     @Query("SELECT mc FROM MemberCouponEntity mc " +
@@ -58,18 +55,6 @@ public interface MemberCouponJpaRepository extends JpaRepository<MemberCouponEnt
         @Param("status") MemberCouponStatus status,
         Pageable pageable
     );
-
-    @Query("SELECT COUNT(mc) FROM MemberCouponEntity mc " +
-           "WHERE mc.memberId = :memberId AND mc.status = 'AVAILABLE' AND mc.expiredAt > CURRENT_TIMESTAMP")
-    long countAvailableByMemberId(@Param("memberId") Long memberId);
-
-    @Query("SELECT COUNT(mc) FROM MemberCouponEntity mc " +
-           "WHERE mc.memberId = :memberId AND mc.status = :status")
-    long countByMemberIdAndStatus(@Param("memberId") Long memberId, @Param("status") MemberCouponStatus status);
-
-    @Query("SELECT COUNT(mc) FROM MemberCouponEntity mc " +
-           "WHERE mc.memberId = :memberId AND (mc.status = 'EXPIRED' OR (mc.status = 'AVAILABLE' AND mc.expiredAt <= CURRENT_TIMESTAMP))")
-    long countExpiredByMemberId(@Param("memberId") Long memberId);
 
     Page<MemberCouponEntity> findAllByCouponId(Long couponId, Pageable pageable);
 

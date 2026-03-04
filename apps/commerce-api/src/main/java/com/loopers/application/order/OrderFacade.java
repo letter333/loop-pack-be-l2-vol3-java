@@ -2,6 +2,7 @@ package com.loopers.application.order;
 
 import com.loopers.domain.address.Address;
 import com.loopers.domain.address.AddressService;
+import com.loopers.domain.coupon.MemberCoupon;
 import com.loopers.domain.coupon.MemberCouponService;
 import com.loopers.domain.member.Member;
 import com.loopers.domain.member.MemberService;
@@ -74,17 +75,19 @@ public class OrderFacade {
         }
 
         // 쿠폰 적용
+        MemberCoupon memberCoupon = null;
         if (command.memberCouponId() != null) {
-            Long discountAmount = memberCouponService.validateAndCalculateDiscount(
-                command.memberCouponId(), member.getId(), order.getTotalAmount());
+            memberCoupon = memberCouponService.validateAndGetCoupon(
+                command.memberCouponId(), member.getId());
+            Long discountAmount = memberCoupon.getCoupon().calculateDiscount(order.getTotalAmount());
             order.applyCouponDiscount(discountAmount);
         }
 
         Order savedOrder = orderService.createOrder(order);
 
         // 주문 저장 후 쿠폰 사용 처리
-        if (command.memberCouponId() != null) {
-            memberCouponService.useCoupon(command.memberCouponId(), savedOrder.getId());
+        if (memberCoupon != null) {
+            memberCouponService.useCoupon(memberCoupon, savedOrder.getId());
         }
 
         return OrderDetailInfo.from(savedOrder);

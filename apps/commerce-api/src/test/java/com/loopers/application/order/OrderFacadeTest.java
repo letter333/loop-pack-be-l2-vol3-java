@@ -187,7 +187,7 @@ class OrderFacadeTest {
             given(addressService.getAddresses(MEMBER_ID)).willReturn(List.of(address));
             given(productService.validateProduct(1L)).willReturn(product);
             given(productService.getProductOption(1L, 10L)).willReturn(option);
-            given(memberCouponService.validateAndCalculateDiscount(eq(memberCouponId), eq(MEMBER_ID), any(Long.class))).willReturn(5000L);
+            given(memberCouponService.validateAndGetCoupon(eq(memberCouponId), eq(MEMBER_ID))).willReturn(memberCoupon);
             given(orderService.createOrder(any(Order.class))).willReturn(savedOrder);
 
             // act
@@ -196,8 +196,8 @@ class OrderFacadeTest {
             // assert
             assertAll(
                 () -> assertThat(result.id()).isEqualTo(ORDER_ID),
-                () -> verify(memberCouponService).validateAndCalculateDiscount(eq(memberCouponId), eq(MEMBER_ID), any(Long.class)),
-                () -> verify(memberCouponService).useCoupon(memberCouponId, ORDER_ID)
+                () -> verify(memberCouponService).validateAndGetCoupon(eq(memberCouponId), eq(MEMBER_ID)),
+                () -> verify(memberCouponService).useCoupon(memberCoupon, ORDER_ID)
             );
         }
 
@@ -222,7 +222,7 @@ class OrderFacadeTest {
             given(addressService.getAddresses(MEMBER_ID)).willReturn(List.of(address));
             given(productService.validateProduct(1L)).willReturn(product);
             given(productService.getProductOption(1L, 10L)).willReturn(option);
-            given(memberCouponService.validateAndCalculateDiscount(eq(memberCouponId), eq(MEMBER_ID), any(Long.class)))
+            given(memberCouponService.validateAndGetCoupon(eq(memberCouponId), eq(MEMBER_ID)))
                 .willThrow(new CoreException(ErrorType.FORBIDDEN, "해당 쿠폰에 대한 권한이 없습니다."));
 
             // act & assert
@@ -253,7 +253,7 @@ class OrderFacadeTest {
             given(addressService.getAddresses(MEMBER_ID)).willReturn(List.of(address));
             given(productService.validateProduct(1L)).willReturn(product);
             given(productService.getProductOption(1L, 10L)).willReturn(option);
-            given(memberCouponService.validateAndCalculateDiscount(eq(memberCouponId), eq(MEMBER_ID), any(Long.class)))
+            given(memberCouponService.validateAndGetCoupon(eq(memberCouponId), eq(MEMBER_ID)))
                 .willThrow(new CoreException(ErrorType.BAD_REQUEST, "사용할 수 없는 쿠폰입니다."));
 
             // act & assert

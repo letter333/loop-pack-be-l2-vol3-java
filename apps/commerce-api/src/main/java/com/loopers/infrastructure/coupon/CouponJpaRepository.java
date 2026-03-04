@@ -14,13 +14,6 @@ public interface CouponJpaRepository extends JpaRepository<CouponEntity, Long> {
 
     Optional<CouponEntity> findByIdAndDeletedAtIsNull(Long id);
 
-    @Query("SELECT c FROM CouponEntity c " +
-           "WHERE c.deletedAt IS NULL " +
-           "AND c.validFrom <= :now " +
-           "AND c.validUntil >= :now " +
-           "AND c.issuedQuantity < c.totalQuantity")
-    List<CouponEntity> findAllIssuable(LocalDateTime now);
-
     Page<CouponEntity> findAllByDeletedAtIsNull(Pageable pageable);
 
     @Query("SELECT c, " +

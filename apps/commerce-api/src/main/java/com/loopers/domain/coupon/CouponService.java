@@ -34,11 +34,6 @@ public class CouponService {
     }
 
     @Transactional(readOnly = true, propagation = Propagation.SUPPORTS)
-    public List<Coupon> getIssuableCoupons() {
-        return couponRepository.findAllIssuable();
-    }
-
-    @Transactional(readOnly = true, propagation = Propagation.SUPPORTS)
     public List<IssuableCoupon> getIssuableCouponsWithIssuedFlag(Long memberId) {
         return couponRepository.findAllIssuableWithIssuedFlag(memberId);
     }

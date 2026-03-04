@@ -1,7 +1,6 @@
 package com.loopers.application.coupon;
 
 import com.loopers.domain.coupon.MemberCoupon;
-import com.loopers.domain.coupon.MemberCouponStatus;
 import org.springframework.data.domain.Page;
 
 public record MemberCouponListInfo(

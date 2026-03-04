@@ -9,8 +9,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
-
 @Service
 @RequiredArgsConstructor
 public class MemberCouponService {
@@ -42,28 +40,8 @@ public class MemberCouponService {
     }
 
     @Transactional(readOnly = true, propagation = Propagation.SUPPORTS)
-    public long countAvailableByMemberId(Long memberId) {
-        return memberCouponRepository.countAvailableByMemberId(memberId);
-    }
-
-    @Transactional(readOnly = true, propagation = Propagation.SUPPORTS)
-    public long countUsedByMemberId(Long memberId) {
-        return memberCouponRepository.countByMemberIdAndStatus(memberId, MemberCouponStatus.USED);
-    }
-
-    @Transactional(readOnly = true, propagation = Propagation.SUPPORTS)
-    public long countExpiredByMemberId(Long memberId) {
-        return memberCouponRepository.countExpiredByMemberId(memberId);
-    }
-
-    @Transactional(readOnly = true, propagation = Propagation.SUPPORTS)
     public MemberCouponStatusCounts getStatusCounts(Long memberId) {
         return memberCouponRepository.countStatusesByMemberId(memberId);
-    }
-
-    @Transactional(readOnly = true, propagation = Propagation.SUPPORTS)
-    public List<Long> getIssuedCouponIds(Long memberId) {
-        return memberCouponRepository.findIssuedCouponIdsByMemberId(memberId);
     }
 
     @Transactional(readOnly = true, propagation = Propagation.SUPPORTS)
@@ -90,7 +68,7 @@ public class MemberCouponService {
     }
 
     @Transactional(readOnly = true, propagation = Propagation.SUPPORTS)
-    public Long validateAndCalculateDiscount(Long memberCouponId, Long memberId, Long orderAmount) {
+    public MemberCoupon validateAndGetCoupon(Long memberCouponId, Long memberId) {
         MemberCoupon memberCoupon = getMemberCouponWithCoupon(memberCouponId);
 
         if (!memberCoupon.isOwnedBy(memberId)) {
@@ -100,17 +78,15 @@ public class MemberCouponService {
             throw new CoreException(ErrorType.BAD_REQUEST, "사용할 수 없는 쿠폰입니다.");
         }
 
-        Coupon coupon = memberCoupon.getCoupon();
-        if (coupon == null) {
+        if (memberCoupon.getCoupon() == null) {
             throw new CoreException(ErrorType.NOT_FOUND, "쿠폰 정보를 찾을 수 없습니다.");
         }
 
-        return coupon.calculateDiscount(orderAmount);
+        return memberCoupon;
     }
 
     @Transactional(propagation = Propagation.REQUIRED)
-    public void useCoupon(Long memberCouponId, Long orderId) {
-        MemberCoupon memberCoupon = getMemberCoupon(memberCouponId);
+    public void useCoupon(MemberCoupon memberCoupon, Long orderId) {
         memberCoupon.use(orderId);
         memberCouponRepository.save(memberCoupon);
     }
