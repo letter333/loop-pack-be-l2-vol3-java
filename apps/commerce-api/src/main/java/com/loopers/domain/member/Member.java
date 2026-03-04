@@ -29,8 +29,6 @@ public class Member {
     }
 
     public Member(Long id, String loginId, String password, String name, LocalDate birthday, String email) {
-        validateBirthday(birthday);
-
         this.id = id;
         this.loginId = loginId;
         this.password = password;
