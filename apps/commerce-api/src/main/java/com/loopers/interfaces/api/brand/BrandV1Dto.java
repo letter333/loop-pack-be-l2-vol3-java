@@ -8,14 +8,16 @@ public class BrandV1Dto {
         Long id,
         String name,
         String description,
-        String logoImageUrl
+        String logoImageUrl,
+        Long likeCount
     ) {
         public static BrandResponse from(BrandInfo info) {
             return new BrandResponse(
                 info.id(),
                 info.name(),
                 info.description(),
-                info.logoImageUrl()
+                info.logoImageUrl(),
+                info.likeCount()
             );
         }
     }

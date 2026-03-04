@@ -2,7 +2,6 @@ package com.loopers.application.order;
 
 import com.loopers.domain.address.Address;
 import com.loopers.domain.address.AddressService;
-import com.loopers.domain.coupon.Coupon;
 import com.loopers.domain.coupon.MemberCoupon;
 import com.loopers.domain.coupon.MemberCouponService;
 import com.loopers.domain.member.Member;
@@ -76,30 +75,19 @@ public class OrderFacade {
         }
 
         // 쿠폰 적용
+        MemberCoupon memberCoupon = null;
         if (command.memberCouponId() != null) {
-            MemberCoupon memberCoupon = memberCouponService.getMemberCouponWithCoupon(command.memberCouponId());
-
-            if (!memberCoupon.isOwnedBy(member.getId())) {
-                throw new CoreException(ErrorType.FORBIDDEN, "해당 쿠폰에 대한 권한이 없습니다.");
-            }
-            if (!memberCoupon.isAvailable()) {
-                throw new CoreException(ErrorType.BAD_REQUEST, "사용할 수 없는 쿠폰입니다.");
-            }
-
-            Coupon coupon = memberCoupon.getCoupon();
-            if (coupon == null) {
-                throw new CoreException(ErrorType.NOT_FOUND, "쿠폰 정보를 찾을 수 없습니다.");
-            }
-
-            Long discountAmount = coupon.calculateDiscount(order.getTotalAmount());
+            memberCoupon = memberCouponService.validateAndGetCoupon(
+                command.memberCouponId(), member.getId());
+            Long discountAmount = memberCoupon.getCoupon().calculateDiscount(order.getTotalAmount());
             order.applyCouponDiscount(discountAmount);
         }
 
         Order savedOrder = orderService.createOrder(order);
 
         // 주문 저장 후 쿠폰 사용 처리
-        if (command.memberCouponId() != null) {
-            memberCouponService.useCoupon(command.memberCouponId(), savedOrder.getId());
+        if (memberCoupon != null) {
+            memberCouponService.useCoupon(memberCoupon, savedOrder.getId());
         }
 
         return OrderDetailInfo.from(savedOrder);

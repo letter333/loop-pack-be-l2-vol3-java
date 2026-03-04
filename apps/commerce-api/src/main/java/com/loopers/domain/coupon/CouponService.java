@@ -5,14 +5,14 @@ import com.loopers.support.error.ErrorType;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
 
-@Component
+@Service
 @RequiredArgsConstructor
 public class CouponService {
 
@@ -34,8 +34,8 @@ public class CouponService {
     }
 
     @Transactional(readOnly = true, propagation = Propagation.SUPPORTS)
-    public List<Coupon> getIssuableCoupons() {
-        return couponRepository.findAllIssuable();
+    public List<IssuableCoupon> getIssuableCouponsWithIssuedFlag(Long memberId) {
+        return couponRepository.findAllIssuableWithIssuedFlag(memberId);
     }
 
     @Transactional(readOnly = true, propagation = Propagation.SUPPORTS)

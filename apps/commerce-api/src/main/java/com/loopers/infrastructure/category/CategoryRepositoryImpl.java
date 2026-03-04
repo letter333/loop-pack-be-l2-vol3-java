@@ -5,12 +5,12 @@ import com.loopers.domain.category.CategoryRepository;
 import com.loopers.support.error.CoreException;
 import com.loopers.support.error.ErrorType;
 import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.Optional;
 
-@Component
+@Repository
 @RequiredArgsConstructor
 public class CategoryRepositoryImpl implements CategoryRepository {
 
@@ -25,13 +25,6 @@ public class CategoryRepositoryImpl implements CategoryRepository {
     @Override
     public List<Category> findAllActive() {
         return categoryJpaRepository.findByDeletedAtIsNull().stream()
-            .map(CategoryEntity::toDomain)
-            .toList();
-    }
-
-    @Override
-    public List<Category> findAllActiveByParentId(Long parentId) {
-        return categoryJpaRepository.findByParentIdAndDeletedAtIsNull(parentId).stream()
             .map(CategoryEntity::toDomain)
             .toList();
     }

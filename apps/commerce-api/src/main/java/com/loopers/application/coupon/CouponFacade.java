@@ -2,9 +2,11 @@ package com.loopers.application.coupon;
 
 import com.loopers.domain.coupon.Coupon;
 import com.loopers.domain.coupon.CouponService;
+import com.loopers.domain.coupon.IssuableCoupon;
 import com.loopers.domain.coupon.MemberCoupon;
 import com.loopers.domain.coupon.MemberCouponService;
 import com.loopers.domain.coupon.MemberCouponStatus;
+import com.loopers.domain.coupon.MemberCouponStatusCounts;
 import com.loopers.domain.member.MemberService;
 import com.loopers.support.auth.AdminValidator;
 import lombok.RequiredArgsConstructor;
@@ -14,7 +16,6 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.Set;
 
 @Component
 @RequiredArgsConstructor
@@ -91,11 +92,10 @@ public class CouponFacade {
     @Transactional(readOnly = true)
     public List<CouponInfo> getIssuableCoupons(String loginId, String loginPw) {
         var member = memberService.authenticate(loginId, loginPw);
-        List<Coupon> coupons = couponService.getIssuableCoupons();
-        Set<Long> issuedCouponIds = Set.copyOf(memberCouponService.getIssuedCouponIds(member.getId()));
+        List<IssuableCoupon> issuableCoupons = couponService.getIssuableCouponsWithIssuedFlag(member.getId());
 
-        return coupons.stream()
-            .map(coupon -> CouponInfo.from(coupon, issuedCouponIds.contains(coupon.getId())))
+        return issuableCoupons.stream()
+            .map(ic -> CouponInfo.from(ic.coupon(), ic.issued()))
             .toList();
     }
 
@@ -118,11 +118,9 @@ public class CouponFacade {
             memberCoupons = memberCouponService.getMemberCoupons(memberId, pageable);
         }
 
-        long availableCount = memberCouponService.countAvailableByMemberId(memberId);
-        long usedCount = memberCouponService.countUsedByMemberId(memberId);
-        long expiredCount = memberCouponService.countExpiredByMemberId(memberId);
+        MemberCouponStatusCounts counts = memberCouponService.getStatusCounts(memberId);
 
-        return MemberCouponListInfo.of(memberCoupons, availableCount, usedCount, expiredCount);
+        return MemberCouponListInfo.of(memberCoupons, counts.availableCount(), counts.usedCount(), counts.expiredCount());
     }
 
 }
