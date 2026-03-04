@@ -30,13 +30,6 @@ public class CategoryRepositoryImpl implements CategoryRepository {
     }
 
     @Override
-    public List<Category> findAllActiveByParentId(Long parentId) {
-        return categoryJpaRepository.findByParentIdAndDeletedAtIsNull(parentId).stream()
-            .map(CategoryEntity::toDomain)
-            .toList();
-    }
-
-    @Override
     public List<Category> findAllActiveChildrenByPath(String pathPrefix) {
         return categoryJpaRepository.findByPathStartingWithAndDeletedAtIsNull(pathPrefix).stream()
             .map(CategoryEntity::toDomain)
