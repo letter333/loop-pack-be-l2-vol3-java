@@ -10,6 +10,8 @@ public interface ProductRepository {
 
     Optional<Product> findById(Long id);
 
+    Optional<Product> findByIdForUpdate(Long id);
+
     List<Product> findAllActive();
 
     List<Product> findAllActiveByCategoryId(Long categoryId);

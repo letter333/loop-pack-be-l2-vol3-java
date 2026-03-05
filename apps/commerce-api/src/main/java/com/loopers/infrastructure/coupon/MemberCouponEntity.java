@@ -29,7 +29,8 @@ import java.time.ZonedDateTime;
 @Table(
     name = "member_coupons",
     uniqueConstraints = {
-        @UniqueConstraint(name = "uk_member_coupons_code", columnNames = {"coupon_code"})
+        @UniqueConstraint(name = "uk_member_coupons_code", columnNames = {"coupon_code"}),
+        @UniqueConstraint(name = "uk_member_coupons_member_coupon", columnNames = {"member_id", "coupon_id"})
     },
     indexes = {
         @Index(name = "idx_member_coupons_member", columnList = "member_id"),

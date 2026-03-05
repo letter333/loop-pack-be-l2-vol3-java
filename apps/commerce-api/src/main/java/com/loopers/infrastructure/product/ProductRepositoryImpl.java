@@ -26,6 +26,13 @@ public class ProductRepositoryImpl implements ProductRepository {
     }
 
     @Override
+    public Optional<Product> findByIdForUpdate(Long id) {
+        return productJpaRepository.lockById(id)
+            .flatMap(lockedId -> productJpaRepository.findByIdWithOptionsAndImages(lockedId)
+                .map(ProductEntity::toDomain));
+    }
+
+    @Override
     public List<Product> findAllActive() {
         return productJpaRepository.findAllByDeletedAtIsNull().stream()
             .map(ProductEntity::toDomain)

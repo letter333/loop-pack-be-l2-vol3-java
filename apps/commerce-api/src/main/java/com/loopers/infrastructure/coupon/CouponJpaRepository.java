@@ -16,6 +16,9 @@ public interface CouponJpaRepository extends JpaRepository<CouponEntity, Long> {
 
     Page<CouponEntity> findAllByDeletedAtIsNull(Pageable pageable);
 
+    @Query(value = "SELECT id FROM coupons WHERE id = :id FOR UPDATE", nativeQuery = true)
+    Optional<Long> lockById(@Param("id") Long id);
+
     @Query("SELECT c, " +
            "CASE WHEN mc.id IS NOT NULL THEN true ELSE false END " +
            "FROM CouponEntity c " +

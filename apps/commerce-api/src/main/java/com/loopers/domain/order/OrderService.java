@@ -22,6 +22,17 @@ public class OrderService {
             .orElseThrow(() -> new CoreException(ErrorType.NOT_FOUND, "주문을 찾을 수 없습니다."));
     }
 
+    @Transactional(propagation = Propagation.REQUIRED)
+    public Order getOrderForUpdate(Long orderId) {
+        return orderRepository.findByIdForUpdate(orderId)
+            .orElseThrow(() -> new CoreException(ErrorType.NOT_FOUND, "주문을 찾을 수 없습니다."));
+    }
+
+    @Transactional(propagation = Propagation.REQUIRED)
+    public Order saveOrder(Order order) {
+        return orderRepository.save(order);
+    }
+
     @Transactional(readOnly = true, propagation = Propagation.SUPPORTS)
     public List<Order> getOrders(Long memberId, LocalDateTime startDate) {
         if (memberId == null) {
@@ -39,15 +50,8 @@ public class OrderService {
     }
 
     @Transactional(propagation = Propagation.REQUIRED)
-    public Order cancelOrder(Long orderId) {
-        Order order = getOrder(orderId);
-        order.cancel();
-        return orderRepository.save(order);
-    }
-
-    @Transactional(propagation = Propagation.REQUIRED)
     public Order changeStatus(Long orderId, OrderStatus newStatus) {
-        Order order = getOrder(orderId);
+        Order order = getOrderForUpdate(orderId);
         order.transitionTo(newStatus);
         return orderRepository.save(order);
     }

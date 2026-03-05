@@ -3,6 +3,7 @@ package com.loopers.domain.coupon;
 import com.loopers.support.error.CoreException;
 import com.loopers.support.error.ErrorType;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -51,10 +52,10 @@ public class MemberCouponService {
 
     @Transactional(propagation = Propagation.REQUIRED)
     public MemberCoupon issueCoupon(Long memberId, Long couponId) {
-        validateNotAlreadyIssued(memberId, couponId);
-
-        Coupon coupon = couponRepository.findById(couponId)
+        Coupon coupon = couponRepository.findByIdForUpdate(couponId)
             .orElseThrow(() -> new CoreException(ErrorType.NOT_FOUND, "쿠폰을 찾을 수 없습니다."));
+
+        validateNotAlreadyIssued(memberId, couponId);
 
         coupon.issue();
         couponRepository.save(coupon);
@@ -64,7 +65,11 @@ public class MemberCouponService {
             memberId, couponId, couponCode, coupon.getValidUntil(), coupon
         );
 
-        return memberCouponRepository.save(memberCoupon);
+        try {
+            return memberCouponRepository.save(memberCoupon);
+        } catch (DataIntegrityViolationException e) {
+            throw new CoreException(ErrorType.CONFLICT, "이미 발급받은 쿠폰입니다.");
+        }
     }
 
     @Transactional(readOnly = true, propagation = Propagation.SUPPORTS)
@@ -86,7 +91,9 @@ public class MemberCouponService {
     }
 
     @Transactional(propagation = Propagation.REQUIRED)
-    public void useCoupon(MemberCoupon memberCoupon, Long orderId) {
+    public void useCoupon(Long memberCouponId, Long orderId) {
+        MemberCoupon memberCoupon = memberCouponRepository.findByIdForUpdate(memberCouponId)
+            .orElseThrow(() -> new CoreException(ErrorType.NOT_FOUND, "발급된 쿠폰을 찾을 수 없습니다."));
         memberCoupon.use(orderId);
         memberCouponRepository.save(memberCoupon);
     }

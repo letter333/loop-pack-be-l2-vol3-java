@@ -30,6 +30,9 @@ public interface ProductJpaRepository extends JpaRepository<ProductEntity, Long>
            "WHERE p.id = :id")
     Optional<ProductEntity> findByIdWithOptionsAndImages(@Param("id") Long id);
 
+    @Query(value = "SELECT id FROM products WHERE id = :id FOR UPDATE", nativeQuery = true)
+    Optional<Long> lockById(@Param("id") Long id);
+
     @Modifying
     @Query("UPDATE ProductEntity p SET p.deletedAt = CURRENT_TIMESTAMP WHERE p.id IN :ids AND p.deletedAt IS NULL")
     void softDeleteAllByIds(@Param("ids") List<Long> ids);

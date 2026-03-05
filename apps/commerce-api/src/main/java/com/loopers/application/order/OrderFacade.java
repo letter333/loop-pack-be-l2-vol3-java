@@ -24,6 +24,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.Comparator;
 import java.util.List;
 
 @Component
@@ -53,7 +54,12 @@ public class OrderFacade {
             command.shippingMemo()
         );
 
-        for (OrderCommand.OrderItem item : command.items()) {
+        // productId 오름차순 정렬 → 락 획득 순서 고정으로 데드락 방지
+        List<OrderCommand.OrderItem> sortedItems = command.items().stream()
+            .sorted(Comparator.comparing(OrderCommand.OrderItem::productId))
+            .toList();
+
+        for (OrderCommand.OrderItem item : sortedItems) {
             Product product = productService.validateProduct(item.productId());
             ProductOption option = productService.getProductOption(item.productId(), item.productOptionId());
 
@@ -87,7 +93,7 @@ public class OrderFacade {
 
         // 주문 저장 후 쿠폰 사용 처리
         if (memberCoupon != null) {
-            memberCouponService.useCoupon(memberCoupon, savedOrder.getId());
+            memberCouponService.useCoupon(command.memberCouponId(), savedOrder.getId());
         }
 
         return OrderDetailInfo.from(savedOrder);
@@ -114,11 +120,17 @@ public class OrderFacade {
     @Transactional
     public OrderDetailInfo cancelOrder(String loginId, String password, Long orderId) {
         Member member = memberService.authenticate(loginId, password);
-        Order order = orderService.getOrder(orderId);
-        orderService.validateOwnership(member.getId(), order);
 
-        // 1. 재고 복구 (먼저 - 실패 시 전체 롤백)
-        for (OrderProduct orderProduct : order.getOrderProducts()) {
+        // 1. 비관적 락 획득 + 취소 가능 여부 검증 (fail-fast)
+        Order order = orderService.getOrderForUpdate(orderId);
+        orderService.validateOwnership(member.getId(), order);
+        order.cancel();
+
+        // 2. 재고 복구 — productId 오름차순 정렬 → 락 획득 순서 고정으로 데드락 방지
+        List<OrderProduct> sortedProducts = order.getOrderProducts().stream()
+            .sorted(Comparator.comparing(OrderProduct::getProductId))
+            .toList();
+        for (OrderProduct orderProduct : sortedProducts) {
             productService.increaseStock(
                 orderProduct.getProductId(),
                 orderProduct.getProductOptionId(),
@@ -126,11 +138,11 @@ public class OrderFacade {
             );
         }
 
-        // 2. 쿠폰 사용 취소
+        // 3. 쿠폰 사용 취소
         memberCouponService.cancelCouponUsage(orderId);
 
-        // 3. 주문 취소 (이후)
-        Order cancelledOrder = orderService.cancelOrder(orderId);
+        // 4. 취소된 주문 저장
+        Order cancelledOrder = orderService.saveOrder(order);
         return OrderDetailInfo.from(cancelledOrder);
     }
 
@@ -154,18 +166,29 @@ public class OrderFacade {
     @Transactional
     public OrderAdminDetailInfo changeOrderStatusForAdmin(String ldap, Long orderId, OrderStatus newStatus) {
         adminValidator.validate(ldap);
-        Order order = orderService.getOrder(orderId);
 
-        // 1. 취소 시 재고 복구 (먼저 - 실패 시 전체 롤백)
         if (newStatus == OrderStatus.CANCELLED) {
-            for (OrderProduct op : order.getOrderProducts()) {
+            // 1. 비관적 락 획득 + 취소 상태 전환 (fail-fast)
+            Order order = orderService.getOrderForUpdate(orderId);
+            order.transitionTo(newStatus);
+
+            // 2. 재고 복구 — productId 오름차순 정렬 → 락 획득 순서 고정으로 데드락 방지
+            List<OrderProduct> sortedOps = order.getOrderProducts().stream()
+                .sorted(Comparator.comparing(OrderProduct::getProductId))
+                .toList();
+            for (OrderProduct op : sortedOps) {
                 productService.increaseStock(op.getProductId(), op.getProductOptionId(), op.getQuantity());
             }
-            // 쿠폰 사용 취소
+
+            // 3. 쿠폰 사용 취소
             memberCouponService.cancelCouponUsage(orderId);
+
+            // 4. 취소된 주문 저장
+            Order updatedOrder = orderService.saveOrder(order);
+            return OrderAdminDetailInfo.from(updatedOrder);
         }
 
-        // 2. 상태 변경 (이후)
+        // 취소가 아닌 상태 변경은 기존 로직 유지
         Order updatedOrder = orderService.changeStatus(orderId, newStatus);
         return OrderAdminDetailInfo.from(updatedOrder);
     }
