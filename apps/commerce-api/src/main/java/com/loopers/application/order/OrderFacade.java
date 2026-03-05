@@ -24,6 +24,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.Comparator;
 import java.util.List;
 
 @Component
@@ -53,7 +54,12 @@ public class OrderFacade {
             command.shippingMemo()
         );
 
-        for (OrderCommand.OrderItem item : command.items()) {
+        // productId 오름차순 정렬 → 락 획득 순서 고정으로 데드락 방지
+        List<OrderCommand.OrderItem> sortedItems = command.items().stream()
+            .sorted(Comparator.comparing(OrderCommand.OrderItem::productId))
+            .toList();
+
+        for (OrderCommand.OrderItem item : sortedItems) {
             Product product = productService.validateProduct(item.productId());
             ProductOption option = productService.getProductOption(item.productId(), item.productOptionId());
 
@@ -120,8 +126,11 @@ public class OrderFacade {
         orderService.validateOwnership(member.getId(), order);
         order.cancel();
 
-        // 2. 재고 복구
-        for (OrderProduct orderProduct : order.getOrderProducts()) {
+        // 2. 재고 복구 — productId 오름차순 정렬 → 락 획득 순서 고정으로 데드락 방지
+        List<OrderProduct> sortedProducts = order.getOrderProducts().stream()
+            .sorted(Comparator.comparing(OrderProduct::getProductId))
+            .toList();
+        for (OrderProduct orderProduct : sortedProducts) {
             productService.increaseStock(
                 orderProduct.getProductId(),
                 orderProduct.getProductOptionId(),
@@ -163,8 +172,11 @@ public class OrderFacade {
             Order order = orderService.getOrderForUpdate(orderId);
             order.transitionTo(newStatus);
 
-            // 2. 재고 복구
-            for (OrderProduct op : order.getOrderProducts()) {
+            // 2. 재고 복구 — productId 오름차순 정렬 → 락 획득 순서 고정으로 데드락 방지
+            List<OrderProduct> sortedOps = order.getOrderProducts().stream()
+                .sorted(Comparator.comparing(OrderProduct::getProductId))
+                .toList();
+            for (OrderProduct op : sortedOps) {
                 productService.increaseStock(op.getProductId(), op.getProductOptionId(), op.getQuantity());
             }
 
