@@ -50,15 +50,8 @@ public class OrderService {
     }
 
     @Transactional(propagation = Propagation.REQUIRED)
-    public Order cancelOrder(Long orderId) {
-        Order order = getOrder(orderId);
-        order.cancel();
-        return orderRepository.save(order);
-    }
-
-    @Transactional(propagation = Propagation.REQUIRED)
     public Order changeStatus(Long orderId, OrderStatus newStatus) {
-        Order order = getOrder(orderId);
+        Order order = getOrderForUpdate(orderId);
         order.transitionTo(newStatus);
         return orderRepository.save(order);
     }

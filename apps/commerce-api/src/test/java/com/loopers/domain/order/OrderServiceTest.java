@@ -194,39 +194,54 @@ class OrderServiceTest {
         }
     }
 
-    @DisplayName("주문 취소")
+    @DisplayName("주문 상태 변경")
     @Nested
-    class CancelOrder {
+    class ChangeStatus {
 
         @Test
-        @DisplayName("주문을 취소하고 반환한다")
-        void cancelsAndReturnsOrder() {
+        @DisplayName("비관적 락으로 주문을 조회한 후 상태를 변경한다")
+        void changesStatus_withPessimisticLock() {
             // arrange
-            Order order = createOrder(ORDER_ID, MEMBER_ID, OrderStatus.PENDING);
-            given(orderRepository.findById(ORDER_ID)).willReturn(Optional.of(order));
+            Order order = createOrder(ORDER_ID, MEMBER_ID, OrderStatus.PAID);
+            given(orderRepository.findByIdForUpdate(ORDER_ID)).willReturn(Optional.of(order));
             given(orderRepository.save(any(Order.class))).willAnswer(invocation -> invocation.getArgument(0));
 
             // act
-            Order result = orderService.cancelOrder(ORDER_ID);
+            Order result = orderService.changeStatus(ORDER_ID, OrderStatus.PREPARING);
 
             // assert
             assertAll(
-                () -> assertThat(result.getStatus()).isEqualTo(OrderStatus.CANCELLED),
+                () -> assertThat(result.getStatus()).isEqualTo(OrderStatus.PREPARING),
+                () -> verify(orderRepository).findByIdForUpdate(ORDER_ID),
                 () -> verify(orderRepository).save(order)
             );
         }
 
         @Test
-        @DisplayName("존재하지 않는 주문을 취소하면 NOT_FOUND 예외가 발생한다")
+        @DisplayName("존재하지 않는 주문 상태 변경 시 NOT_FOUND 예외가 발생한다")
         void throwsException_whenOrderNotFound() {
             // arrange
-            given(orderRepository.findById(999L)).willReturn(Optional.empty());
+            given(orderRepository.findByIdForUpdate(999L)).willReturn(Optional.empty());
 
             // act & assert
-            assertThatThrownBy(() -> orderService.cancelOrder(999L))
+            assertThatThrownBy(() -> orderService.changeStatus(999L, OrderStatus.PREPARING))
                 .isInstanceOf(CoreException.class)
                 .extracting("errorType")
                 .isEqualTo(ErrorType.NOT_FOUND);
+        }
+
+        @Test
+        @DisplayName("유효하지 않은 상태 전환 시 BAD_REQUEST 예외가 발생한다")
+        void throwsException_whenInvalidTransition() {
+            // arrange
+            Order order = createOrder(ORDER_ID, MEMBER_ID, OrderStatus.DELIVERED);
+            given(orderRepository.findByIdForUpdate(ORDER_ID)).willReturn(Optional.of(order));
+
+            // act & assert
+            assertThatThrownBy(() -> orderService.changeStatus(ORDER_ID, OrderStatus.PAID))
+                .isInstanceOf(CoreException.class)
+                .extracting("errorType")
+                .isEqualTo(ErrorType.BAD_REQUEST);
         }
     }
 
