@@ -10,6 +10,8 @@ public interface OrderRepository {
 
     Optional<Order> findById(Long id);
 
+    Optional<Order> findByIdForUpdate(Long id);
+
     List<Order> findByMemberIdAndCreatedAtAfter(Long memberId, LocalDateTime startDate);
 
     List<Order> findByMemberId(Long memberId);

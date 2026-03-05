@@ -392,10 +392,9 @@ class OrderFacadeTest {
             // arrange
             Member member = createMember();
             Order order = createOrderWithProducts(ORDER_ID, MEMBER_ID, OrderStatus.PENDING);
-            Order cancelledOrder = createOrderWithProducts(ORDER_ID, MEMBER_ID, OrderStatus.CANCELLED);
             given(memberService.authenticate(LOGIN_ID, PASSWORD)).willReturn(member);
-            given(orderService.getOrder(ORDER_ID)).willReturn(order);
-            given(orderService.cancelOrder(ORDER_ID)).willReturn(cancelledOrder);
+            given(orderService.getOrderForUpdate(ORDER_ID)).willReturn(order);
+            given(orderService.saveOrder(any(Order.class))).willAnswer(invocation -> invocation.getArgument(0));
 
             // act
             OrderDetailInfo result = orderFacade.cancelOrder(LOGIN_ID, PASSWORD, ORDER_ID);
@@ -414,7 +413,7 @@ class OrderFacadeTest {
             Member member = createMember();
             Order order = createOrder(ORDER_ID, 2L, OrderStatus.PENDING);
             given(memberService.authenticate(LOGIN_ID, PASSWORD)).willReturn(member);
-            given(orderService.getOrder(ORDER_ID)).willReturn(order);
+            given(orderService.getOrderForUpdate(ORDER_ID)).willReturn(order);
             doThrow(new CoreException(ErrorType.FORBIDDEN, "해당 주문에 대한 권한이 없습니다."))
                 .when(orderService).validateOwnership(MEMBER_ID, order);
 
@@ -432,11 +431,9 @@ class OrderFacadeTest {
             Member member = createMember();
             Order order = createOrder(ORDER_ID, MEMBER_ID, OrderStatus.PREPARING);
             given(memberService.authenticate(LOGIN_ID, PASSWORD)).willReturn(member);
-            given(orderService.getOrder(ORDER_ID)).willReturn(order);
-            given(orderService.cancelOrder(ORDER_ID))
-                .willThrow(new CoreException(ErrorType.BAD_REQUEST, "취소할 수 없는 주문 상태입니다."));
+            given(orderService.getOrderForUpdate(ORDER_ID)).willReturn(order);
 
-            // act & assert
+            // act & assert — order.cancel()에서 직접 예외 발생
             assertThatThrownBy(() -> orderFacade.cancelOrder(LOGIN_ID, PASSWORD, ORDER_ID))
                 .isInstanceOf(CoreException.class)
                 .extracting("errorType")
@@ -444,13 +441,13 @@ class OrderFacadeTest {
         }
 
         @Test
-        @DisplayName("재고 복구 실패 시 주문 취소도 롤백되어야 한다 - 재고 복구가 먼저 수행됨")
+        @DisplayName("재고 복구 실패 시 주문 취소도 롤백되어야 한다")
         void rollsBackCancellation_whenStockRestoreFails() {
             // arrange
             Member member = createMember();
             Order order = createOrderWithProducts(ORDER_ID, MEMBER_ID, OrderStatus.PENDING);
             given(memberService.authenticate(LOGIN_ID, PASSWORD)).willReturn(member);
-            given(orderService.getOrder(ORDER_ID)).willReturn(order);
+            given(orderService.getOrderForUpdate(ORDER_ID)).willReturn(order);
             doThrow(new CoreException(ErrorType.INTERNAL_ERROR, "재고 복구 실패"))
                 .when(productService).increaseStock(eq(1L), eq(10L), eq(2));
 
@@ -460,8 +457,8 @@ class OrderFacadeTest {
                 .extracting("errorType")
                 .isEqualTo(ErrorType.INTERNAL_ERROR);
 
-            // 재고 복구가 먼저 수행되므로 cancelOrder가 호출되지 않음
-            verify(orderService, never()).cancelOrder(ORDER_ID);
+            // 재고 복구 실패 시 saveOrder가 호출되지 않음
+            verify(orderService, never()).saveOrder(any(Order.class));
         }
     }
 
@@ -510,10 +507,9 @@ class OrderFacadeTest {
         void restoresStock_whenAdminCancelsOrder() {
             // arrange
             Order order = createOrderWithProducts(ORDER_ID, MEMBER_ID, OrderStatus.PENDING);
-            Order cancelledOrder = createOrderWithProducts(ORDER_ID, MEMBER_ID, OrderStatus.CANCELLED);
             doNothing().when(adminValidator).validate(ADMIN_LDAP);
-            given(orderService.getOrder(ORDER_ID)).willReturn(order);
-            given(orderService.changeStatus(ORDER_ID, OrderStatus.CANCELLED)).willReturn(cancelledOrder);
+            given(orderService.getOrderForUpdate(ORDER_ID)).willReturn(order);
+            given(orderService.saveOrder(any(Order.class))).willAnswer(invocation -> invocation.getArgument(0));
 
             // act
             OrderAdminDetailInfo result = orderFacade.changeOrderStatusForAdmin(ADMIN_LDAP, ORDER_ID, OrderStatus.CANCELLED);
@@ -526,12 +522,12 @@ class OrderFacadeTest {
         }
 
         @Test
-        @DisplayName("Admin 주문 취소 시 재고 복구 실패하면 상태 변경도 롤백된다 - 재고 복구가 먼저 수행됨")
+        @DisplayName("Admin 주문 취소 시 재고 복구 실패하면 상태 변경도 롤백된다")
         void rollsBackStatusChange_whenStockRestoreFails() {
             // arrange
             Order order = createOrderWithProducts(ORDER_ID, MEMBER_ID, OrderStatus.PENDING);
             doNothing().when(adminValidator).validate(ADMIN_LDAP);
-            given(orderService.getOrder(ORDER_ID)).willReturn(order);
+            given(orderService.getOrderForUpdate(ORDER_ID)).willReturn(order);
             doThrow(new CoreException(ErrorType.INTERNAL_ERROR, "재고 복구 실패"))
                 .when(productService).increaseStock(eq(1L), eq(10L), eq(2));
 
@@ -541,8 +537,8 @@ class OrderFacadeTest {
                 .extracting("errorType")
                 .isEqualTo(ErrorType.INTERNAL_ERROR);
 
-            // 재고 복구가 먼저 수행되므로 changeStatus가 호출되지 않음
-            verify(orderService, never()).changeStatus(ORDER_ID, OrderStatus.CANCELLED);
+            // 재고 복구 실패 시 saveOrder가 호출되지 않음
+            verify(orderService, never()).saveOrder(any(Order.class));
         }
     }
 

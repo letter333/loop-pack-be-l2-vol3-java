@@ -114,10 +114,13 @@ public class OrderFacade {
     @Transactional
     public OrderDetailInfo cancelOrder(String loginId, String password, Long orderId) {
         Member member = memberService.authenticate(loginId, password);
-        Order order = orderService.getOrder(orderId);
-        orderService.validateOwnership(member.getId(), order);
 
-        // 1. 재고 복구 (먼저 - 실패 시 전체 롤백)
+        // 1. 비관적 락 획득 + 취소 가능 여부 검증 (fail-fast)
+        Order order = orderService.getOrderForUpdate(orderId);
+        orderService.validateOwnership(member.getId(), order);
+        order.cancel();
+
+        // 2. 재고 복구
         for (OrderProduct orderProduct : order.getOrderProducts()) {
             productService.increaseStock(
                 orderProduct.getProductId(),
@@ -126,11 +129,11 @@ public class OrderFacade {
             );
         }
 
-        // 2. 쿠폰 사용 취소
+        // 3. 쿠폰 사용 취소
         memberCouponService.cancelCouponUsage(orderId);
 
-        // 3. 주문 취소 (이후)
-        Order cancelledOrder = orderService.cancelOrder(orderId);
+        // 4. 취소된 주문 저장
+        Order cancelledOrder = orderService.saveOrder(order);
         return OrderDetailInfo.from(cancelledOrder);
     }
 
@@ -154,18 +157,26 @@ public class OrderFacade {
     @Transactional
     public OrderAdminDetailInfo changeOrderStatusForAdmin(String ldap, Long orderId, OrderStatus newStatus) {
         adminValidator.validate(ldap);
-        Order order = orderService.getOrder(orderId);
 
-        // 1. 취소 시 재고 복구 (먼저 - 실패 시 전체 롤백)
         if (newStatus == OrderStatus.CANCELLED) {
+            // 1. 비관적 락 획득 + 취소 상태 전환 (fail-fast)
+            Order order = orderService.getOrderForUpdate(orderId);
+            order.transitionTo(newStatus);
+
+            // 2. 재고 복구
             for (OrderProduct op : order.getOrderProducts()) {
                 productService.increaseStock(op.getProductId(), op.getProductOptionId(), op.getQuantity());
             }
-            // 쿠폰 사용 취소
+
+            // 3. 쿠폰 사용 취소
             memberCouponService.cancelCouponUsage(orderId);
+
+            // 4. 취소된 주문 저장
+            Order updatedOrder = orderService.saveOrder(order);
+            return OrderAdminDetailInfo.from(updatedOrder);
         }
 
-        // 2. 상태 변경 (이후)
+        // 취소가 아닌 상태 변경은 기존 로직 유지
         Order updatedOrder = orderService.changeStatus(orderId, newStatus);
         return OrderAdminDetailInfo.from(updatedOrder);
     }

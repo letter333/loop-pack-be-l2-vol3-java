@@ -115,6 +115,63 @@ class OrderServiceTest {
         }
     }
 
+    @DisplayName("주문 조회 (비관적 락)")
+    @Nested
+    class GetOrderForUpdate {
+
+        @Test
+        @DisplayName("주문이 존재하면 비관적 락과 함께 반환한다")
+        void returnsOrder_withPessimisticLock() {
+            // arrange
+            Order order = createOrder(ORDER_ID, MEMBER_ID, OrderStatus.PENDING);
+            given(orderRepository.findByIdForUpdate(ORDER_ID)).willReturn(Optional.of(order));
+
+            // act
+            Order result = orderService.getOrderForUpdate(ORDER_ID);
+
+            // assert
+            assertAll(
+                () -> assertThat(result.getId()).isEqualTo(ORDER_ID),
+                () -> verify(orderRepository).findByIdForUpdate(ORDER_ID)
+            );
+        }
+
+        @Test
+        @DisplayName("주문이 존재하지 않으면 NOT_FOUND 예외가 발생한다")
+        void throwsException_whenNotFound() {
+            // arrange
+            given(orderRepository.findByIdForUpdate(999L)).willReturn(Optional.empty());
+
+            // act & assert
+            assertThatThrownBy(() -> orderService.getOrderForUpdate(999L))
+                .isInstanceOf(CoreException.class)
+                .extracting("errorType")
+                .isEqualTo(ErrorType.NOT_FOUND);
+        }
+    }
+
+    @DisplayName("주문 저장")
+    @Nested
+    class SaveOrder {
+
+        @Test
+        @DisplayName("주문을 저장하고 반환한다")
+        void savesAndReturnsOrder() {
+            // arrange
+            Order order = createOrder(ORDER_ID, MEMBER_ID, OrderStatus.CANCELLED);
+            given(orderRepository.save(order)).willReturn(order);
+
+            // act
+            Order result = orderService.saveOrder(order);
+
+            // assert
+            assertAll(
+                () -> assertThat(result.getStatus()).isEqualTo(OrderStatus.CANCELLED),
+                () -> verify(orderRepository).save(order)
+            );
+        }
+    }
+
     @DisplayName("주문 생성")
     @Nested
     class CreateOrder {
