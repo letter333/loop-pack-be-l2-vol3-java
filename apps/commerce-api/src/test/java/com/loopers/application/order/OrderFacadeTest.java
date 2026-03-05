@@ -197,7 +197,7 @@ class OrderFacadeTest {
             assertAll(
                 () -> assertThat(result.id()).isEqualTo(ORDER_ID),
                 () -> verify(memberCouponService).validateAndGetCoupon(eq(memberCouponId), eq(MEMBER_ID)),
-                () -> verify(memberCouponService).useCoupon(memberCoupon, ORDER_ID)
+                () -> verify(memberCouponService).useCoupon(memberCouponId, ORDER_ID)
             );
         }
 

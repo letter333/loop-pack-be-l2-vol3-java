@@ -87,7 +87,7 @@ public class OrderFacade {
 
         // 주문 저장 후 쿠폰 사용 처리
         if (memberCoupon != null) {
-            memberCouponService.useCoupon(memberCoupon, savedOrder.getId());
+            memberCouponService.useCoupon(command.memberCouponId(), savedOrder.getId());
         }
 
         return OrderDetailInfo.from(savedOrder);

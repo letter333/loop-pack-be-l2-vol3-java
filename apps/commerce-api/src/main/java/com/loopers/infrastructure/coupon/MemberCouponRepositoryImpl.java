@@ -33,6 +33,13 @@ public class MemberCouponRepositoryImpl implements MemberCouponRepository {
     }
 
     @Override
+    public Optional<MemberCoupon> findByIdForUpdate(Long id) {
+        return memberCouponJpaRepository.lockById(id)
+            .flatMap(lockedId -> memberCouponJpaRepository.findByIdWithCoupon(lockedId)
+                .map(MemberCouponEntity::toDomainWithCoupon));
+    }
+
+    @Override
     public Optional<MemberCoupon> findByMemberIdAndCouponId(Long memberId, Long couponId) {
         return memberCouponJpaRepository.findByMemberIdAndCouponId(memberId, couponId)
             .map(MemberCouponEntity::toDomain);
