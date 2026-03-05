@@ -10,6 +10,8 @@ public interface CouponRepository {
 
     Optional<Coupon> findById(Long id);
 
+    Optional<Coupon> findByIdForUpdate(Long id);
+
     List<IssuableCoupon> findAllIssuableWithIssuedFlag(Long memberId);
 
     Page<Coupon> findAllActive(Pageable pageable);

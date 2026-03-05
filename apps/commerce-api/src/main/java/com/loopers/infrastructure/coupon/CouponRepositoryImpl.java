@@ -27,6 +27,13 @@ public class CouponRepositoryImpl implements CouponRepository {
     }
 
     @Override
+    public Optional<Coupon> findByIdForUpdate(Long id) {
+        return couponJpaRepository.lockById(id)
+            .flatMap(lockedId -> couponJpaRepository.findById(lockedId)
+                .map(CouponEntity::toDomain));
+    }
+
+    @Override
     public List<IssuableCoupon> findAllIssuableWithIssuedFlag(Long memberId) {
         return couponJpaRepository.findAllIssuableWithIssuedFlag(memberId, LocalDateTime.now()).stream()
             .map(row -> {
