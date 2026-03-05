@@ -221,7 +221,7 @@ class BrandTest {
 
             // Act
             Brand brand = new Brand(1L, "Nike", "스포츠 브랜드", "https://example.com/nike-logo.png", 0L,
-                createdAt, updatedAt, null);
+                0L, createdAt, updatedAt, null);
 
             // Assert
             assertAll(
@@ -241,7 +241,7 @@ class BrandTest {
 
             // Act
             Brand brand = new Brand(1L, "Nike", "스포츠 브랜드", "https://example.com/nike-logo.png", 0L,
-                now, now, now);
+                0L, now, now, now);
 
             // Assert
             assertThat(brand.isDeleted()).isTrue();

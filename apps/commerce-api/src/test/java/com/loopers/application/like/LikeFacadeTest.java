@@ -10,6 +10,7 @@ import com.loopers.domain.product.Product;
 import com.loopers.domain.product.ProductService;
 import com.loopers.support.error.CoreException;
 import com.loopers.support.error.ErrorType;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -17,11 +18,14 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.transaction.support.TransactionCallback;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.LocalDate;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.verify;
 
@@ -43,6 +47,9 @@ class LikeFacadeTest {
 
     @Mock
     private BrandService brandService;
+
+    @Mock
+    private TransactionTemplate transactionTemplate;
 
     @Nested
     @DisplayName("toggleProductLike - 상품 좋아요 토글")
@@ -138,6 +145,14 @@ class LikeFacadeTest {
     @Nested
     @DisplayName("toggleBrandLike - 브랜드 좋아요 토글")
     class ToggleBrandLike {
+
+        @BeforeEach
+        void setUp() {
+            given(transactionTemplate.execute(any())).willAnswer(invocation -> {
+                TransactionCallback<?> callback = invocation.getArgument(0);
+                return callback.doInTransaction(null);
+            });
+        }
 
         @Test
         @DisplayName("인증 실패 시 UNAUTHORIZED 예외가 발생한다")
@@ -239,6 +254,6 @@ class LikeFacadeTest {
 
     private Brand createBrand(Long id) {
         return new Brand(id, "Test Brand", "Description", "https://example.com/logo.png", 0L,
-            null, null, null);
+            0L, null, null, null);
     }
 }

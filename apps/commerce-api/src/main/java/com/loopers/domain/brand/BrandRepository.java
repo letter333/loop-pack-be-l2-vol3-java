@@ -23,4 +23,8 @@ public interface BrandRepository {
     void delete(Long id);
 
     boolean existsById(Long id);
+
+    Long increaseLikeCount(Long id);
+
+    Long decreaseLikeCount(Long id);
 }

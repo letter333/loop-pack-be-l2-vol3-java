@@ -77,15 +77,11 @@ public class BrandService {
 
     @Transactional(propagation = Propagation.REQUIRED)
     public Long increaseLikeCount(Long brandId) {
-        Brand brand = getBrand(brandId);
-        brand.increaseLikeCount();
-        return brandRepository.save(brand).getLikeCount();
+        return brandRepository.increaseLikeCount(brandId);
     }
 
     @Transactional(propagation = Propagation.REQUIRED)
     public Long decreaseLikeCount(Long brandId) {
-        Brand brand = getBrand(brandId);
-        brand.decreaseLikeCount();
-        return brandRepository.save(brand).getLikeCount();
+        return brandRepository.decreaseLikeCount(brandId);
     }
 }
