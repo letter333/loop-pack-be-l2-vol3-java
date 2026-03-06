@@ -12,8 +12,6 @@ public interface MemberCouponRepository {
 
     Optional<MemberCoupon> findByIdWithCoupon(Long id);
 
-    Optional<MemberCoupon> findByIdForUpdate(Long id);
-
     Optional<MemberCoupon> findByMemberIdAndCouponId(Long memberId, Long couponId);
 
     Optional<MemberCoupon> findByUsedOrderId(Long orderId);

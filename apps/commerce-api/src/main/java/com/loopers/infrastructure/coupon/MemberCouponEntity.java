@@ -18,6 +18,7 @@ import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
+import jakarta.persistence.Version;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -70,6 +71,10 @@ public class MemberCouponEntity {
 
     @Column(name = "expired_at", nullable = false)
     private LocalDateTime expiredAt;
+
+    @Version
+    @Column(name = "version", nullable = false)
+    private Long version = 0L;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private ZonedDateTime createdAt;
@@ -128,6 +133,7 @@ public class MemberCouponEntity {
             expiredAt,
             createdAt != null ? createdAt.toLocalDateTime() : null,
             updatedAt != null ? updatedAt.toLocalDateTime() : null,
+            version,
             domainCoupon
         );
     }

@@ -20,6 +20,7 @@ public class MemberCoupon {
     private LocalDateTime expiredAt;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    private Long version;
 
     private Coupon coupon;
 
@@ -42,7 +43,7 @@ public class MemberCoupon {
                         MemberCouponStatus status, Long usedOrderId, LocalDateTime usedAt,
                         LocalDateTime issuedAt, LocalDateTime expiredAt,
                         LocalDateTime createdAt, LocalDateTime updatedAt,
-                        Coupon coupon) {
+                        Long version, Coupon coupon) {
         this.id = id;
         this.memberId = memberId;
         this.couponId = couponId;
@@ -54,6 +55,7 @@ public class MemberCoupon {
         this.expiredAt = expiredAt;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
+        this.version = version;
         this.coupon = coupon;
     }
 

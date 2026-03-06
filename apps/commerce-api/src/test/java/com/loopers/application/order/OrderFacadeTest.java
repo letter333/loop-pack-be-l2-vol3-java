@@ -169,7 +169,7 @@ class OrderFacadeTest {
                 null, null, null);
             MemberCoupon memberCoupon = new MemberCoupon(memberCouponId, MEMBER_ID, 1L, "ABCD-1234-EFGH",
                 MemberCouponStatus.AVAILABLE, null, null, LocalDateTime.now(), LocalDateTime.now().plusDays(30),
-                null, null, coupon);
+                null, null, 0L, coupon);
 
             Order savedOrder = new Order(
                 ORDER_ID, MEMBER_ID, "ORD20250225-0000001", "테스트 상품",

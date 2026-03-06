@@ -9,6 +9,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.time.LocalDate;
@@ -71,7 +72,7 @@ class CouponUseConcurrencyTest {
                 try {
                     memberCouponService.useCoupon(memberCouponId, orderId);
                     successCount.incrementAndGet();
-                } catch (CoreException e) {
+                } catch (CoreException | ObjectOptimisticLockingFailureException e) {
                     failCount.incrementAndGet();
                 } finally {
                     latch.countDown();
@@ -113,7 +114,7 @@ class CouponUseConcurrencyTest {
                 try {
                     memberCouponService.useCoupon(memberCouponId, orderId);
                     successCount.incrementAndGet();
-                } catch (CoreException e) {
+                } catch (CoreException | ObjectOptimisticLockingFailureException e) {
                     badRequestCount.incrementAndGet();
                 } finally {
                     latch.countDown();

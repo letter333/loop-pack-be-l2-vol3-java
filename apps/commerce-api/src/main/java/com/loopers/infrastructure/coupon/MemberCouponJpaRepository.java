@@ -12,9 +12,6 @@ import java.util.Optional;
 
 public interface MemberCouponJpaRepository extends JpaRepository<MemberCouponEntity, Long> {
 
-    @Query(value = "SELECT id FROM member_coupons WHERE id = :id FOR UPDATE", nativeQuery = true)
-    Optional<Long> lockById(@Param("id") Long id);
-
     Optional<MemberCouponEntity> findByMemberIdAndCouponId(Long memberId, Long couponId);
 
     Optional<MemberCouponEntity> findByUsedOrderId(Long orderId);

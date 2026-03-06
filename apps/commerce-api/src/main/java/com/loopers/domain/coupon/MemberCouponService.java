@@ -90,7 +90,7 @@ public class MemberCouponService {
 
     @Transactional(propagation = Propagation.REQUIRED)
     public void useCoupon(Long memberCouponId, Long orderId) {
-        MemberCoupon memberCoupon = memberCouponRepository.findByIdForUpdate(memberCouponId)
+        MemberCoupon memberCoupon = memberCouponRepository.findByIdWithCoupon(memberCouponId)
             .orElseThrow(() -> new CoreException(ErrorType.NOT_FOUND, "발급된 쿠폰을 찾을 수 없습니다."));
         memberCoupon.use(orderId);
         memberCouponRepository.save(memberCoupon);

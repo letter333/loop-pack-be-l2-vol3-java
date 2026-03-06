@@ -20,6 +20,9 @@ import com.loopers.support.auth.AdminValidator;
 import com.loopers.support.error.CoreException;
 import com.loopers.support.error.ErrorType;
 import lombok.RequiredArgsConstructor;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
+import org.springframework.retry.annotation.Backoff;
+import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -38,6 +41,11 @@ public class OrderFacade {
     private final MemberCouponService memberCouponService;
     private final AdminValidator adminValidator;
 
+    @Retryable(
+        retryFor = ObjectOptimisticLockingFailureException.class,
+        maxAttempts = 3,
+        backoff = @Backoff(delay = 50, multiplier = 2)
+    )
     @Transactional
     public OrderDetailInfo createOrder(String loginId, String password, OrderCommand.Create command) {
         Member member = memberService.authenticate(loginId, password);
