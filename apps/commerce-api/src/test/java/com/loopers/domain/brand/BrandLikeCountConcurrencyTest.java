@@ -6,7 +6,6 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.orm.ObjectOptimisticLockingFailureException;
 
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
@@ -19,8 +18,6 @@ import static org.junit.jupiter.api.Assertions.assertAll;
 @SpringBootTest
 @DisplayName("브랜드 좋아요 수 동시성 테스트")
 class BrandLikeCountConcurrencyTest {
-
-    private static final int MAX_RETRY_COUNT = 10;
 
     @Autowired
     private BrandService brandService;
@@ -37,7 +34,7 @@ class BrandLikeCountConcurrencyTest {
     }
 
     @Test
-    @DisplayName("동시에 좋아요를 눌러도 낙관적 락 재시도로 정확한 좋아요 수가 유지된다")
+    @DisplayName("동시에 좋아요를 눌러도 원자적 UPDATE로 정확한 좋아요 수가 유지된다")
     void increaseLikeCount_concurrently_maintainsCorrectCount() throws InterruptedException {
         // Arrange
         int threadCount = 10;
@@ -52,7 +49,7 @@ class BrandLikeCountConcurrencyTest {
         for (int i = 0; i < threadCount; i++) {
             executorService.submit(() -> {
                 try {
-                    retryOnOptimisticLock(() -> brandService.increaseLikeCount(brandId));
+                    brandService.increaseLikeCount(brandId);
                     successCount.incrementAndGet();
                 } finally {
                     latch.countDown();
@@ -71,7 +68,7 @@ class BrandLikeCountConcurrencyTest {
     }
 
     @Test
-    @DisplayName("동시에 좋아요를 취소해도 낙관적 락 재시도로 정확한 좋아요 수가 유지된다")
+    @DisplayName("동시에 좋아요를 취소해도 원자적 UPDATE로 정확한 좋아요 수가 유지된다")
     void decreaseLikeCount_concurrently_maintainsCorrectCount() throws InterruptedException {
         // Arrange
         int threadCount = 10;
@@ -92,7 +89,7 @@ class BrandLikeCountConcurrencyTest {
         for (int i = 0; i < threadCount; i++) {
             executorService.submit(() -> {
                 try {
-                    retryOnOptimisticLock(() -> brandService.decreaseLikeCount(brandId));
+                    brandService.decreaseLikeCount(brandId);
                     successCount.incrementAndGet();
                 } finally {
                     latch.countDown();
@@ -110,18 +107,4 @@ class BrandLikeCountConcurrencyTest {
         );
     }
 
-    private void retryOnOptimisticLock(Runnable action) {
-        int retryCount = 0;
-        while (true) {
-            try {
-                action.run();
-                return;
-            } catch (ObjectOptimisticLockingFailureException e) {
-                retryCount++;
-                if (retryCount >= MAX_RETRY_COUNT) {
-                    throw e;
-                }
-            }
-        }
-    }
 }

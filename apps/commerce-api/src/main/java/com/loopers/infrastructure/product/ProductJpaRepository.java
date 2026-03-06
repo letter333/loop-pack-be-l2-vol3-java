@@ -39,4 +39,15 @@ public interface ProductJpaRepository extends JpaRepository<ProductEntity, Long>
 
     @Query("SELECT p FROM ProductEntity p")
     Page<ProductEntity> findAllIncludingDeleted(Pageable pageable);
+
+    @Modifying
+    @Query(value = "UPDATE products SET like_count = like_count + 1 WHERE id = :id", nativeQuery = true)
+    void increaseLikeCount(@Param("id") Long id);
+
+    @Modifying
+    @Query(value = "UPDATE products SET like_count = like_count - 1 WHERE id = :id AND like_count > 0", nativeQuery = true)
+    void decreaseLikeCount(@Param("id") Long id);
+
+    @Query(value = "SELECT like_count FROM products WHERE id = :id", nativeQuery = true)
+    Long findLikeCountById(@Param("id") Long id);
 }

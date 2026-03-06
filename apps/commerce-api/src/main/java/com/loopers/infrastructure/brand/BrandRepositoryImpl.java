@@ -87,19 +87,13 @@ public class BrandRepositoryImpl implements BrandRepository {
 
     @Override
     public Long increaseLikeCount(Long id) {
-        BrandEntity entity = brandJpaRepository.findById(id)
-            .orElseThrow(() -> new CoreException(ErrorType.NOT_FOUND, "브랜드를 찾을 수 없습니다."));
-        entity.increaseLikeCount();
-        brandJpaRepository.flush();
-        return entity.getLikeCount();
+        brandJpaRepository.increaseLikeCount(id);
+        return brandJpaRepository.findLikeCountById(id);
     }
 
     @Override
     public Long decreaseLikeCount(Long id) {
-        BrandEntity entity = brandJpaRepository.findById(id)
-            .orElseThrow(() -> new CoreException(ErrorType.NOT_FOUND, "브랜드를 찾을 수 없습니다."));
-        entity.decreaseLikeCount();
-        brandJpaRepository.flush();
-        return entity.getLikeCount();
+        brandJpaRepository.decreaseLikeCount(id);
+        return brandJpaRepository.findLikeCountById(id);
     }
 }

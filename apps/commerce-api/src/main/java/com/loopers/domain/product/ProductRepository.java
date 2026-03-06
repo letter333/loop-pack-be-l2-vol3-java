@@ -31,4 +31,8 @@ public interface ProductRepository {
     boolean existsById(Long id);
 
     Page<Product> findAllIncludingDeleted(Pageable pageable);
+
+    Long increaseLikeCount(Long id);
+
+    Long decreaseLikeCount(Long id);
 }

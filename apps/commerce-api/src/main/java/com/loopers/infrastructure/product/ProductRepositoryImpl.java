@@ -112,4 +112,16 @@ public class ProductRepositoryImpl implements ProductRepository {
         return productJpaRepository.findAllIncludingDeleted(pageable)
             .map(ProductEntity::toDomain);
     }
+
+    @Override
+    public Long increaseLikeCount(Long id) {
+        productJpaRepository.increaseLikeCount(id);
+        return productJpaRepository.findLikeCountById(id);
+    }
+
+    @Override
+    public Long decreaseLikeCount(Long id) {
+        productJpaRepository.decreaseLikeCount(id);
+        return productJpaRepository.findLikeCountById(id);
+    }
 }

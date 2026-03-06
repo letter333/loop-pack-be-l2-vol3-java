@@ -17,14 +17,11 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.transaction.support.TransactionCallback;
-import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.LocalDate;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.verify;
 
@@ -46,9 +43,6 @@ class LikeFacadeTest {
 
     @Mock
     private BrandService brandService;
-
-    @Mock
-    private TransactionTemplate transactionTemplate;
 
     @Nested
     @DisplayName("toggleProductLike - 상품 좋아요 토글")
@@ -192,7 +186,6 @@ class LikeFacadeTest {
             Member member = createMember(memberId, loginId);
             Brand brand = createBrand(brandId);
 
-            mockTransactionTemplate();
             given(memberService.authenticate(loginId, password)).willReturn(member);
             given(brandService.getActiveBrand(brandId)).willReturn(brand);
             given(likeService.toggleLike(memberId, brandId, TargetType.BRAND)).willReturn(true);
@@ -218,7 +211,6 @@ class LikeFacadeTest {
             Member member = createMember(memberId, loginId);
             Brand brand = createBrand(brandId);
 
-            mockTransactionTemplate();
             given(memberService.authenticate(loginId, password)).willReturn(member);
             given(brandService.getActiveBrand(brandId)).willReturn(brand);
             given(likeService.toggleLike(memberId, brandId, TargetType.BRAND)).willReturn(false);
@@ -232,13 +224,6 @@ class LikeFacadeTest {
             assertThat(result.likeCount()).isEqualTo(0L);
             verify(brandService).decreaseLikeCount(brandId);
         }
-    }
-
-    private void mockTransactionTemplate() {
-        given(transactionTemplate.execute(any())).willAnswer(invocation -> {
-            TransactionCallback<?> callback = invocation.getArgument(0);
-            return callback.doInTransaction(null);
-        });
     }
 
     private Member createMember(Long id, String loginId) {
