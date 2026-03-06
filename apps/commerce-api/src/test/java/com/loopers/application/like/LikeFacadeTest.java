@@ -192,10 +192,7 @@ class LikeFacadeTest {
             Member member = createMember(memberId, loginId);
             Brand brand = createBrand(brandId);
 
-            given(transactionTemplate.execute(any())).willAnswer(invocation -> {
-                TransactionCallback<?> callback = invocation.getArgument(0);
-                return callback.doInTransaction(null);
-            });
+            mockTransactionTemplate();
             given(memberService.authenticate(loginId, password)).willReturn(member);
             given(brandService.getActiveBrand(brandId)).willReturn(brand);
             given(likeService.toggleLike(memberId, brandId, TargetType.BRAND)).willReturn(true);
@@ -221,10 +218,7 @@ class LikeFacadeTest {
             Member member = createMember(memberId, loginId);
             Brand brand = createBrand(brandId);
 
-            given(transactionTemplate.execute(any())).willAnswer(invocation -> {
-                TransactionCallback<?> callback = invocation.getArgument(0);
-                return callback.doInTransaction(null);
-            });
+            mockTransactionTemplate();
             given(memberService.authenticate(loginId, password)).willReturn(member);
             given(brandService.getActiveBrand(brandId)).willReturn(brand);
             given(likeService.toggleLike(memberId, brandId, TargetType.BRAND)).willReturn(false);
@@ -238,6 +232,13 @@ class LikeFacadeTest {
             assertThat(result.likeCount()).isEqualTo(0L);
             verify(brandService).decreaseLikeCount(brandId);
         }
+    }
+
+    private void mockTransactionTemplate() {
+        given(transactionTemplate.execute(any())).willAnswer(invocation -> {
+            TransactionCallback<?> callback = invocation.getArgument(0);
+            return callback.doInTransaction(null);
+        });
     }
 
     private Member createMember(Long id, String loginId) {

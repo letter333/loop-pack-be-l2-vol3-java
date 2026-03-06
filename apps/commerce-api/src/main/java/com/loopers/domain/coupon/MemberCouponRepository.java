@@ -30,7 +30,5 @@ public interface MemberCouponRepository {
 
     MemberCoupon save(MemberCoupon memberCoupon);
 
-    boolean existsByMemberIdAndCouponId(Long memberId, Long couponId);
-
     Page<MemberCoupon> findAllByCouponId(Long couponId, Pageable pageable);
 }

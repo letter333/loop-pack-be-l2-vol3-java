@@ -106,11 +106,6 @@ public class MemberCouponRepositoryImpl implements MemberCouponRepository {
     }
 
     @Override
-    public boolean existsByMemberIdAndCouponId(Long memberId, Long couponId) {
-        return memberCouponJpaRepository.existsByMemberIdAndCouponId(memberId, couponId);
-    }
-
-    @Override
     public Page<MemberCoupon> findAllByCouponId(Long couponId, Pageable pageable) {
         return memberCouponJpaRepository.findAllByCouponId(couponId, pageable)
             .map(MemberCouponEntity::toDomain);
