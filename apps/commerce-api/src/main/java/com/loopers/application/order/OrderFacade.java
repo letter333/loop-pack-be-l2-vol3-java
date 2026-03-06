@@ -126,22 +126,10 @@ public class OrderFacade {
         orderService.validateOwnership(member.getId(), order);
         order.cancel();
 
-        // 2. 재고 복구 — productId 오름차순 정렬 → 락 획득 순서 고정으로 데드락 방지
-        List<OrderProduct> sortedProducts = order.getOrderProducts().stream()
-            .sorted(Comparator.comparing(OrderProduct::getProductId))
-            .toList();
-        for (OrderProduct orderProduct : sortedProducts) {
-            productService.increaseStock(
-                orderProduct.getProductId(),
-                orderProduct.getProductOptionId(),
-                orderProduct.getQuantity()
-            );
-        }
+        // 2. 재고 복구 + 쿠폰 사용 취소
+        restoreStockAndCancelCoupon(order, orderId);
 
-        // 3. 쿠폰 사용 취소
-        memberCouponService.cancelCouponUsage(orderId);
-
-        // 4. 취소된 주문 저장
+        // 3. 취소된 주문 저장
         Order cancelledOrder = orderService.saveOrder(order);
         return OrderDetailInfo.from(cancelledOrder);
     }
@@ -172,18 +160,10 @@ public class OrderFacade {
             Order order = orderService.getOrderForUpdate(orderId);
             order.transitionTo(newStatus);
 
-            // 2. 재고 복구 — productId 오름차순 정렬 → 락 획득 순서 고정으로 데드락 방지
-            List<OrderProduct> sortedOps = order.getOrderProducts().stream()
-                .sorted(Comparator.comparing(OrderProduct::getProductId))
-                .toList();
-            for (OrderProduct op : sortedOps) {
-                productService.increaseStock(op.getProductId(), op.getProductOptionId(), op.getQuantity());
-            }
+            // 2. 재고 복구 + 쿠폰 사용 취소
+            restoreStockAndCancelCoupon(order, orderId);
 
-            // 3. 쿠폰 사용 취소
-            memberCouponService.cancelCouponUsage(orderId);
-
-            // 4. 취소된 주문 저장
+            // 3. 취소된 주문 저장
             Order updatedOrder = orderService.saveOrder(order);
             return OrderAdminDetailInfo.from(updatedOrder);
         }
@@ -191,6 +171,22 @@ public class OrderFacade {
         // 취소가 아닌 상태 변경은 기존 로직 유지
         Order updatedOrder = orderService.changeStatus(orderId, newStatus);
         return OrderAdminDetailInfo.from(updatedOrder);
+    }
+
+    private void restoreStockAndCancelCoupon(Order order, Long orderId) {
+        // 재고 복구 — productId 오름차순 정렬 → 락 획득 순서 고정으로 데드락 방지
+        List<OrderProduct> sortedProducts = order.getOrderProducts().stream()
+            .sorted(Comparator.comparing(OrderProduct::getProductId))
+            .toList();
+        for (OrderProduct orderProduct : sortedProducts) {
+            productService.increaseStock(
+                orderProduct.getProductId(),
+                orderProduct.getProductOptionId(),
+                orderProduct.getQuantity()
+            );
+        }
+        // 쿠폰 사용 취소
+        memberCouponService.cancelCouponUsage(orderId);
     }
 
     private Address findAddressForMember(Long memberId, Long addressId) {
