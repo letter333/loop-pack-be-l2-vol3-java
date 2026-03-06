@@ -51,6 +51,11 @@ public class CouponRepositoryImpl implements CouponRepository {
     }
 
     @Override
+    public boolean existsActiveById(Long id) {
+        return couponJpaRepository.existsByIdAndDeletedAtIsNull(id);
+    }
+
+    @Override
     public Coupon save(Coupon coupon) {
         CouponEntity entity;
         if (coupon.getId() != null) {

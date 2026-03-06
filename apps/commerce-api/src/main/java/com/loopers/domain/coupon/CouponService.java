@@ -34,6 +34,13 @@ public class CouponService {
     }
 
     @Transactional(readOnly = true, propagation = Propagation.SUPPORTS)
+    public void validateCouponExists(Long couponId) {
+        if (!couponRepository.existsActiveById(couponId)) {
+            throw new CoreException(ErrorType.NOT_FOUND, "쿠폰을 찾을 수 없습니다.");
+        }
+    }
+
+    @Transactional(readOnly = true, propagation = Propagation.SUPPORTS)
     public List<IssuableCoupon> getIssuableCouponsWithIssuedFlag(Long memberId) {
         return couponRepository.findAllIssuableWithIssuedFlag(memberId);
     }

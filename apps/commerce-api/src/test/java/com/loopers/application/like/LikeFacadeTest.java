@@ -10,7 +10,6 @@ import com.loopers.domain.product.Product;
 import com.loopers.domain.product.ProductService;
 import com.loopers.support.error.CoreException;
 import com.loopers.support.error.ErrorType;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -146,14 +145,6 @@ class LikeFacadeTest {
     @DisplayName("toggleBrandLike - 브랜드 좋아요 토글")
     class ToggleBrandLike {
 
-        @BeforeEach
-        void setUp() {
-            given(transactionTemplate.execute(any())).willAnswer(invocation -> {
-                TransactionCallback<?> callback = invocation.getArgument(0);
-                return callback.doInTransaction(null);
-            });
-        }
-
         @Test
         @DisplayName("인증 실패 시 UNAUTHORIZED 예외가 발생한다")
         void throwsUnauthorized_whenAuthenticationFails() {
@@ -201,6 +192,10 @@ class LikeFacadeTest {
             Member member = createMember(memberId, loginId);
             Brand brand = createBrand(brandId);
 
+            given(transactionTemplate.execute(any())).willAnswer(invocation -> {
+                TransactionCallback<?> callback = invocation.getArgument(0);
+                return callback.doInTransaction(null);
+            });
             given(memberService.authenticate(loginId, password)).willReturn(member);
             given(brandService.getActiveBrand(brandId)).willReturn(brand);
             given(likeService.toggleLike(memberId, brandId, TargetType.BRAND)).willReturn(true);
@@ -226,6 +221,10 @@ class LikeFacadeTest {
             Member member = createMember(memberId, loginId);
             Brand brand = createBrand(brandId);
 
+            given(transactionTemplate.execute(any())).willAnswer(invocation -> {
+                TransactionCallback<?> callback = invocation.getArgument(0);
+                return callback.doInTransaction(null);
+            });
             given(memberService.authenticate(loginId, password)).willReturn(member);
             given(brandService.getActiveBrand(brandId)).willReturn(brand);
             given(likeService.toggleLike(memberId, brandId, TargetType.BRAND)).willReturn(false);

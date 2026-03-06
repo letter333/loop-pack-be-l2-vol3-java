@@ -44,13 +44,13 @@ public class LikeFacade {
     }
 
     public LikeInfo toggleBrandLike(String loginId, String password, Long brandId) {
+        Member member = memberService.authenticate(loginId, password);
+        brandService.getActiveBrand(brandId);
+
         int retryCount = 0;
         while (true) {
             try {
                 return transactionTemplate.execute(status -> {
-                    Member member = memberService.authenticate(loginId, password);
-                    brandService.getActiveBrand(brandId);
-
                     boolean liked = likeService.toggleLike(member.getId(), brandId, TargetType.BRAND);
 
                     Long likeCount;

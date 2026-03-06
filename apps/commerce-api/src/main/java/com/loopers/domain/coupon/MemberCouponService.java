@@ -55,8 +55,6 @@ public class MemberCouponService {
         Coupon coupon = couponRepository.findByIdForUpdate(couponId)
             .orElseThrow(() -> new CoreException(ErrorType.NOT_FOUND, "쿠폰을 찾을 수 없습니다."));
 
-        validateNotAlreadyIssued(memberId, couponId);
-
         coupon.issue();
         couponRepository.save(coupon);
 
@@ -105,11 +103,5 @@ public class MemberCouponService {
                 memberCoupon.cancelUse();
                 memberCouponRepository.save(memberCoupon);
             });
-    }
-
-    private void validateNotAlreadyIssued(Long memberId, Long couponId) {
-        if (memberCouponRepository.existsByMemberIdAndCouponId(memberId, couponId)) {
-            throw new CoreException(ErrorType.CONFLICT, "이미 발급받은 쿠폰입니다.");
-        }
     }
 }

@@ -84,7 +84,7 @@ public class CouponFacade {
     @Transactional(readOnly = true)
     public Page<CouponIssueInfo> getCouponIssues(String ldap, Long couponId, Pageable pageable) {
         adminValidator.validate(ldap);
-        couponService.getActiveCoupon(couponId);
+        couponService.validateCouponExists(couponId);
         return memberCouponService.getMemberCouponsByCouponId(couponId, pageable)
             .map(CouponIssueInfo::from);
     }

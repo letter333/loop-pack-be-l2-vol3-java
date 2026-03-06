@@ -16,6 +16,8 @@ public interface CouponRepository {
 
     Page<Coupon> findAllActive(Pageable pageable);
 
+    boolean existsActiveById(Long id);
+
     Coupon save(Coupon coupon);
 
     void delete(Long id);
