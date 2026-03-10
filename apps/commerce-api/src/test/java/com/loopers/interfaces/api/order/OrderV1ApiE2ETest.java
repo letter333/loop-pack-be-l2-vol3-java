@@ -32,6 +32,8 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
+import jakarta.persistence.EntityManager;
+
 import java.time.LocalDate;
 import java.util.List;
 
@@ -49,6 +51,7 @@ class OrderV1ApiE2ETest {
     private final CategoryRepository categoryRepository;
     private final PasswordEncoder passwordEncoder;
     private final DatabaseCleanUp databaseCleanUp;
+    private final EntityManager entityManager;
 
     @Autowired
     public OrderV1ApiE2ETest(
@@ -59,7 +62,8 @@ class OrderV1ApiE2ETest {
         BrandRepository brandRepository,
         CategoryRepository categoryRepository,
         PasswordEncoder passwordEncoder,
-        DatabaseCleanUp databaseCleanUp
+        DatabaseCleanUp databaseCleanUp,
+        EntityManager entityManager
     ) {
         this.testRestTemplate = testRestTemplate;
         this.memberRepository = memberRepository;
@@ -69,6 +73,7 @@ class OrderV1ApiE2ETest {
         this.categoryRepository = categoryRepository;
         this.passwordEncoder = passwordEncoder;
         this.databaseCleanUp = databaseCleanUp;
+        this.entityManager = entityManager;
     }
 
     @AfterEach
@@ -102,7 +107,8 @@ class OrderV1ApiE2ETest {
             OrderV1Dto.CreateOrderRequest request = new OrderV1Dto.CreateOrderRequest(
                 address.getId(),
                 "문 앞에 놓아주세요",
-                List.of(new OrderV1Dto.OrderItemRequest(product.getId(), product.getOptions().get(0).getId(), 2))
+                List.of(new OrderV1Dto.OrderItemRequest(product.getId(), product.getOptions().get(0).getId(), 2)),
+                null
             );
 
             // act
@@ -124,7 +130,8 @@ class OrderV1ApiE2ETest {
             // arrange
             OrderV1Dto.CreateOrderRequest request = new OrderV1Dto.CreateOrderRequest(
                 address.getId(), null,
-                List.of(new OrderV1Dto.OrderItemRequest(product.getId(), product.getOptions().get(0).getId(), 1))
+                List.of(new OrderV1Dto.OrderItemRequest(product.getId(), product.getOptions().get(0).getId(), 1)),
+                null
             );
 
             // act
@@ -142,7 +149,8 @@ class OrderV1ApiE2ETest {
             // arrange
             OrderV1Dto.CreateOrderRequest request = new OrderV1Dto.CreateOrderRequest(
                 999L, null,
-                List.of(new OrderV1Dto.OrderItemRequest(product.getId(), product.getOptions().get(0).getId(), 1))
+                List.of(new OrderV1Dto.OrderItemRequest(product.getId(), product.getOptions().get(0).getId(), 1)),
+                null
             );
 
             // act
@@ -160,7 +168,8 @@ class OrderV1ApiE2ETest {
             // arrange
             OrderV1Dto.CreateOrderRequest request = new OrderV1Dto.CreateOrderRequest(
                 address.getId(), null,
-                List.of(new OrderV1Dto.OrderItemRequest(product.getId(), product.getOptions().get(0).getId(), 200))
+                List.of(new OrderV1Dto.OrderItemRequest(product.getId(), product.getOptions().get(0).getId(), 200)),
+                null
             );
 
             // act
@@ -255,7 +264,8 @@ class OrderV1ApiE2ETest {
             headers.setContentType(MediaType.APPLICATION_JSON);
             OrderV1Dto.CreateOrderRequest request = new OrderV1Dto.CreateOrderRequest(
                 address.getId(), null,
-                List.of(new OrderV1Dto.OrderItemRequest(product.getId(), product.getOptions().get(0).getId(), 1))
+                List.of(new OrderV1Dto.OrderItemRequest(product.getId(), product.getOptions().get(0).getId(), 1)),
+                null
             );
             testRestTemplate.exchange(
                 "/api/v1/orders",
@@ -343,7 +353,8 @@ class OrderV1ApiE2ETest {
             headers.setContentType(MediaType.APPLICATION_JSON);
             OrderV1Dto.CreateOrderRequest request = new OrderV1Dto.CreateOrderRequest(
                 address.getId(), null,
-                List.of(new OrderV1Dto.OrderItemRequest(product.getId(), product.getOptions().get(0).getId(), 1))
+                List.of(new OrderV1Dto.OrderItemRequest(product.getId(), product.getOptions().get(0).getId(), 1)),
+                null
             );
             ResponseEntity<ApiResponse<OrderV1Dto.OrderDetailResponse>> response = testRestTemplate.exchange(
                 "/api/v1/orders",
@@ -427,7 +438,8 @@ class OrderV1ApiE2ETest {
             headers.setContentType(MediaType.APPLICATION_JSON);
             OrderV1Dto.CreateOrderRequest request = new OrderV1Dto.CreateOrderRequest(
                 address.getId(), null,
-                List.of(new OrderV1Dto.OrderItemRequest(product.getId(), product.getOptions().get(0).getId(), orderedQuantity))
+                List.of(new OrderV1Dto.OrderItemRequest(product.getId(), product.getOptions().get(0).getId(), orderedQuantity)),
+                null
             );
             ResponseEntity<ApiResponse<OrderV1Dto.OrderDetailResponse>> createResponse = testRestTemplate.exchange(
                 "/api/v1/orders",
@@ -441,6 +453,7 @@ class OrderV1ApiE2ETest {
             cancelOrder(newOrderId, member.getLoginId(), "Password123!");
 
             // assert
+            entityManager.clear();
             Product updatedProduct = productRepository.findById(product.getId()).orElseThrow();
             int finalStock = updatedProduct.getOptions().stream()
                 .filter(o -> o.getId().equals(product.getOptions().get(0).getId()))
@@ -455,7 +468,8 @@ class OrderV1ApiE2ETest {
             headers.setContentType(MediaType.APPLICATION_JSON);
             OrderV1Dto.CreateOrderRequest request = new OrderV1Dto.CreateOrderRequest(
                 address.getId(), null,
-                List.of(new OrderV1Dto.OrderItemRequest(product.getId(), product.getOptions().get(0).getId(), 1))
+                List.of(new OrderV1Dto.OrderItemRequest(product.getId(), product.getOptions().get(0).getId(), 1)),
+                null
             );
             ResponseEntity<ApiResponse<OrderV1Dto.OrderDetailResponse>> response = testRestTemplate.exchange(
                 "/api/v1/orders",
@@ -511,7 +525,8 @@ class OrderV1ApiE2ETest {
             // Act: 재고 전체를 주문
             OrderV1Dto.CreateOrderRequest request = new OrderV1Dto.CreateOrderRequest(
                 address.getId(), null,
-                List.of(new OrderV1Dto.OrderItemRequest(product.getId(), optionId, 5))
+                List.of(new OrderV1Dto.OrderItemRequest(product.getId(), optionId, 5)),
+                null
             );
 
             HttpHeaders headers = createAuthHeaders(member.getLoginId(), "Password123!");
@@ -524,6 +539,7 @@ class OrderV1ApiE2ETest {
             );
 
             // Assert: 상품이 SOLDOUT 상태로 변경되었는지 확인
+            entityManager.clear();
             Product afterProduct = productRepository.findById(product.getId()).orElseThrow();
             assertAll(
                 () -> assertThat(afterProduct.getStatus()).isEqualTo(ProductStatus.SOLDOUT),
@@ -541,8 +557,12 @@ class OrderV1ApiE2ETest {
                 List.of(optionM, optionL), List.of());
             product = productRepository.save(product);
 
-            Long optionMId = product.getOptions().get(0).getId();
-            Long optionLId = product.getOptions().get(1).getId();
+            Long optionMId = product.getOptions().stream()
+                .filter(opt -> "M".equals(opt.getOptionValue()))
+                .findFirst().orElseThrow().getId();
+            Long optionLId = product.getOptions().stream()
+                .filter(opt -> "L".equals(opt.getOptionValue()))
+                .findFirst().orElseThrow().getId();
 
             // 상품이 SALE 상태인지 확인
             assertThat(product.getStatus()).isEqualTo(ProductStatus.SALE);
@@ -550,7 +570,8 @@ class OrderV1ApiE2ETest {
             // Act: M 사이즈 전체 주문
             OrderV1Dto.CreateOrderRequest requestM = new OrderV1Dto.CreateOrderRequest(
                 address.getId(), null,
-                List.of(new OrderV1Dto.OrderItemRequest(product.getId(), optionMId, 3))
+                List.of(new OrderV1Dto.OrderItemRequest(product.getId(), optionMId, 3)),
+                null
             );
             HttpHeaders headers = createAuthHeaders(member.getLoginId(), "Password123!");
             headers.setContentType(MediaType.APPLICATION_JSON);
@@ -562,13 +583,15 @@ class OrderV1ApiE2ETest {
             );
 
             // M 사이즈만 소진된 상태에서는 SALE 유지
+            entityManager.clear();
             Product afterMOrder = productRepository.findById(product.getId()).orElseThrow();
             assertThat(afterMOrder.getStatus()).isEqualTo(ProductStatus.SALE);
 
             // Act: L 사이즈 전체 주문
             OrderV1Dto.CreateOrderRequest requestL = new OrderV1Dto.CreateOrderRequest(
                 address.getId(), null,
-                List.of(new OrderV1Dto.OrderItemRequest(product.getId(), optionLId, 2))
+                List.of(new OrderV1Dto.OrderItemRequest(product.getId(), optionLId, 2)),
+                null
             );
             testRestTemplate.exchange(
                 "/api/v1/orders",
@@ -578,6 +601,7 @@ class OrderV1ApiE2ETest {
             );
 
             // Assert: 모든 옵션 재고가 소진되어 SOLDOUT 상태로 변경
+            entityManager.clear();
             Product afterAllOrder = productRepository.findById(product.getId()).orElseThrow();
             assertAll(
                 () -> assertThat(afterAllOrder.getStatus()).isEqualTo(ProductStatus.SOLDOUT),
@@ -596,7 +620,8 @@ class OrderV1ApiE2ETest {
             // Act: 재고의 일부만 주문 (5개)
             OrderV1Dto.CreateOrderRequest request = new OrderV1Dto.CreateOrderRequest(
                 address.getId(), null,
-                List.of(new OrderV1Dto.OrderItemRequest(product.getId(), optionId, 5))
+                List.of(new OrderV1Dto.OrderItemRequest(product.getId(), optionId, 5)),
+                null
             );
 
             HttpHeaders headers = createAuthHeaders(member.getLoginId(), "Password123!");
@@ -609,6 +634,7 @@ class OrderV1ApiE2ETest {
             );
 
             // Assert: 상품이 SALE 상태를 유지하는지 확인
+            entityManager.clear();
             Product afterProduct = productRepository.findById(product.getId()).orElseThrow();
             assertAll(
                 () -> assertThat(afterProduct.getStatus()).isEqualTo(ProductStatus.SALE),
@@ -627,7 +653,8 @@ class OrderV1ApiE2ETest {
             // 재고 전체를 주문하여 SOLDOUT 만들기
             OrderV1Dto.CreateOrderRequest request = new OrderV1Dto.CreateOrderRequest(
                 address.getId(), null,
-                List.of(new OrderV1Dto.OrderItemRequest(product.getId(), optionId, 5))
+                List.of(new OrderV1Dto.OrderItemRequest(product.getId(), optionId, 5)),
+                null
             );
 
             HttpHeaders headers = createAuthHeaders(member.getLoginId(), "Password123!");
@@ -641,6 +668,7 @@ class OrderV1ApiE2ETest {
             Long orderId = createResponse.getBody().data().id();
 
             // SOLDOUT 상태 확인
+            entityManager.clear();
             Product soldoutProduct = productRepository.findById(product.getId()).orElseThrow();
             assertThat(soldoutProduct.getStatus()).isEqualTo(ProductStatus.SOLDOUT);
 
@@ -653,6 +681,7 @@ class OrderV1ApiE2ETest {
             );
 
             // Assert: 상품이 SALE 상태로 복구되고 재고도 복구되었는지 확인
+            entityManager.clear();
             Product afterCancelProduct = productRepository.findById(product.getId()).orElseThrow();
             assertAll(
                 () -> assertThat(afterCancelProduct.getStatus()).isEqualTo(ProductStatus.SALE),

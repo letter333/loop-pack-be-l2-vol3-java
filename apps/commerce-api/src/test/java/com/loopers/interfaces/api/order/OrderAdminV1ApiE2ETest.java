@@ -126,7 +126,8 @@ class OrderAdminV1ApiE2ETest {
             headers.setContentType(MediaType.APPLICATION_JSON);
             OrderV1Dto.CreateOrderRequest request = new OrderV1Dto.CreateOrderRequest(
                 address.getId(), null,
-                List.of(new OrderV1Dto.OrderItemRequest(product.getId(), product.getOptions().get(0).getId(), 1))
+                List.of(new OrderV1Dto.OrderItemRequest(product.getId(), product.getOptions().get(0).getId(), 1)),
+                null
             );
             testRestTemplate.exchange(
                 "/api/v1/orders",
@@ -212,7 +213,8 @@ class OrderAdminV1ApiE2ETest {
             headers.setContentType(MediaType.APPLICATION_JSON);
             OrderV1Dto.CreateOrderRequest request = new OrderV1Dto.CreateOrderRequest(
                 address.getId(), null,
-                List.of(new OrderV1Dto.OrderItemRequest(product.getId(), product.getOptions().get(0).getId(), 1))
+                List.of(new OrderV1Dto.OrderItemRequest(product.getId(), product.getOptions().get(0).getId(), 1)),
+                null
             );
             ResponseEntity<ApiResponse<OrderV1Dto.OrderDetailResponse>> response = testRestTemplate.exchange(
                 "/api/v1/orders",
@@ -381,7 +383,8 @@ class OrderAdminV1ApiE2ETest {
             headers.setContentType(MediaType.APPLICATION_JSON);
             OrderV1Dto.CreateOrderRequest request = new OrderV1Dto.CreateOrderRequest(
                 address.getId(), null,
-                List.of(new OrderV1Dto.OrderItemRequest(product.getId(), product.getOptions().get(0).getId(), 1))
+                List.of(new OrderV1Dto.OrderItemRequest(product.getId(), product.getOptions().get(0).getId(), 1)),
+                null
             );
             ResponseEntity<ApiResponse<OrderV1Dto.OrderDetailResponse>> response = testRestTemplate.exchange(
                 "/api/v1/orders",

@@ -1,0 +1,109 @@
+package com.loopers.domain.product;
+
+import com.loopers.utils.DatabaseCleanUp;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicInteger;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertAll;
+
+@SpringBootTest
+@DisplayName("상품 좋아요 수 동시성 테스트")
+class ProductLikeCountConcurrencyTest {
+
+    @Autowired
+    private ProductService productService;
+
+    @Autowired
+    private ProductRepository productRepository;
+
+    @Autowired
+    private DatabaseCleanUp databaseCleanUp;
+
+    @AfterEach
+    void tearDown() {
+        databaseCleanUp.truncateAllTables();
+    }
+
+    @Test
+    @DisplayName("동시에 좋아요를 눌러도 정확한 좋아요 수가 유지된다")
+    void increaseLikeCount_concurrently_maintainsCorrectCount() throws InterruptedException {
+        // Arrange
+        int threadCount = 10;
+        Product saved = productRepository.save(new Product("테스트 상품", 1L, 1L, 10000L, null, null));
+        Long productId = saved.getId();
+
+        ExecutorService executorService = Executors.newFixedThreadPool(threadCount);
+        CountDownLatch latch = new CountDownLatch(threadCount);
+        AtomicInteger successCount = new AtomicInteger(0);
+
+        // Act
+        for (int i = 0; i < threadCount; i++) {
+            executorService.submit(() -> {
+                try {
+                    productService.increaseLikeCount(productId);
+                    successCount.incrementAndGet();
+                } finally {
+                    latch.countDown();
+                }
+            });
+        }
+        latch.await();
+        executorService.shutdown();
+
+        // Assert
+        Product result = productService.getProduct(productId);
+        assertAll(
+            () -> assertThat(successCount.get()).isEqualTo(threadCount),
+            () -> assertThat(result.getLikeCount()).isEqualTo(threadCount)
+        );
+    }
+
+    @Test
+    @DisplayName("동시에 좋아요를 취소해도 정확한 좋아요 수가 유지된다")
+    void decreaseLikeCount_concurrently_maintainsCorrectCount() throws InterruptedException {
+        // Arrange
+        int threadCount = 10;
+        Product saved = productRepository.save(new Product("테스트 상품", 1L, 1L, 10000L, null, null));
+        Long productId = saved.getId();
+
+        // 초기 좋아요 수를 threadCount로 설정
+        for (int i = 0; i < threadCount; i++) {
+            productService.increaseLikeCount(productId);
+        }
+        assertThat(productService.getProduct(productId).getLikeCount()).isEqualTo(threadCount);
+
+        ExecutorService executorService = Executors.newFixedThreadPool(threadCount);
+        CountDownLatch latch = new CountDownLatch(threadCount);
+        AtomicInteger successCount = new AtomicInteger(0);
+
+        // Act
+        for (int i = 0; i < threadCount; i++) {
+            executorService.submit(() -> {
+                try {
+                    productService.decreaseLikeCount(productId);
+                    successCount.incrementAndGet();
+                } finally {
+                    latch.countDown();
+                }
+            });
+        }
+        latch.await();
+        executorService.shutdown();
+
+        // Assert
+        Product result = productService.getProduct(productId);
+        assertAll(
+            () -> assertThat(successCount.get()).isEqualTo(threadCount),
+            () -> assertThat(result.getLikeCount()).isEqualTo(0L)
+        );
+    }
+}

@@ -9,8 +9,6 @@ public interface CategoryRepository {
 
     List<Category> findAllActive();
 
-    List<Category> findAllActiveByParentId(Long parentId);
-
     List<Category> findAllActiveChildrenByPath(String pathPrefix);
 
     Category save(Category category);

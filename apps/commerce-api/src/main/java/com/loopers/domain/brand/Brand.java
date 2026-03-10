@@ -14,6 +14,7 @@ public class Brand {
     private String description;
     private String logoImageUrl;
     private Long likeCount;
+    private Long version;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private LocalDateTime deletedAt;
@@ -27,12 +28,13 @@ public class Brand {
     }
 
     public Brand(Long id, String name, String description, String logoImageUrl, Long likeCount,
-                 LocalDateTime createdAt, LocalDateTime updatedAt, LocalDateTime deletedAt) {
+                 Long version, LocalDateTime createdAt, LocalDateTime updatedAt, LocalDateTime deletedAt) {
         this.id = id;
         this.name = name;
         this.description = description;
         this.logoImageUrl = logoImageUrl;
         this.likeCount = likeCount != null ? likeCount : 0L;
+        this.version = version;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
         this.deletedAt = deletedAt;

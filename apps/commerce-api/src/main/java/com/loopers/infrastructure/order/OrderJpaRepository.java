@@ -1,6 +1,8 @@
 package com.loopers.infrastructure.order;
 
+import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -12,6 +14,10 @@ public interface OrderJpaRepository extends JpaRepository<OrderEntity, Long> {
 
     @Query("SELECT o FROM OrderEntity o LEFT JOIN FETCH o.orderProducts WHERE o.id = :id")
     Optional<OrderEntity> findByIdWithOrderProducts(@Param("id") Long id);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT o FROM OrderEntity o LEFT JOIN FETCH o.orderProducts WHERE o.id = :id")
+    Optional<OrderEntity> findByIdWithOrderProductsForUpdate(@Param("id") Long id);
 
     @Query("SELECT DISTINCT o FROM OrderEntity o LEFT JOIN FETCH o.orderProducts WHERE o.memberId = :memberId ORDER BY o.createdAt DESC")
     List<OrderEntity> findByMemberIdWithOrderProducts(@Param("memberId") Long memberId);

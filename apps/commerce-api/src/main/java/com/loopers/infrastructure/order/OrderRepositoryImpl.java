@@ -35,6 +35,12 @@ public class OrderRepositoryImpl implements OrderRepository {
     }
 
     @Override
+    public Optional<Order> findByIdForUpdate(Long id) {
+        return orderJpaRepository.findByIdWithOrderProductsForUpdate(id)
+            .map(OrderEntity::toDomain);
+    }
+
+    @Override
     public List<Order> findByMemberIdAndCreatedAtAfter(Long memberId, LocalDateTime startDate) {
         return orderJpaRepository.findByMemberIdAndCreatedAtAfterWithOrderProducts(memberId, startDate)
             .stream()

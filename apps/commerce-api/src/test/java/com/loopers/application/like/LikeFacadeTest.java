@@ -239,6 +239,6 @@ class LikeFacadeTest {
 
     private Brand createBrand(Long id) {
         return new Brand(id, "Test Brand", "Description", "https://example.com/logo.png", 0L,
-            null, null, null);
+            0L, null, null, null);
     }
 }

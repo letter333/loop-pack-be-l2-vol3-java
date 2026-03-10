@@ -5,13 +5,13 @@ import com.loopers.support.error.ErrorType;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
-@Component
+@Service
 @RequiredArgsConstructor
 public class ProductService {
 
@@ -84,16 +84,21 @@ public class ProductService {
 
     @Transactional(propagation = Propagation.REQUIRED)
     public void decreaseStock(Long productId, Long optionId, int quantity) {
-        Product product = getProduct(productId);
+        Product product = getProductForUpdate(productId);
         product.decreaseStock(optionId, quantity);
         productRepository.save(product);
     }
 
     @Transactional(propagation = Propagation.REQUIRED)
     public void increaseStock(Long productId, Long optionId, int quantity) {
-        Product product = getProduct(productId);
+        Product product = getProductForUpdate(productId);
         product.increaseStock(optionId, quantity);
         productRepository.save(product);
+    }
+
+    private Product getProductForUpdate(Long productId) {
+        return productRepository.findByIdForUpdate(productId)
+            .orElseThrow(() -> new CoreException(ErrorType.NOT_FOUND, "상품을 찾을 수 없습니다."));
     }
 
     @Transactional(readOnly = true, propagation = Propagation.SUPPORTS)
@@ -129,16 +134,12 @@ public class ProductService {
 
     @Transactional(propagation = Propagation.REQUIRED)
     public Long increaseLikeCount(Long productId) {
-        Product product = getProduct(productId);
-        product.increaseLikeCount();
-        return productRepository.save(product).getLikeCount();
+        return productRepository.increaseLikeCount(productId);
     }
 
     @Transactional(propagation = Propagation.REQUIRED)
     public Long decreaseLikeCount(Long productId) {
-        Product product = getProduct(productId);
-        product.decreaseLikeCount();
-        return productRepository.save(product).getLikeCount();
+        return productRepository.decreaseLikeCount(productId);
     }
 
     @Transactional(readOnly = true, propagation = Propagation.SUPPORTS)

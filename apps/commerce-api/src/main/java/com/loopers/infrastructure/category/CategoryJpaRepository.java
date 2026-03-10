@@ -8,7 +8,5 @@ public interface CategoryJpaRepository extends JpaRepository<CategoryEntity, Lon
 
     List<CategoryEntity> findByDeletedAtIsNull();
 
-    List<CategoryEntity> findByParentIdAndDeletedAtIsNull(Long parentId);
-
     List<CategoryEntity> findByPathStartingWithAndDeletedAtIsNull(String pathPrefix);
 }

@@ -7,12 +7,13 @@ import com.loopers.support.error.ErrorType;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.stereotype.Component;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
+import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.Optional;
 
-@Component
+@Repository
 @RequiredArgsConstructor
 public class BrandRepositoryImpl implements BrandRepository {
 
@@ -54,6 +55,9 @@ public class BrandRepositoryImpl implements BrandRepository {
         if (brand.getId() != null) {
             entity = brandJpaRepository.findById(brand.getId())
                 .orElseThrow(() -> new CoreException(ErrorType.NOT_FOUND, "브랜드를 찾을 수 없습니다."));
+            if (brand.getVersion() != null && !entity.getVersion().equals(brand.getVersion())) {
+                throw new ObjectOptimisticLockingFailureException(BrandEntity.class, brand.getId());
+            }
             entity.update(brand.getName(), brand.getDescription(), brand.getLogoImageUrl());
             entity.updateLikeCount(brand.getLikeCount());
         } else {
@@ -79,5 +83,17 @@ public class BrandRepositoryImpl implements BrandRepository {
     @Override
     public boolean existsById(Long id) {
         return brandJpaRepository.existsById(id);
+    }
+
+    @Override
+    public Long increaseLikeCount(Long id) {
+        brandJpaRepository.increaseLikeCount(id);
+        return brandJpaRepository.findLikeCountById(id);
+    }
+
+    @Override
+    public Long decreaseLikeCount(Long id) {
+        brandJpaRepository.decreaseLikeCount(id);
+        return brandJpaRepository.findLikeCountById(id);
     }
 }

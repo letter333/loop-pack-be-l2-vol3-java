@@ -8,12 +8,12 @@ import com.loopers.support.error.ErrorType;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.Optional;
 
-@Component
+@Repository
 @RequiredArgsConstructor
 public class ProductRepositoryImpl implements ProductRepository {
 
@@ -23,6 +23,13 @@ public class ProductRepositoryImpl implements ProductRepository {
     public Optional<Product> findById(Long id) {
         return productJpaRepository.findByIdWithOptionsAndImages(id)
             .map(ProductEntity::toDomain);
+    }
+
+    @Override
+    public Optional<Product> findByIdForUpdate(Long id) {
+        return productJpaRepository.lockById(id)
+            .flatMap(lockedId -> productJpaRepository.findByIdWithOptionsAndImages(lockedId)
+                .map(ProductEntity::toDomain));
     }
 
     @Override
@@ -104,5 +111,17 @@ public class ProductRepositoryImpl implements ProductRepository {
     public Page<Product> findAllIncludingDeleted(Pageable pageable) {
         return productJpaRepository.findAllIncludingDeleted(pageable)
             .map(ProductEntity::toDomain);
+    }
+
+    @Override
+    public Long increaseLikeCount(Long id) {
+        productJpaRepository.increaseLikeCount(id);
+        return productJpaRepository.findLikeCountById(id);
+    }
+
+    @Override
+    public Long decreaseLikeCount(Long id) {
+        productJpaRepository.decreaseLikeCount(id);
+        return productJpaRepository.findLikeCountById(id);
     }
 }

@@ -2,6 +2,8 @@ package com.loopers.application.order;
 
 import com.loopers.domain.address.Address;
 import com.loopers.domain.address.AddressService;
+import com.loopers.domain.coupon.MemberCoupon;
+import com.loopers.domain.coupon.MemberCouponService;
 import com.loopers.domain.member.Member;
 import com.loopers.domain.member.MemberService;
 import com.loopers.domain.order.Order;
@@ -18,10 +20,14 @@ import com.loopers.support.auth.AdminValidator;
 import com.loopers.support.error.CoreException;
 import com.loopers.support.error.ErrorType;
 import lombok.RequiredArgsConstructor;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
+import org.springframework.retry.annotation.Backoff;
+import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.Comparator;
 import java.util.List;
 
 @Component
@@ -32,8 +38,14 @@ public class OrderFacade {
     private final MemberService memberService;
     private final AddressService addressService;
     private final ProductService productService;
+    private final MemberCouponService memberCouponService;
     private final AdminValidator adminValidator;
 
+    @Retryable(
+        retryFor = ObjectOptimisticLockingFailureException.class,
+        maxAttempts = 3,
+        backoff = @Backoff(delay = 50, multiplier = 2)
+    )
     @Transactional
     public OrderDetailInfo createOrder(String loginId, String password, OrderCommand.Create command) {
         Member member = memberService.authenticate(loginId, password);
@@ -50,7 +62,12 @@ public class OrderFacade {
             command.shippingMemo()
         );
 
-        for (OrderCommand.OrderItem item : command.items()) {
+        // productId 오름차순 정렬 → 락 획득 순서 고정으로 데드락 방지
+        List<OrderCommand.OrderItem> sortedItems = command.items().stream()
+            .sorted(Comparator.comparing(OrderCommand.OrderItem::productId))
+            .toList();
+
+        for (OrderCommand.OrderItem item : sortedItems) {
             Product product = productService.validateProduct(item.productId());
             ProductOption option = productService.getProductOption(item.productId(), item.productOptionId());
 
@@ -71,7 +88,22 @@ public class OrderFacade {
             productService.decreaseStock(item.productId(), item.productOptionId(), item.quantity());
         }
 
+        // 쿠폰 적용
+        MemberCoupon memberCoupon = null;
+        if (command.memberCouponId() != null) {
+            memberCoupon = memberCouponService.validateAndGetCoupon(
+                command.memberCouponId(), member.getId());
+            Long discountAmount = memberCoupon.getCoupon().calculateDiscount(order.getTotalAmount());
+            order.applyCouponDiscount(discountAmount);
+        }
+
         Order savedOrder = orderService.createOrder(order);
+
+        // 주문 저장 후 쿠폰 사용 처리
+        if (memberCoupon != null) {
+            memberCouponService.useCoupon(command.memberCouponId(), savedOrder.getId());
+        }
+
         return OrderDetailInfo.from(savedOrder);
     }
 
@@ -96,20 +128,17 @@ public class OrderFacade {
     @Transactional
     public OrderDetailInfo cancelOrder(String loginId, String password, Long orderId) {
         Member member = memberService.authenticate(loginId, password);
-        Order order = orderService.getOrder(orderId);
+
+        // 1. 비관적 락 획득 + 취소 가능 여부 검증 (fail-fast)
+        Order order = orderService.getOrderForUpdate(orderId);
         orderService.validateOwnership(member.getId(), order);
+        order.cancel();
 
-        // 1. 재고 복구 (먼저 - 실패 시 전체 롤백)
-        for (OrderProduct orderProduct : order.getOrderProducts()) {
-            productService.increaseStock(
-                orderProduct.getProductId(),
-                orderProduct.getProductOptionId(),
-                orderProduct.getQuantity()
-            );
-        }
+        // 2. 재고 복구 + 쿠폰 사용 취소
+        restoreStockAndCancelCoupon(order, orderId);
 
-        // 2. 주문 취소 (이후)
-        Order cancelledOrder = orderService.cancelOrder(orderId);
+        // 3. 취소된 주문 저장
+        Order cancelledOrder = orderService.saveOrder(order);
         return OrderDetailInfo.from(cancelledOrder);
     }
 
@@ -133,18 +162,39 @@ public class OrderFacade {
     @Transactional
     public OrderAdminDetailInfo changeOrderStatusForAdmin(String ldap, Long orderId, OrderStatus newStatus) {
         adminValidator.validate(ldap);
-        Order order = orderService.getOrder(orderId);
 
-        // 1. 취소 시 재고 복구 (먼저 - 실패 시 전체 롤백)
         if (newStatus == OrderStatus.CANCELLED) {
-            for (OrderProduct op : order.getOrderProducts()) {
-                productService.increaseStock(op.getProductId(), op.getProductOptionId(), op.getQuantity());
-            }
+            // 1. 비관적 락 획득 + 취소 상태 전환 (fail-fast)
+            Order order = orderService.getOrderForUpdate(orderId);
+            order.transitionTo(newStatus);
+
+            // 2. 재고 복구 + 쿠폰 사용 취소
+            restoreStockAndCancelCoupon(order, orderId);
+
+            // 3. 취소된 주문 저장
+            Order updatedOrder = orderService.saveOrder(order);
+            return OrderAdminDetailInfo.from(updatedOrder);
         }
 
-        // 2. 상태 변경 (이후)
+        // 취소가 아닌 상태 변경은 기존 로직 유지
         Order updatedOrder = orderService.changeStatus(orderId, newStatus);
         return OrderAdminDetailInfo.from(updatedOrder);
+    }
+
+    private void restoreStockAndCancelCoupon(Order order, Long orderId) {
+        // 재고 복구 — productId 오름차순 정렬 → 락 획득 순서 고정으로 데드락 방지
+        List<OrderProduct> sortedProducts = order.getOrderProducts().stream()
+            .sorted(Comparator.comparing(OrderProduct::getProductId))
+            .toList();
+        for (OrderProduct orderProduct : sortedProducts) {
+            productService.increaseStock(
+                orderProduct.getProductId(),
+                orderProduct.getProductOptionId(),
+                orderProduct.getQuantity()
+            );
+        }
+        // 쿠폰 사용 취소
+        memberCouponService.cancelCouponUsage(orderId);
     }
 
     private Address findAddressForMember(Long memberId, Long addressId) {

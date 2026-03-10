@@ -1,0 +1,62 @@
+### 쿠폰 템플릿 목록 조회 (Admin)
+GET http://localhost:8080/api/v1/admin/coupons?page=0&size=20
+Accept: application/json
+X-Loopers-Ldap: loopers.admin
+
+### 쿠폰 템플릿 상세 조회 (Admin)
+GET http://localhost:8080/api/v1/admin/coupons/1
+Accept: application/json
+X-Loopers-Ldap: loopers.admin
+
+### 쿠폰 템플릿 생성 - 정액 할인 (Admin)
+POST http://localhost:8080/api/v1/admin/coupons
+Content-Type: application/json
+X-Loopers-Ldap: loopers.admin
+
+{
+  "name": "신규 가입 환영 쿠폰",
+  "description": "신규 가입 회원을 위한 5,000원 할인 쿠폰입니다.",
+  "couponType": "FIXED_AMOUNT",
+  "discountValue": 5000,
+  "minOrderAmount": 30000,
+  "totalQuantity": 1000,
+  "validFrom": "2025-01-01T00:00:00",
+  "validUntil": "2025-12-31T23:59:59"
+}
+
+### 쿠폰 템플릿 생성 - 정률 할인 (Admin)
+POST http://localhost:8080/api/v1/admin/coupons
+Content-Type: application/json
+X-Loopers-Ldap: loopers.admin
+
+{
+  "name": "VIP 10% 할인 쿠폰",
+  "description": "VIP 회원 전용 10% 할인 쿠폰입니다. 최대 10,000원까지 할인됩니다.",
+  "couponType": "PERCENTAGE",
+  "discountValue": 10,
+  "minOrderAmount": 50000,
+  "maxDiscountAmount": 10000,
+  "totalQuantity": 500,
+  "validFrom": "2025-01-01T00:00:00",
+  "validUntil": "2025-06-30T23:59:59"
+}
+
+### 쿠폰 템플릿 수정 (Admin)
+PUT http://localhost:8080/api/v1/admin/coupons/1
+Content-Type: application/json
+X-Loopers-Ldap: loopers.admin
+
+{
+  "name": "신규 가입 환영 쿠폰 (수정)",
+  "description": "신규 가입 회원을 위한 7,000원 할인 쿠폰입니다.",
+  "couponType": "FIXED_AMOUNT",
+  "discountValue": 7000,
+  "minOrderAmount": 30000,
+  "totalQuantity": 2000,
+  "validFrom": "2025-01-01T00:00:00",
+  "validUntil": "2025-12-31T23:59:59"
+}
+
+### 쿠폰 템플릿 삭제 (Admin)
+DELETE http://localhost:8080/api/v1/admin/coupons/1
+X-Loopers-Ldap: loopers.admin

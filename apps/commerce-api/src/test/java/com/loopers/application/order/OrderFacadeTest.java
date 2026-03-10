@@ -2,6 +2,11 @@ package com.loopers.application.order;
 
 import com.loopers.domain.address.Address;
 import com.loopers.domain.address.AddressService;
+import com.loopers.domain.coupon.Coupon;
+import com.loopers.domain.coupon.CouponType;
+import com.loopers.domain.coupon.MemberCoupon;
+import com.loopers.domain.coupon.MemberCouponService;
+import com.loopers.domain.coupon.MemberCouponStatus;
 import com.loopers.domain.member.Member;
 import com.loopers.domain.member.MemberService;
 import com.loopers.domain.order.Order;
@@ -26,6 +31,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -56,6 +62,9 @@ class OrderFacadeTest {
     private ProductService productService;
 
     @Mock
+    private MemberCouponService memberCouponService;
+
+    @Mock
     private AdminValidator adminValidator;
 
     @InjectMocks
@@ -84,7 +93,8 @@ class OrderFacadeTest {
             OrderCommand.Create command = new OrderCommand.Create(
                 ADDRESS_ID,
                 "문 앞에 놓아주세요",
-                List.of(new OrderCommand.OrderItem(1L, 10L, 2))
+                List.of(new OrderCommand.OrderItem(1L, 10L, 2)),
+                null
             );
 
             given(memberService.authenticate(LOGIN_ID, PASSWORD)).willReturn(member);
@@ -109,7 +119,7 @@ class OrderFacadeTest {
             // arrange
             Member member = createMember();
             OrderCommand.Create command = new OrderCommand.Create(
-                999L, null, List.of(new OrderCommand.OrderItem(1L, 10L, 1))
+                999L, null, List.of(new OrderCommand.OrderItem(1L, 10L, 1)), null
             );
 
             given(memberService.authenticate(LOGIN_ID, PASSWORD)).willReturn(member);
@@ -129,13 +139,122 @@ class OrderFacadeTest {
             Member member = createMember();
             Address address = createAddress(ADDRESS_ID, MEMBER_ID);
             OrderCommand.Create command = new OrderCommand.Create(
-                ADDRESS_ID, null, List.of(new OrderCommand.OrderItem(1L, 10L, 1))
+                ADDRESS_ID, null, List.of(new OrderCommand.OrderItem(1L, 10L, 1)), null
             );
 
             given(memberService.authenticate(LOGIN_ID, PASSWORD)).willReturn(member);
             given(addressService.getAddresses(MEMBER_ID)).willReturn(List.of(address));
             given(productService.validateProduct(1L))
                 .willThrow(new CoreException(ErrorType.BAD_REQUEST, "판매중지된 상품입니다."));
+
+            // act & assert
+            assertThatThrownBy(() -> orderFacade.createOrder(LOGIN_ID, PASSWORD, command))
+                .isInstanceOf(CoreException.class)
+                .extracting("errorType")
+                .isEqualTo(ErrorType.BAD_REQUEST);
+        }
+
+        @Test
+        @DisplayName("쿠폰을 적용하여 주문을 생성한다")
+        void createsOrder_withCouponDiscount() {
+            // arrange
+            Member member = createMember();
+            Address address = createAddress(ADDRESS_ID, MEMBER_ID);
+            Product product = createProduct(1L, "테스트 상품", 30000L);
+            ProductOption option = createProductOption(10L, 1L, 0L, 100);
+
+            Long memberCouponId = 100L;
+            Coupon coupon = new Coupon(1L, "테스트 쿠폰", "설명", CouponType.FIXED, 5000L, 10000L, null,
+                1000, 0, LocalDateTime.now().minusDays(1), LocalDateTime.now().plusDays(30),
+                null, null, null);
+            MemberCoupon memberCoupon = new MemberCoupon(memberCouponId, MEMBER_ID, 1L, "ABCD-1234-EFGH",
+                MemberCouponStatus.AVAILABLE, null, null, LocalDateTime.now(), LocalDateTime.now().plusDays(30),
+                null, null, 0L, coupon);
+
+            Order savedOrder = new Order(
+                ORDER_ID, MEMBER_ID, "ORD20250225-0000001", "테스트 상품",
+                "홍길동", "010-1234-5678", "06234", "서울시 강남구", "101호", "문 앞에 놓아주세요",
+                OrderStatus.PENDING, 30000L, 3000L, 5000L, 28000L
+            );
+
+            OrderCommand.Create command = new OrderCommand.Create(
+                ADDRESS_ID, "문 앞에 놓아주세요",
+                List.of(new OrderCommand.OrderItem(1L, 10L, 1)),
+                memberCouponId
+            );
+
+            given(memberService.authenticate(LOGIN_ID, PASSWORD)).willReturn(member);
+            given(addressService.getAddresses(MEMBER_ID)).willReturn(List.of(address));
+            given(productService.validateProduct(1L)).willReturn(product);
+            given(productService.getProductOption(1L, 10L)).willReturn(option);
+            given(memberCouponService.validateAndGetCoupon(eq(memberCouponId), eq(MEMBER_ID))).willReturn(memberCoupon);
+            given(orderService.createOrder(any(Order.class))).willReturn(savedOrder);
+
+            // act
+            OrderDetailInfo result = orderFacade.createOrder(LOGIN_ID, PASSWORD, command);
+
+            // assert
+            assertAll(
+                () -> assertThat(result.id()).isEqualTo(ORDER_ID),
+                () -> verify(memberCouponService).validateAndGetCoupon(eq(memberCouponId), eq(MEMBER_ID)),
+                () -> verify(memberCouponService).useCoupon(memberCouponId, ORDER_ID)
+            );
+        }
+
+        @Test
+        @DisplayName("타인의 쿠폰으로 주문하면 FORBIDDEN 예외가 발생한다")
+        void throwsException_whenCouponNotOwned() {
+            // arrange
+            Member member = createMember();
+            Address address = createAddress(ADDRESS_ID, MEMBER_ID);
+            Product product = createProduct(1L, "테스트 상품", 30000L);
+            ProductOption option = createProductOption(10L, 1L, 0L, 100);
+
+            Long memberCouponId = 100L;
+
+            OrderCommand.Create command = new OrderCommand.Create(
+                ADDRESS_ID, null,
+                List.of(new OrderCommand.OrderItem(1L, 10L, 1)),
+                memberCouponId
+            );
+
+            given(memberService.authenticate(LOGIN_ID, PASSWORD)).willReturn(member);
+            given(addressService.getAddresses(MEMBER_ID)).willReturn(List.of(address));
+            given(productService.validateProduct(1L)).willReturn(product);
+            given(productService.getProductOption(1L, 10L)).willReturn(option);
+            given(memberCouponService.validateAndGetCoupon(eq(memberCouponId), eq(MEMBER_ID)))
+                .willThrow(new CoreException(ErrorType.FORBIDDEN, "해당 쿠폰에 대한 권한이 없습니다."));
+
+            // act & assert
+            assertThatThrownBy(() -> orderFacade.createOrder(LOGIN_ID, PASSWORD, command))
+                .isInstanceOf(CoreException.class)
+                .extracting("errorType")
+                .isEqualTo(ErrorType.FORBIDDEN);
+        }
+
+        @Test
+        @DisplayName("사용할 수 없는 쿠폰으로 주문하면 BAD_REQUEST 예외가 발생한다")
+        void throwsException_whenCouponNotAvailable() {
+            // arrange
+            Member member = createMember();
+            Address address = createAddress(ADDRESS_ID, MEMBER_ID);
+            Product product = createProduct(1L, "테스트 상품", 30000L);
+            ProductOption option = createProductOption(10L, 1L, 0L, 100);
+
+            Long memberCouponId = 100L;
+
+            OrderCommand.Create command = new OrderCommand.Create(
+                ADDRESS_ID, null,
+                List.of(new OrderCommand.OrderItem(1L, 10L, 1)),
+                memberCouponId
+            );
+
+            given(memberService.authenticate(LOGIN_ID, PASSWORD)).willReturn(member);
+            given(addressService.getAddresses(MEMBER_ID)).willReturn(List.of(address));
+            given(productService.validateProduct(1L)).willReturn(product);
+            given(productService.getProductOption(1L, 10L)).willReturn(option);
+            given(memberCouponService.validateAndGetCoupon(eq(memberCouponId), eq(MEMBER_ID)))
+                .willThrow(new CoreException(ErrorType.BAD_REQUEST, "사용할 수 없는 쿠폰입니다."));
 
             // act & assert
             assertThatThrownBy(() -> orderFacade.createOrder(LOGIN_ID, PASSWORD, command))
@@ -153,7 +272,7 @@ class OrderFacadeTest {
             Product product = createProduct(1L, "테스트 상품", 10000L);
             ProductOption option = createProductOption(10L, 1L, 1000L, 100);
             OrderCommand.Create command = new OrderCommand.Create(
-                ADDRESS_ID, null, List.of(new OrderCommand.OrderItem(1L, 10L, 200))
+                ADDRESS_ID, null, List.of(new OrderCommand.OrderItem(1L, 10L, 200)), null
             );
 
             given(memberService.authenticate(LOGIN_ID, PASSWORD)).willReturn(member);
@@ -273,10 +392,9 @@ class OrderFacadeTest {
             // arrange
             Member member = createMember();
             Order order = createOrderWithProducts(ORDER_ID, MEMBER_ID, OrderStatus.PENDING);
-            Order cancelledOrder = createOrderWithProducts(ORDER_ID, MEMBER_ID, OrderStatus.CANCELLED);
             given(memberService.authenticate(LOGIN_ID, PASSWORD)).willReturn(member);
-            given(orderService.getOrder(ORDER_ID)).willReturn(order);
-            given(orderService.cancelOrder(ORDER_ID)).willReturn(cancelledOrder);
+            given(orderService.getOrderForUpdate(ORDER_ID)).willReturn(order);
+            given(orderService.saveOrder(any(Order.class))).willAnswer(invocation -> invocation.getArgument(0));
 
             // act
             OrderDetailInfo result = orderFacade.cancelOrder(LOGIN_ID, PASSWORD, ORDER_ID);
@@ -295,7 +413,7 @@ class OrderFacadeTest {
             Member member = createMember();
             Order order = createOrder(ORDER_ID, 2L, OrderStatus.PENDING);
             given(memberService.authenticate(LOGIN_ID, PASSWORD)).willReturn(member);
-            given(orderService.getOrder(ORDER_ID)).willReturn(order);
+            given(orderService.getOrderForUpdate(ORDER_ID)).willReturn(order);
             doThrow(new CoreException(ErrorType.FORBIDDEN, "해당 주문에 대한 권한이 없습니다."))
                 .when(orderService).validateOwnership(MEMBER_ID, order);
 
@@ -313,11 +431,9 @@ class OrderFacadeTest {
             Member member = createMember();
             Order order = createOrder(ORDER_ID, MEMBER_ID, OrderStatus.PREPARING);
             given(memberService.authenticate(LOGIN_ID, PASSWORD)).willReturn(member);
-            given(orderService.getOrder(ORDER_ID)).willReturn(order);
-            given(orderService.cancelOrder(ORDER_ID))
-                .willThrow(new CoreException(ErrorType.BAD_REQUEST, "취소할 수 없는 주문 상태입니다."));
+            given(orderService.getOrderForUpdate(ORDER_ID)).willReturn(order);
 
-            // act & assert
+            // act & assert — order.cancel()에서 직접 예외 발생
             assertThatThrownBy(() -> orderFacade.cancelOrder(LOGIN_ID, PASSWORD, ORDER_ID))
                 .isInstanceOf(CoreException.class)
                 .extracting("errorType")
@@ -325,13 +441,13 @@ class OrderFacadeTest {
         }
 
         @Test
-        @DisplayName("재고 복구 실패 시 주문 취소도 롤백되어야 한다 - 재고 복구가 먼저 수행됨")
+        @DisplayName("재고 복구 실패 시 주문 취소도 롤백되어야 한다")
         void rollsBackCancellation_whenStockRestoreFails() {
             // arrange
             Member member = createMember();
             Order order = createOrderWithProducts(ORDER_ID, MEMBER_ID, OrderStatus.PENDING);
             given(memberService.authenticate(LOGIN_ID, PASSWORD)).willReturn(member);
-            given(orderService.getOrder(ORDER_ID)).willReturn(order);
+            given(orderService.getOrderForUpdate(ORDER_ID)).willReturn(order);
             doThrow(new CoreException(ErrorType.INTERNAL_ERROR, "재고 복구 실패"))
                 .when(productService).increaseStock(eq(1L), eq(10L), eq(2));
 
@@ -341,8 +457,8 @@ class OrderFacadeTest {
                 .extracting("errorType")
                 .isEqualTo(ErrorType.INTERNAL_ERROR);
 
-            // 재고 복구가 먼저 수행되므로 cancelOrder가 호출되지 않음
-            verify(orderService, never()).cancelOrder(ORDER_ID);
+            // 재고 복구 실패 시 saveOrder가 호출되지 않음
+            verify(orderService, never()).saveOrder(any(Order.class));
         }
     }
 
@@ -391,10 +507,9 @@ class OrderFacadeTest {
         void restoresStock_whenAdminCancelsOrder() {
             // arrange
             Order order = createOrderWithProducts(ORDER_ID, MEMBER_ID, OrderStatus.PENDING);
-            Order cancelledOrder = createOrderWithProducts(ORDER_ID, MEMBER_ID, OrderStatus.CANCELLED);
             doNothing().when(adminValidator).validate(ADMIN_LDAP);
-            given(orderService.getOrder(ORDER_ID)).willReturn(order);
-            given(orderService.changeStatus(ORDER_ID, OrderStatus.CANCELLED)).willReturn(cancelledOrder);
+            given(orderService.getOrderForUpdate(ORDER_ID)).willReturn(order);
+            given(orderService.saveOrder(any(Order.class))).willAnswer(invocation -> invocation.getArgument(0));
 
             // act
             OrderAdminDetailInfo result = orderFacade.changeOrderStatusForAdmin(ADMIN_LDAP, ORDER_ID, OrderStatus.CANCELLED);
@@ -407,12 +522,12 @@ class OrderFacadeTest {
         }
 
         @Test
-        @DisplayName("Admin 주문 취소 시 재고 복구 실패하면 상태 변경도 롤백된다 - 재고 복구가 먼저 수행됨")
+        @DisplayName("Admin 주문 취소 시 재고 복구 실패하면 상태 변경도 롤백된다")
         void rollsBackStatusChange_whenStockRestoreFails() {
             // arrange
             Order order = createOrderWithProducts(ORDER_ID, MEMBER_ID, OrderStatus.PENDING);
             doNothing().when(adminValidator).validate(ADMIN_LDAP);
-            given(orderService.getOrder(ORDER_ID)).willReturn(order);
+            given(orderService.getOrderForUpdate(ORDER_ID)).willReturn(order);
             doThrow(new CoreException(ErrorType.INTERNAL_ERROR, "재고 복구 실패"))
                 .when(productService).increaseStock(eq(1L), eq(10L), eq(2));
 
@@ -422,8 +537,8 @@ class OrderFacadeTest {
                 .extracting("errorType")
                 .isEqualTo(ErrorType.INTERNAL_ERROR);
 
-            // 재고 복구가 먼저 수행되므로 changeStatus가 호출되지 않음
-            verify(orderService, never()).changeStatus(ORDER_ID, OrderStatus.CANCELLED);
+            // 재고 복구 실패 시 saveOrder가 호출되지 않음
+            verify(orderService, never()).saveOrder(any(Order.class));
         }
     }
 

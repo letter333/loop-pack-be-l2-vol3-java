@@ -10,6 +10,8 @@ public interface ProductRepository {
 
     Optional<Product> findById(Long id);
 
+    Optional<Product> findByIdForUpdate(Long id);
+
     List<Product> findAllActive();
 
     List<Product> findAllActiveByCategoryId(Long categoryId);
@@ -29,4 +31,8 @@ public interface ProductRepository {
     boolean existsById(Long id);
 
     Page<Product> findAllIncludingDeleted(Pageable pageable);
+
+    Long increaseLikeCount(Long id);
+
+    Long decreaseLikeCount(Long id);
 }
