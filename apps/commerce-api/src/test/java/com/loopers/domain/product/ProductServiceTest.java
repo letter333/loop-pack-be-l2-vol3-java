@@ -212,7 +212,7 @@ class ProductServiceTest {
             Pageable pageable = PageRequest.of(0, 10);
 
             // Act
-            Page<Product> result = productService.getProducts(null, null, ProductSortType.LATEST, pageable);
+            Page<Product> result = productService.getProducts(null, null, null, ProductSortType.LATEST, pageable);
 
             // Assert
             assertAll(
@@ -232,7 +232,7 @@ class ProductServiceTest {
             Pageable pageable = PageRequest.of(0, 10);
 
             // Act
-            Page<Product> result = productService.getProducts(1L, null, ProductSortType.LATEST, pageable);
+            Page<Product> result = productService.getProducts(1L, null, null, ProductSortType.LATEST, pageable);
 
             // Assert
             assertAll(
@@ -251,7 +251,7 @@ class ProductServiceTest {
             Pageable pageable = PageRequest.of(0, 10);
 
             // Act
-            Page<Product> result = productService.getProducts(null, "아이폰", ProductSortType.LATEST, pageable);
+            Page<Product> result = productService.getProducts(null, null, "아이폰", ProductSortType.LATEST, pageable);
 
             // Assert
             assertAll(
@@ -270,7 +270,7 @@ class ProductServiceTest {
             Pageable pageable = PageRequest.of(0, 10);
 
             // Act
-            Page<Product> result = productService.getProducts(null, null, ProductSortType.LATEST, pageable);
+            Page<Product> result = productService.getProducts(null, null, null, ProductSortType.LATEST, pageable);
 
             // Assert
             assertThat(result.getContent().get(0).getId()).isEqualTo(product3.getId());
@@ -286,7 +286,7 @@ class ProductServiceTest {
             Pageable pageable = PageRequest.of(0, 10);
 
             // Act
-            Page<Product> result = productService.getProducts(null, null, ProductSortType.PRICE_ASC, pageable);
+            Page<Product> result = productService.getProducts(null, null, null, ProductSortType.PRICE_ASC, pageable);
 
             // Assert
             assertAll(
@@ -308,9 +308,9 @@ class ProductServiceTest {
             Pageable thirdPage = PageRequest.of(2, 10);
 
             // Act
-            Page<Product> firstResult = productService.getProducts(null, null, ProductSortType.LATEST, firstPage);
-            Page<Product> secondResult = productService.getProducts(null, null, ProductSortType.LATEST, secondPage);
-            Page<Product> thirdResult = productService.getProducts(null, null, ProductSortType.LATEST, thirdPage);
+            Page<Product> firstResult = productService.getProducts(null, null, null, ProductSortType.LATEST, firstPage);
+            Page<Product> secondResult = productService.getProducts(null, null, null, ProductSortType.LATEST, secondPage);
+            Page<Product> thirdResult = productService.getProducts(null, null, null, ProductSortType.LATEST, thirdPage);
 
             // Assert
             assertAll(
@@ -332,7 +332,7 @@ class ProductServiceTest {
             Pageable pageable = PageRequest.of(0, 10);
 
             // Act
-            Page<Product> result = productService.getProducts(null, null, ProductSortType.LATEST, pageable);
+            Page<Product> result = productService.getProducts(null, null, null, ProductSortType.LATEST, pageable);
 
             // Assert
             assertAll(
@@ -357,7 +357,7 @@ class ProductServiceTest {
             Pageable pageable = PageRequest.of(0, 10);
 
             // Act
-            Page<Product> result = productService.getProducts(null, null, ProductSortType.LIKES_DESC, pageable);
+            Page<Product> result = productService.getProducts(null, null, null, ProductSortType.LIKES_DESC, pageable);
 
             // Assert
             assertAll(
@@ -386,7 +386,7 @@ class ProductServiceTest {
             Pageable pageable = PageRequest.of(0, 10);
 
             // Act
-            Page<Product> result = productService.getProducts(null, null, ProductSortType.LIKES_DESC, pageable);
+            Page<Product> result = productService.getProducts(null, null, null, ProductSortType.LIKES_DESC, pageable);
 
             // Assert - 좋아요 수 동일하면 최신순 (product3 > product2 > product1)
             assertAll(

@@ -26,11 +26,12 @@ public class ProductV1Controller implements ProductV1ApiSpec {
     @Override
     public ApiResponse<Page<ProductV1Dto.ProductResponse>> getProducts(
         @RequestParam(required = false) Long categoryId,
+        @RequestParam(required = false) Long brandId,
         @RequestParam(required = false) String keyword,
         @RequestParam(defaultValue = "LATEST") ProductSortType sort,
         @PageableDefault(size = 20) Pageable pageable
     ) {
-        Page<ProductInfo> infos = productFacade.getProducts(categoryId, keyword, sort, pageable);
+        Page<ProductInfo> infos = productFacade.getProducts(categoryId, brandId, keyword, sort, pageable);
         Page<ProductV1Dto.ProductResponse> response = infos.map(ProductV1Dto.ProductResponse::from);
         return ApiResponse.success(response);
     }

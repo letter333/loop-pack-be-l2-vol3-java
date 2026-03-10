@@ -61,8 +61,8 @@ public class ProductRepositoryImpl implements ProductRepository {
     }
 
     @Override
-    public Page<Product> findProducts(Long categoryId, String keyword, ProductSortType sort, Pageable pageable) {
-        return productJpaRepository.findProducts(categoryId, keyword, sort, pageable)
+    public Page<Product> findProducts(Long categoryId, Long brandId, String keyword, ProductSortType sort, Pageable pageable) {
+        return productJpaRepository.findProducts(categoryId, brandId, keyword, sort, pageable)
             .map(ProductEntity::toDomain);
     }
 
