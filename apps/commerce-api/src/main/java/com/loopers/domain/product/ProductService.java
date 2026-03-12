@@ -43,8 +43,8 @@ public class ProductService {
     }
 
     @Transactional(readOnly = true, propagation = Propagation.SUPPORTS)
-    public Page<Product> getProducts(Long categoryId, String keyword, ProductSortType sort, Pageable pageable) {
-        return productRepository.findProducts(categoryId, keyword, sort, pageable);
+    public Page<Product> getProducts(Long categoryId, Long brandId, String keyword, ProductSortType sort, Pageable pageable) {
+        return productRepository.findProducts(categoryId, brandId, keyword, sort, pageable);
     }
 
     @Transactional(propagation = Propagation.REQUIRED)

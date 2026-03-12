@@ -34,8 +34,8 @@ public class ProductFacade {
     }
 
     @Transactional(readOnly = true)
-    public Page<ProductInfo> getProducts(Long categoryId, String keyword, ProductSortType sort, Pageable pageable) {
-        Page<Product> products = productService.getProducts(categoryId, keyword, sort, pageable);
+    public Page<ProductInfo> getProducts(Long categoryId, Long brandId, String keyword, ProductSortType sort, Pageable pageable) {
+        Page<Product> products = productService.getProducts(categoryId, brandId, keyword, sort, pageable);
 
         // 1. 모든 brandId 수집 (중복 제거)
         List<Long> brandIds = products.getContent().stream()

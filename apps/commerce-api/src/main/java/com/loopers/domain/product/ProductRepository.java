@@ -20,7 +20,7 @@ public interface ProductRepository {
 
     List<Product> findAllActiveByCategoryIds(List<Long> categoryIds);
 
-    Page<Product> findProducts(Long categoryId, String keyword, ProductSortType sort, Pageable pageable);
+    Page<Product> findProducts(Long categoryId, Long brandId, String keyword, ProductSortType sort, Pageable pageable);
 
     Product save(Product product);
 

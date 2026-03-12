@@ -144,7 +144,7 @@ class ProductFacadeTest {
             Pageable pageable = PageRequest.of(0, 10);
 
             // Act
-            Page<ProductInfo> result = productFacade.getProducts(null, null, ProductSortType.LATEST, pageable);
+            Page<ProductInfo> result = productFacade.getProducts(null, null, null, ProductSortType.LATEST, pageable);
 
             // Assert
             assertAll(
@@ -165,7 +165,7 @@ class ProductFacadeTest {
             Pageable pageable = PageRequest.of(0, 20);
 
             // Act
-            Page<ProductInfo> result = productFacade.getProducts(null, null, ProductSortType.LATEST, pageable);
+            Page<ProductInfo> result = productFacade.getProducts(null, null, null, ProductSortType.LATEST, pageable);
 
             // Assert
             assertAll(
@@ -204,7 +204,7 @@ class ProductFacadeTest {
             Pageable pageable = PageRequest.of(0, 10);
 
             // Act
-            Page<ProductInfo> result = productFacade.getProducts(null, null, ProductSortType.LIKES_DESC, pageable);
+            Page<ProductInfo> result = productFacade.getProducts(null, null, null, ProductSortType.LIKES_DESC, pageable);
 
             // Assert
             assertAll(
@@ -239,7 +239,7 @@ class ProductFacadeTest {
             Pageable pageable = PageRequest.of(0, 10);
 
             // Act
-            Page<ProductInfo> result = productFacade.getProducts(null, null, ProductSortType.LIKES_DESC, pageable);
+            Page<ProductInfo> result = productFacade.getProducts(null, null, null, ProductSortType.LIKES_DESC, pageable);
 
             // Assert - 좋아요 수 동일하면 최신순 (product3 > product2 > product1)
             assertAll(

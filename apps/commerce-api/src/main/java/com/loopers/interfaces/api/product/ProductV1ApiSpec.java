@@ -17,6 +17,7 @@ public interface ProductV1ApiSpec {
     )
     ApiResponse<Page<ProductV1Dto.ProductResponse>> getProducts(
         @Parameter(description = "카테고리 ID (null이면 전체)") Long categoryId,
+        @Parameter(description = "브랜드 ID (null이면 전체)") Long brandId,
         @Parameter(description = "검색 키워드 (상품명 검색)") String keyword,
         @Parameter(description = "정렬 기준 (LATEST: 최신순, PRICE_ASC: 가격 낮은순, LIKES_DESC: 좋아요순)") ProductSortType sort,
         @Parameter(description = "페이징 정보") Pageable pageable
