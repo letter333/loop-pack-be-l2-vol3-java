@@ -11,6 +11,7 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
+import jakarta.persistence.Index;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import lombok.AccessLevel;
@@ -23,7 +24,13 @@ import java.util.List;
 import java.util.Set;
 
 @Entity
-@Table(name = "products")
+@Table(name = "products", indexes = {
+    @Index(name = "idx_products_brand_created", columnList = "brand_id, created_at DESC"),
+    @Index(name = "idx_products_category_created", columnList = "category_id, created_at DESC"),
+    @Index(name = "idx_products_like_count", columnList = "like_count DESC, created_at DESC"),
+    @Index(name = "idx_products_base_price", columnList = "base_price ASC, created_at DESC"),
+    @Index(name = "idx_products_created", columnList = "created_at DESC")
+})
 @SQLDelete(sql = "UPDATE products SET deleted_at = NOW() WHERE id = ?")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
