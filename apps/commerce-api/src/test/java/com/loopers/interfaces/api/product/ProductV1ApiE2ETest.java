@@ -263,6 +263,7 @@ class ProductV1ApiE2ETest {
         }
 
         @Test
+<<<<<<< HEAD
         @DisplayName("브랜드 ID + 카테고리 ID 조합으로 필터링하여 조회한다")
         void returnsFilteredProductsByBrandIdAndCategoryId() {
             // Arrange

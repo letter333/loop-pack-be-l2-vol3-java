@@ -178,6 +178,27 @@ class ProductFacadeTest {
         }
 
         @Test
+        @DisplayName("브랜드 ID로 필터링하여 조회한다")
+        void returnsFilteredProductsByBrandId() {
+            // Arrange
+            Brand samsung = brandRepository.save(new Brand("Samsung", "삼성", "https://example.com/samsung.png"));
+            productRepository.save(new Product("아이폰 15", savedBrand.getId(), 1L, 1500000L));
+            productRepository.save(new Product("맥북 프로", savedBrand.getId(), 2L, 3000000L));
+            productRepository.save(new Product("갤럭시 S24", samsung.getId(), 1L, 1400000L));
+            Pageable pageable = PageRequest.of(0, 10);
+
+            // Act
+            Page<ProductInfo> result = productFacade.getProducts(null, savedBrand.getId(), null, ProductSortType.LATEST, pageable);
+
+            // Assert
+            assertAll(
+                () -> assertThat(result.getContent()).hasSize(2),
+                () -> assertThat(result.getTotalElements()).isEqualTo(2),
+                () -> assertThat(result.getContent()).allMatch(info -> info.brand().name().equals("Apple"))
+            );
+        }
+
+        @Test
         @DisplayName("좋아요 많은순으로 정렬하여 조회한다")
         void returnsProducts_sortedByLikesDesc() {
             // Arrange
