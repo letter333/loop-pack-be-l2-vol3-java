@@ -1,5 +1,6 @@
 package com.loopers.application.like;
 
+import com.loopers.application.product.ProductDetailCacheRepository;
 import com.loopers.domain.brand.Brand;
 import com.loopers.domain.brand.BrandService;
 import com.loopers.domain.like.LikeService;
@@ -43,6 +44,9 @@ class LikeFacadeTest {
 
     @Mock
     private BrandService brandService;
+
+    @Mock
+    private ProductDetailCacheRepository productDetailCacheRepository;
 
     @Nested
     @DisplayName("toggleProductLike - 상품 좋아요 토글")

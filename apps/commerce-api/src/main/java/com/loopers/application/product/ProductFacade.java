@@ -25,12 +25,18 @@ public class ProductFacade {
     private final BrandService brandService;
     private final CategoryService categoryService;
     private final AdminValidator adminValidator;
+    private final ProductDetailCacheRepository productDetailCacheRepository;
 
     @Transactional(readOnly = true)
     public ProductDetailInfo getProduct(Long productId) {
-        Product product = productService.getActiveProduct(productId);
-        Brand brand = brandService.getActiveBrand(product.getBrandId());
-        return ProductDetailInfo.from(product, BrandInfo.from(brand), product.getLikeCount());
+        return productDetailCacheRepository.get(productId)
+            .orElseGet(() -> {
+                Product product = productService.getActiveProduct(productId);
+                Brand brand = brandService.getActiveBrand(product.getBrandId());
+                ProductDetailInfo info = ProductDetailInfo.from(product, BrandInfo.from(brand), product.getLikeCount());
+                productDetailCacheRepository.put(productId, info);
+                return info;
+            });
     }
 
     @Transactional(readOnly = true)
@@ -79,6 +85,7 @@ public class ProductFacade {
             productId, command.name(), command.categoryId(), command.basePrice(),
             command.discount(), command.discountType(), command.status()
         );
+        productDetailCacheRepository.evict(productId);
         return ProductAdminDetailInfo.from(product);
     }
 
@@ -86,6 +93,7 @@ public class ProductFacade {
     public void deleteProduct(String ldap, Long productId) {
         adminValidator.validate(ldap);
         productService.deleteProduct(productId);
+        productDetailCacheRepository.evict(productId);
     }
 
     @Transactional(readOnly = true)

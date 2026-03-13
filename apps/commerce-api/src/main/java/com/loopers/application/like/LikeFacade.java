@@ -1,5 +1,6 @@
 package com.loopers.application.like;
 
+import com.loopers.application.product.ProductDetailCacheRepository;
 import com.loopers.domain.brand.BrandService;
 import com.loopers.domain.like.LikeService;
 import com.loopers.domain.like.TargetType;
@@ -18,6 +19,7 @@ public class LikeFacade {
     private final MemberService memberService;
     private final ProductService productService;
     private final BrandService brandService;
+    private final ProductDetailCacheRepository productDetailCacheRepository;
 
     @Transactional
     public LikeInfo toggleProductLike(String loginId, String password, Long productId) {
@@ -33,6 +35,7 @@ public class LikeFacade {
             likeCount = productService.decreaseLikeCount(productId);
         }
 
+        productDetailCacheRepository.evict(productId);
         return new LikeInfo(liked, likeCount);
     }
 

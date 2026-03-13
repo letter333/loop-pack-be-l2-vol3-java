@@ -15,6 +15,7 @@ import com.loopers.domain.order.OrderProduct;
 import com.loopers.domain.order.OrderProductStatus;
 import com.loopers.domain.order.OrderService;
 import com.loopers.domain.order.OrderStatus;
+import com.loopers.application.product.ProductDetailCacheRepository;
 import com.loopers.domain.product.Product;
 import com.loopers.domain.product.ProductOption;
 import com.loopers.domain.product.ProductService;
@@ -66,6 +67,9 @@ class OrderFacadeTest {
 
     @Mock
     private AdminValidator adminValidator;
+
+    @Mock
+    private ProductDetailCacheRepository productDetailCacheRepository;
 
     @InjectMocks
     private OrderFacade orderFacade;

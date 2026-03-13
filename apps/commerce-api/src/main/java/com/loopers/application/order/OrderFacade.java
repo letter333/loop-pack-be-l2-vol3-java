@@ -1,5 +1,6 @@
 package com.loopers.application.order;
 
+import com.loopers.application.product.ProductDetailCacheRepository;
 import com.loopers.domain.address.Address;
 import com.loopers.domain.address.AddressService;
 import com.loopers.domain.coupon.MemberCoupon;
@@ -40,6 +41,7 @@ public class OrderFacade {
     private final ProductService productService;
     private final MemberCouponService memberCouponService;
     private final AdminValidator adminValidator;
+    private final ProductDetailCacheRepository productDetailCacheRepository;
 
     @Retryable(
         retryFor = ObjectOptimisticLockingFailureException.class,
@@ -86,6 +88,7 @@ public class OrderFacade {
             order.addOrderProduct(orderProduct);
 
             productService.decreaseStock(item.productId(), item.productOptionId(), item.quantity());
+            productDetailCacheRepository.evict(item.productId());
         }
 
         // 쿠폰 적용
@@ -192,6 +195,7 @@ public class OrderFacade {
                 orderProduct.getProductOptionId(),
                 orderProduct.getQuantity()
             );
+            productDetailCacheRepository.evict(orderProduct.getProductId());
         }
         // 쿠폰 사용 취소
         memberCouponService.cancelCouponUsage(orderId);

@@ -15,6 +15,7 @@ import com.loopers.domain.product.ProductStatus;
 import com.loopers.support.error.CoreException;
 import com.loopers.support.error.ErrorType;
 import com.loopers.utils.DatabaseCleanUp;
+import com.loopers.utils.RedisCleanUp;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -27,6 +28,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 
 import java.util.List;
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -51,6 +53,12 @@ class ProductFacadeTest {
     @Autowired
     private DatabaseCleanUp databaseCleanUp;
 
+    @Autowired
+    private RedisCleanUp redisCleanUp;
+
+    @Autowired
+    private ProductDetailCacheRepository productDetailCacheRepository;
+
     private Brand savedBrand;
     private Category savedCategory;
 
@@ -63,6 +71,7 @@ class ProductFacadeTest {
     @AfterEach
     void tearDown() {
         databaseCleanUp.truncateAllTables();
+        redisCleanUp.truncateAll();
     }
 
     @Nested
@@ -128,6 +137,39 @@ class ProductFacadeTest {
             assertThatThrownBy(() -> productFacade.getProduct(999L))
                 .isInstanceOf(CoreException.class)
                 .satisfies(ex -> assertThat(((CoreException) ex).getErrorType()).isEqualTo(ErrorType.NOT_FOUND));
+        }
+
+        @Test
+        @DisplayName("상품 조회 후 Redis 캐시에 저장된다")
+        void cachesProductDetailInfoInRedis() {
+            // Arrange
+            Product product = productRepository.save(
+                new Product("아이폰 15", savedBrand.getId(), 1L, 1500000L)
+            );
+
+            // Act
+            productFacade.getProduct(product.getId());
+
+            // Assert
+            Optional<ProductDetailInfo> cached = productDetailCacheRepository.get(product.getId());
+            assertThat(cached).isPresent();
+            assertThat(cached.get().name()).isEqualTo("아이폰 15");
+        }
+
+        @Test
+        @DisplayName("캐시에 데이터가 있으면 캐시에서 반환한다")
+        void returnsCachedData_whenCacheHit() {
+            // Arrange
+            Product product = productRepository.save(
+                new Product("아이폰 15", savedBrand.getId(), 1L, 1500000L)
+            );
+            productFacade.getProduct(product.getId());
+
+            // Act - 두 번째 호출은 캐시에서 반환
+            ProductDetailInfo result = productFacade.getProduct(product.getId());
+
+            // Assert
+            assertThat(result.name()).isEqualTo("아이폰 15");
         }
     }
 
@@ -361,6 +403,23 @@ class ProductFacadeTest {
                 .isInstanceOf(CoreException.class)
                 .satisfies(ex -> assertThat(((CoreException) ex).getErrorType()).isEqualTo(ErrorType.NOT_FOUND));
         }
+
+        @Test
+        @DisplayName("상품 삭제 후 Redis 캐시가 삭제된다")
+        void evictsCache_whenProductDeleted() {
+            // Arrange
+            Product product = productRepository.save(
+                new Product("아이폰 15", savedBrand.getId(), 1L, 1500000L)
+            );
+            productFacade.getProduct(product.getId()); // 캐시 저장
+            assertThat(productDetailCacheRepository.get(product.getId())).isPresent();
+
+            // Act
+            productFacade.deleteProduct("loopers.admin", product.getId());
+
+            // Assert
+            assertThat(productDetailCacheRepository.get(product.getId())).isEmpty();
+        }
     }
 
     @Nested
@@ -444,6 +503,28 @@ class ProductFacadeTest {
             assertThatThrownBy(() -> productFacade.updateProduct("invalid.ldap", product.getId(), command))
                 .isInstanceOf(CoreException.class)
                 .satisfies(ex -> assertThat(((CoreException) ex).getErrorType()).isEqualTo(ErrorType.FORBIDDEN));
+        }
+
+        @Test
+        @DisplayName("상품 수정 후 Redis 캐시가 삭제된다")
+        void evictsCache_whenProductUpdated() {
+            // Arrange
+            Product product = productRepository.save(
+                new Product("아이폰 15", savedBrand.getId(), savedCategory.getId(), 1500000L)
+            );
+            productFacade.getProduct(product.getId()); // 캐시 저장
+            assertThat(productDetailCacheRepository.get(product.getId())).isPresent();
+
+            ProductCommand.Update command = new ProductCommand.Update(
+                "아이폰 15 Pro", savedCategory.getId(), 1800000L,
+                null, null, ProductStatus.SALE
+            );
+
+            // Act
+            productFacade.updateProduct("loopers.admin", product.getId(), command);
+
+            // Assert
+            assertThat(productDetailCacheRepository.get(product.getId())).isEmpty();
         }
     }
 
