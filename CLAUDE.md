@@ -154,6 +154,7 @@ interfaces → application → domain ← infrastructure
 - null-safety 하지 않게 코드 작성하지 말 것 (Java 의 경우, Optional 을 활용할 것)
 - println 코드 남기지 말 것
 - 객체지향 5원칙을 어기지 말 것
+- 리팩토링 시 테스트가 실패한다면 테스트 코드는 수정하지 말 것
 
 ### 2. Recommendation
 - 실제 API 를 호출해 확인하는 E2E 테스트 코드 작성
