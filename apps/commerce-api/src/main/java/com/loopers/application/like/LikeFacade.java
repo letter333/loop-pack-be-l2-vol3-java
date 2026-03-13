@@ -1,6 +1,6 @@
 package com.loopers.application.like;
 
-import com.loopers.application.product.ProductDetailCacheRepository;
+import com.loopers.application.product.ProductCacheEvictEvent;
 import com.loopers.domain.brand.BrandService;
 import com.loopers.domain.like.LikeService;
 import com.loopers.domain.like.TargetType;
@@ -8,6 +8,7 @@ import com.loopers.domain.member.Member;
 import com.loopers.domain.member.MemberService;
 import com.loopers.domain.product.ProductService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,7 +20,7 @@ public class LikeFacade {
     private final MemberService memberService;
     private final ProductService productService;
     private final BrandService brandService;
-    private final ProductDetailCacheRepository productDetailCacheRepository;
+    private final ApplicationEventPublisher applicationEventPublisher;
 
     @Transactional
     public LikeInfo toggleProductLike(String loginId, String password, Long productId) {
@@ -35,7 +36,7 @@ public class LikeFacade {
             likeCount = productService.decreaseLikeCount(productId);
         }
 
-        productDetailCacheRepository.evict(productId);
+        applicationEventPublisher.publishEvent(ProductCacheEvictEvent.of(productId));
         return new LikeInfo(liked, likeCount);
     }
 

@@ -1,6 +1,6 @@
 package com.loopers.application.like;
 
-import com.loopers.application.product.ProductDetailCacheRepository;
+import com.loopers.application.product.ProductCacheEvictEvent;
 import com.loopers.domain.brand.Brand;
 import com.loopers.domain.brand.BrandService;
 import com.loopers.domain.like.LikeService;
@@ -21,8 +21,11 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDate;
 
+import org.springframework.context.ApplicationEventPublisher;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.verify;
 
@@ -46,7 +49,7 @@ class LikeFacadeTest {
     private BrandService brandService;
 
     @Mock
-    private ProductDetailCacheRepository productDetailCacheRepository;
+    private ApplicationEventPublisher applicationEventPublisher;
 
     @Nested
     @DisplayName("toggleProductLike - 상품 좋아요 토글")
@@ -111,6 +114,7 @@ class LikeFacadeTest {
             assertThat(result.liked()).isTrue();
             assertThat(result.likeCount()).isEqualTo(1L);
             verify(productService).increaseLikeCount(productId);
+            verify(applicationEventPublisher).publishEvent(any(ProductCacheEvictEvent.class));
         }
 
         @Test
@@ -136,6 +140,7 @@ class LikeFacadeTest {
             assertThat(result.liked()).isFalse();
             assertThat(result.likeCount()).isEqualTo(0L);
             verify(productService).decreaseLikeCount(productId);
+            verify(applicationEventPublisher).publishEvent(any(ProductCacheEvictEvent.class));
         }
     }
 

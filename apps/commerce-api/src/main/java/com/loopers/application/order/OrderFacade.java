@@ -1,6 +1,6 @@
 package com.loopers.application.order;
 
-import com.loopers.application.product.ProductDetailCacheRepository;
+import com.loopers.application.product.ProductCacheEvictEvent;
 import com.loopers.domain.address.Address;
 import com.loopers.domain.address.AddressService;
 import com.loopers.domain.coupon.MemberCoupon;
@@ -21,6 +21,7 @@ import com.loopers.support.auth.AdminValidator;
 import com.loopers.support.error.CoreException;
 import com.loopers.support.error.ErrorType;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.retry.annotation.Backoff;
 import org.springframework.retry.annotation.Retryable;
@@ -30,6 +31,8 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Component
 @RequiredArgsConstructor
@@ -41,7 +44,7 @@ public class OrderFacade {
     private final ProductService productService;
     private final MemberCouponService memberCouponService;
     private final AdminValidator adminValidator;
-    private final ProductDetailCacheRepository productDetailCacheRepository;
+    private final ApplicationEventPublisher applicationEventPublisher;
 
     @Retryable(
         retryFor = ObjectOptimisticLockingFailureException.class,
@@ -88,8 +91,11 @@ public class OrderFacade {
             order.addOrderProduct(orderProduct);
 
             productService.decreaseStock(item.productId(), item.productOptionId(), item.quantity());
-            productDetailCacheRepository.evict(item.productId());
         }
+        Set<Long> productIds = sortedItems.stream()
+            .map(OrderCommand.OrderItem::productId)
+            .collect(Collectors.toSet());
+        applicationEventPublisher.publishEvent(ProductCacheEvictEvent.of(productIds));
 
         // 쿠폰 적용
         MemberCoupon memberCoupon = null;
@@ -195,8 +201,11 @@ public class OrderFacade {
                 orderProduct.getProductOptionId(),
                 orderProduct.getQuantity()
             );
-            productDetailCacheRepository.evict(orderProduct.getProductId());
         }
+        Set<Long> productIds = sortedProducts.stream()
+            .map(OrderProduct::getProductId)
+            .collect(Collectors.toSet());
+        applicationEventPublisher.publishEvent(ProductCacheEvictEvent.of(productIds));
         // 쿠폰 사용 취소
         memberCouponService.cancelCouponUsage(orderId);
     }
