@@ -1,0 +1,39 @@
+### 상품 목록 조회 (Admin) - 삭제된 상품 포함
+GET http://localhost:8080/api/v1/admin/products?page=0&size=20
+Accept: application/json
+X-Loopers-Ldap: loopers.admin
+
+### 상품 상세 조회 (Admin)
+GET http://localhost:8080/api/v1/admin/products/1
+Accept: application/json
+X-Loopers-Ldap: loopers.admin
+
+### 상품 등록 (Admin)
+POST http://localhost:8080/api/v1/admin/products
+Content-Type: application/json
+X-Loopers-Ldap: loopers.admin
+
+{
+  "name": "아이폰 15",
+  "brandId": 1,
+  "categoryId": 1,
+  "basePrice": 1500000
+}
+
+### 상품 수정 (Admin)
+PUT http://localhost:8080/api/v1/admin/products/1
+Content-Type: application/json
+X-Loopers-Ldap: loopers.admin
+
+{
+  "name": "아이폰 15 Pro",
+  "categoryId": 1,
+  "basePrice": 1800000,
+  "discount": 100000,
+  "discountType": "FIXED",
+  "status": "ON_SALE"
+}
+
+### 상품 삭제 (Admin)
+DELETE http://localhost:8080/api/v1/admin/products/1
+X-Loopers-Ldap: loopers.admin

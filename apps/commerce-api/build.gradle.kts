@@ -6,8 +6,16 @@ dependencies {
     implementation(project(":supports:logging"))
     implementation(project(":supports:monitoring"))
 
+    // security
+    implementation("org.springframework.security:spring-security-crypto")
+
+    // retry
+    implementation("org.springframework.retry:spring-retry")
+    implementation("org.springframework:spring-aspects")
+
     // web
     implementation("org.springframework.boot:spring-boot-starter-web")
+    implementation("org.springframework.boot:spring-boot-starter-validation")
     implementation("org.springframework.boot:spring-boot-starter-actuator")
     implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:${project.properties["springDocOpenApiVersion"]}")
 

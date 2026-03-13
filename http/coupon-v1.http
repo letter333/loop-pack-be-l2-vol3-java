@@ -1,0 +1,35 @@
+### 발급 가능한 쿠폰 목록 조회
+GET http://localhost:8080/api/v1/coupons
+Accept: application/json
+X-Loopers-LoginId: testuser
+X-Loopers-LoginPw: password123!
+
+### 쿠폰 발급
+POST http://localhost:8080/api/v1/coupons/1/issue
+Accept: application/json
+X-Loopers-LoginId: testuser
+X-Loopers-LoginPw: password123!
+
+### 내 쿠폰 목록 조회 (전체)
+GET http://localhost:8080/api/v1/coupons/my
+Accept: application/json
+X-Loopers-LoginId: testuser
+X-Loopers-LoginPw: password123!
+
+### 내 쿠폰 목록 조회 (사용 가능한 쿠폰)
+GET http://localhost:8080/api/v1/coupons/my?status=AVAILABLE
+Accept: application/json
+X-Loopers-LoginId: testuser
+X-Loopers-LoginPw: password123!
+
+### 내 쿠폰 목록 조회 (사용한 쿠폰)
+GET http://localhost:8080/api/v1/coupons/my?status=USED
+Accept: application/json
+X-Loopers-LoginId: testuser
+X-Loopers-LoginPw: password123!
+
+### 내 쿠폰 목록 조회 (만료된 쿠폰)
+GET http://localhost:8080/api/v1/coupons/my?status=EXPIRED
+Accept: application/json
+X-Loopers-LoginId: testuser
+X-Loopers-LoginPw: password123!

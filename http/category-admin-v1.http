@@ -1,0 +1,32 @@
+### 루트 카테고리 등록 (Admin)
+POST http://localhost:8080/api/v1/admin/categories
+Content-Type: application/json
+X-Loopers-Ldap: loopers.admin
+
+{
+  "name": "전자제품",
+  "parentId": null
+}
+
+### 하위 카테고리 등록 (Admin)
+POST http://localhost:8080/api/v1/admin/categories
+Content-Type: application/json
+X-Loopers-Ldap: loopers.admin
+
+{
+  "name": "휴대폰",
+  "parentId": 1
+}
+
+### 카테고리 수정 (Admin)
+PUT http://localhost:8080/api/v1/admin/categories/1
+Content-Type: application/json
+X-Loopers-Ldap: loopers.admin
+
+{
+  "name": "가전제품"
+}
+
+### 카테고리 삭제 (Admin)
+DELETE http://localhost:8080/api/v1/admin/categories/1
+X-Loopers-Ldap: loopers.admin
