@@ -9,6 +9,7 @@ import com.loopers.domain.product.ProductService;
 import com.loopers.domain.product.ProductSortType;
 import com.loopers.support.auth.AdminValidator;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Component;
@@ -16,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 @Component
 @RequiredArgsConstructor
@@ -26,6 +28,8 @@ public class ProductFacade {
     private final CategoryService categoryService;
     private final AdminValidator adminValidator;
     private final ProductDetailCacheRepository productDetailCacheRepository;
+    private final ProductListCacheRepository productListCacheRepository;
+    private final ApplicationEventPublisher applicationEventPublisher;
 
     @Transactional(readOnly = true)
     public ProductDetailInfo getProduct(Long productId) {
@@ -41,6 +45,19 @@ public class ProductFacade {
 
     @Transactional(readOnly = true)
     public Page<ProductInfo> getProducts(Long categoryId, Long brandId, String keyword, ProductSortType sort, Pageable pageable) {
+        // 키워드 검색은 캐시 우회
+        boolean useCache = keyword == null || keyword.isBlank();
+        String cacheKey = null;
+
+        if (useCache) {
+            cacheKey = productListCacheRepository.generateKey(
+                    categoryId, brandId, sort, pageable.getPageNumber(), pageable.getPageSize());
+            Optional<Page<ProductInfo>> cached = productListCacheRepository.get(cacheKey);
+            if (cached.isPresent()) {
+                return cached.get();
+            }
+        }
+
         Page<Product> products = productService.getProducts(categoryId, brandId, keyword, sort, pageable);
 
         // 1. 모든 brandId 수집 (중복 제거)
@@ -53,11 +70,18 @@ public class ProductFacade {
         Map<Long, Brand> brandMap = brandService.getActiveBrandsByIds(brandIds);
 
         // 3. 매핑
-        return products.map(product -> {
+        Page<ProductInfo> result = products.map(product -> {
             Brand brand = brandMap.get(product.getBrandId());
             BrandInfo brandInfo = brand != null ? BrandInfo.from(brand) : null;
             return ProductInfo.from(product, brandInfo, product.getLikeCount());
         });
+
+        // 키워드 없는 경우만 캐시 저장
+        if (useCache) {
+            productListCacheRepository.put(cacheKey, result);
+        }
+
+        return result;
     }
 
     @Transactional(readOnly = true)
@@ -75,6 +99,7 @@ public class ProductFacade {
         Product product = productService.createProduct(
             command.name(), command.brandId(), command.categoryId(), command.basePrice()
         );
+        applicationEventPublisher.publishEvent(ProductCacheEvictEvent.listOnly());
         return ProductAdminDetailInfo.from(product);
     }
 
@@ -85,7 +110,7 @@ public class ProductFacade {
             productId, command.name(), command.categoryId(), command.basePrice(),
             command.discount(), command.discountType(), command.status()
         );
-        productDetailCacheRepository.evict(productId);
+        applicationEventPublisher.publishEvent(ProductCacheEvictEvent.of(productId));
         return ProductAdminDetailInfo.from(product);
     }
 
@@ -93,7 +118,7 @@ public class ProductFacade {
     public void deleteProduct(String ldap, Long productId) {
         adminValidator.validate(ldap);
         productService.deleteProduct(productId);
-        productDetailCacheRepository.evict(productId);
+        applicationEventPublisher.publishEvent(ProductCacheEvictEvent.of(productId));
     }
 
     @Transactional(readOnly = true)

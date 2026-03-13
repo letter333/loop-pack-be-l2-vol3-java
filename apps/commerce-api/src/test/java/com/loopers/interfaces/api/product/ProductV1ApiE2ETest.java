@@ -7,6 +7,7 @@ import com.loopers.domain.product.ProductRepository;
 import com.loopers.domain.product.ProductService;
 import com.loopers.interfaces.api.ApiResponse;
 import com.loopers.utils.DatabaseCleanUp;
+import com.loopers.utils.RedisCleanUp;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -48,6 +49,9 @@ class ProductV1ApiE2ETest {
     @Autowired
     private DatabaseCleanUp databaseCleanUp;
 
+    @Autowired
+    private RedisCleanUp redisCleanUp;
+
     private Brand savedBrand;
     private Brand savedBrand2;
 
@@ -60,6 +64,7 @@ class ProductV1ApiE2ETest {
     @AfterEach
     void tearDown() {
         databaseCleanUp.truncateAllTables();
+        redisCleanUp.truncateAll();
     }
 
     @Nested
@@ -263,7 +268,6 @@ class ProductV1ApiE2ETest {
         }
 
         @Test
-<<<<<<< HEAD
         @DisplayName("브랜드 ID + 카테고리 ID 조합으로 필터링하여 조회한다")
         void returnsFilteredProductsByBrandIdAndCategoryId() {
             // Arrange
