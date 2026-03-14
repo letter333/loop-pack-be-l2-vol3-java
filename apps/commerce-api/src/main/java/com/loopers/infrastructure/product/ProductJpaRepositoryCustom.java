@@ -6,5 +6,5 @@ import org.springframework.data.domain.Pageable;
 
 public interface ProductJpaRepositoryCustom {
 
-    Page<ProductEntity> findProducts(Long categoryId, String keyword, ProductSortType sort, Pageable pageable);
+    Page<ProductEntity> findProducts(Long categoryId, Long brandId, String keyword, ProductSortType sort, Pageable pageable);
 }

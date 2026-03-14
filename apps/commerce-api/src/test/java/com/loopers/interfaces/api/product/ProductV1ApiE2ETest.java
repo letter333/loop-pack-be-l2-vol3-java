@@ -7,6 +7,7 @@ import com.loopers.domain.product.ProductRepository;
 import com.loopers.domain.product.ProductService;
 import com.loopers.interfaces.api.ApiResponse;
 import com.loopers.utils.DatabaseCleanUp;
+import com.loopers.utils.RedisCleanUp;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -48,6 +49,9 @@ class ProductV1ApiE2ETest {
     @Autowired
     private DatabaseCleanUp databaseCleanUp;
 
+    @Autowired
+    private RedisCleanUp redisCleanUp;
+
     private Brand savedBrand;
     private Brand savedBrand2;
 
@@ -60,6 +64,7 @@ class ProductV1ApiE2ETest {
     @AfterEach
     void tearDown() {
         databaseCleanUp.truncateAllTables();
+        redisCleanUp.truncateAll();
     }
 
     @Nested
@@ -238,6 +243,149 @@ class ProductV1ApiE2ETest {
                 () -> assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK),
                 () -> assertThat(brand).isNotNull(),
                 () -> assertThat(brand.get("name")).isEqualTo("Apple")
+            );
+        }
+
+        @Test
+        @DisplayName("브랜드 ID로 필터링하여 조회한다")
+        void returnsFilteredProductsByBrandId() {
+            // Arrange
+            productRepository.save(new Product("아이폰 15", savedBrand.getId(), 1L, 1500000L));
+            productRepository.save(new Product("갤럭시 S24", savedBrand2.getId(), 1L, 1400000L));
+            productRepository.save(new Product("맥북 프로", savedBrand.getId(), 2L, 3000000L));
+
+            // Act
+            ResponseEntity<ApiResponse<Map<String, Object>>> response =
+                testRestTemplate.exchange(ENDPOINT + "?brandId=" + savedBrand.getId(), HttpMethod.GET, null,
+                    new ParameterizedTypeReference<>() {});
+
+            // Assert
+            assertAll(
+                () -> assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK),
+                () -> assertThat((List<?>) response.getBody().data().get("content")).hasSize(2),
+                () -> assertThat(response.getBody().data().get("totalElements")).isEqualTo(2)
+            );
+        }
+
+        @Test
+        @DisplayName("브랜드 ID + 카테고리 ID 조합으로 필터링하여 조회한다")
+        void returnsFilteredProductsByBrandIdAndCategoryId() {
+            // Arrange
+            productRepository.save(new Product("아이폰 15", savedBrand.getId(), 1L, 1500000L));
+            productRepository.save(new Product("갤럭시 S24", savedBrand2.getId(), 1L, 1400000L));
+            productRepository.save(new Product("맥북 프로", savedBrand.getId(), 2L, 3000000L));
+
+            // Act
+            ResponseEntity<ApiResponse<Map<String, Object>>> response =
+                testRestTemplate.exchange(ENDPOINT + "?brandId=" + savedBrand.getId() + "&categoryId=1", HttpMethod.GET, null,
+                    new ParameterizedTypeReference<>() {});
+
+            // Assert
+            assertAll(
+                () -> assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK),
+                () -> assertThat((List<?>) response.getBody().data().get("content")).hasSize(1),
+                () -> assertThat(response.getBody().data().get("totalElements")).isEqualTo(1)
+            );
+        }
+
+        @Test
+        @DisplayName("브랜드 ID 필터 + 가격 낮은순 정렬을 동시에 적용한다")
+        void returnsFilteredByBrandIdSortedByPriceAsc() {
+            // Arrange
+            productRepository.save(new Product("아이폰 15", savedBrand.getId(), 1L, 1500000L));
+            productRepository.save(new Product("맥북 프로", savedBrand.getId(), 2L, 3000000L));
+            productRepository.save(new Product("아이폰 SE", savedBrand.getId(), 1L, 700000L));
+            productRepository.save(new Product("갤럭시 S24", savedBrand2.getId(), 1L, 1400000L));
+
+            // Act
+            ResponseEntity<ApiResponse<Map<String, Object>>> response =
+                testRestTemplate.exchange(ENDPOINT + "?brandId=" + savedBrand.getId() + "&sort=PRICE_ASC", HttpMethod.GET, null,
+                    new ParameterizedTypeReference<>() {});
+
+            // Assert
+            @SuppressWarnings("unchecked")
+            List<Map<String, Object>> content = (List<Map<String, Object>>) response.getBody().data().get("content");
+            assertAll(
+                () -> assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK),
+                () -> assertThat(content).hasSize(3),
+                () -> assertThat(content.get(0).get("basePrice")).isEqualTo(700000),
+                () -> assertThat(content.get(1).get("basePrice")).isEqualTo(1500000),
+                () -> assertThat(content.get(2).get("basePrice")).isEqualTo(3000000)
+            );
+        }
+
+        @Test
+        @DisplayName("카테고리 ID 필터 + 좋아요 많은순 정렬을 동시에 적용한다")
+        void returnsFilteredByCategoryIdSortedByLikesDesc() {
+            // Arrange
+            Product product1 = productRepository.save(new Product("아이폰 15", savedBrand.getId(), 1L, 1500000L));
+            Product product2 = productRepository.save(new Product("갤럭시 S24", savedBrand2.getId(), 1L, 1400000L));
+            productRepository.save(new Product("맥북 프로", savedBrand.getId(), 2L, 3000000L));
+
+            // 좋아요 수 설정: product2(5) > product1(2)
+            for (int i = 0; i < 2; i++) productService.increaseLikeCount(product1.getId());
+            for (int i = 0; i < 5; i++) productService.increaseLikeCount(product2.getId());
+
+            // Act
+            ResponseEntity<ApiResponse<Map<String, Object>>> response =
+                testRestTemplate.exchange(ENDPOINT + "?categoryId=1&sort=LIKES_DESC", HttpMethod.GET, null,
+                    new ParameterizedTypeReference<>() {});
+
+            // Assert - 카테고리 1만 필터 + 좋아요 내림차순
+            @SuppressWarnings("unchecked")
+            List<Map<String, Object>> content = (List<Map<String, Object>>) response.getBody().data().get("content");
+            assertAll(
+                () -> assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK),
+                () -> assertThat(content).hasSize(2),
+                () -> assertThat(((Number) content.get(0).get("likeCount")).longValue()).isEqualTo(5L),
+                () -> assertThat(((Number) content.get(1).get("likeCount")).longValue()).isEqualTo(2L)
+            );
+        }
+
+        @Test
+        @DisplayName("브랜드 ID + 카테고리 ID 필터 + 가격 낮은순 정렬을 동시에 적용한다")
+        void returnsFilteredByBrandIdAndCategoryIdSortedByPriceAsc() {
+            // Arrange
+            productRepository.save(new Product("아이폰 15", savedBrand.getId(), 1L, 1500000L));
+            productRepository.save(new Product("아이폰 SE", savedBrand.getId(), 1L, 700000L));
+            productRepository.save(new Product("맥북 프로", savedBrand.getId(), 2L, 3000000L));
+            productRepository.save(new Product("갤럭시 S24", savedBrand2.getId(), 1L, 1400000L));
+
+            // Act
+            ResponseEntity<ApiResponse<Map<String, Object>>> response =
+                testRestTemplate.exchange(ENDPOINT + "?brandId=" + savedBrand.getId() + "&categoryId=1&sort=PRICE_ASC", HttpMethod.GET, null,
+                    new ParameterizedTypeReference<>() {});
+
+            // Assert - Apple + 카테고리 1만 필터 + 가격 오름차순
+            @SuppressWarnings("unchecked")
+            List<Map<String, Object>> content = (List<Map<String, Object>>) response.getBody().data().get("content");
+            assertAll(
+                () -> assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK),
+                () -> assertThat(content).hasSize(2),
+                () -> assertThat(content.get(0).get("basePrice")).isEqualTo(700000),
+                () -> assertThat(content.get(1).get("basePrice")).isEqualTo(1500000)
+            );
+        }
+
+        @Test
+        @DisplayName("브랜드 ID + 키워드 필터를 동시에 적용한다")
+        void returnsFilteredByBrandIdAndKeyword() {
+            // Arrange
+            productRepository.save(new Product("아이폰 15", savedBrand.getId(), 1L, 1500000L));
+            productRepository.save(new Product("아이폰 SE", savedBrand.getId(), 1L, 700000L));
+            productRepository.save(new Product("맥북 프로", savedBrand.getId(), 2L, 3000000L));
+            productRepository.save(new Product("갤럭시 S24", savedBrand2.getId(), 1L, 1400000L));
+
+            // Act
+            ResponseEntity<ApiResponse<Map<String, Object>>> response =
+                testRestTemplate.exchange(ENDPOINT + "?brandId=" + savedBrand.getId() + "&keyword=아이폰", HttpMethod.GET, null,
+                    new ParameterizedTypeReference<>() {});
+
+            // Assert - Apple 브랜드 + "아이폰" 키워드 → 2건
+            assertAll(
+                () -> assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK),
+                () -> assertThat((List<?>) response.getBody().data().get("content")).hasSize(2),
+                () -> assertThat(response.getBody().data().get("totalElements")).isEqualTo(2)
             );
         }
 

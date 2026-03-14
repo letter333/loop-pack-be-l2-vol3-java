@@ -19,7 +19,7 @@ public class ProductJpaRepositoryCustomImpl implements ProductJpaRepositoryCusto
 
     @Override
     @SuppressWarnings("unchecked")
-    public Page<ProductEntity> findProducts(Long categoryId, String keyword, ProductSortType sort, Pageable pageable) {
+    public Page<ProductEntity> findProducts(Long categoryId, Long brandId, String keyword, ProductSortType sort, Pageable pageable) {
         StringBuilder sql = new StringBuilder();
         StringBuilder countSql = new StringBuilder();
         Map<String, Object> params = new HashMap<>();
@@ -31,6 +31,12 @@ public class ProductJpaRepositoryCustomImpl implements ProductJpaRepositoryCusto
             sql.append(" AND category_id = :categoryId");
             countSql.append(" AND category_id = :categoryId");
             params.put("categoryId", categoryId);
+        }
+
+        if (brandId != null) {
+            sql.append(" AND brand_id = :brandId");
+            countSql.append(" AND brand_id = :brandId");
+            params.put("brandId", brandId);
         }
 
         if (keyword != null && !keyword.isBlank()) {
