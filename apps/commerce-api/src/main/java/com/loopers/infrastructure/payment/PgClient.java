@@ -1,5 +1,8 @@
 package com.loopers.infrastructure.payment;
 
+import com.loopers.domain.payment.PaymentGateway;
+import com.loopers.domain.payment.PaymentGatewayException;
+import com.loopers.domain.payment.PaymentGatewayResponse;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
@@ -9,12 +12,13 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestTemplate;
 
 import java.util.Objects;
 
 @Component
-public class PgClient {
+public class PgClient implements PaymentGateway {
 
     private final RestTemplate restTemplate;
 
@@ -28,8 +32,9 @@ public class PgClient {
     @Value("${pg.callback-url}")
     private String callbackUrl;
 
-    public PgPaymentResponse requestPayment(String orderId, String cardType, String cardNo,
-                                             Long amount, Long memberId) {
+    @Override
+    public PaymentGatewayResponse requestPayment(String orderNumber, String cardType, String cardNo,
+                                                  Long amount, Long memberId) {
         String url = baseUrl + "/api/v1/payments";
 
         HttpHeaders headers = new HttpHeaders();
@@ -37,16 +42,21 @@ public class PgClient {
         headers.set("X-USER-ID", String.valueOf(memberId));
 
         PgPaymentRequest request = new PgPaymentRequest(
-            orderId, cardType, cardNo, String.valueOf(amount), callbackUrl
+            orderNumber, cardType, cardNo, String.valueOf(amount), callbackUrl
         );
 
         try {
             ResponseEntity<PgPaymentResponse> response = restTemplate.exchange(
                 url, HttpMethod.POST, new HttpEntity<>(request, headers), PgPaymentResponse.class
             );
-            return Objects.requireNonNull(response.getBody(), "PG 응답 본문이 없습니다.");
+            PgPaymentResponse body = Objects.requireNonNull(response.getBody(), "PG 응답 본문이 없습니다.");
+            return new PaymentGatewayResponse(body.transactionId(), body.status(), body.message());
         } catch (HttpClientErrorException e) {
-            throw new PgPaymentFailedException("PG 결제 요청 실패: " + e.getResponseBodyAsString());
+            throw new PaymentGatewayException(
+                "PG 결제 요청 실패: " + e.getResponseBodyAsString(), false, e);
+        } catch (ResourceAccessException e) {
+            throw new PaymentGatewayException(
+                "PG 결제 요청 타임아웃: " + e.getMessage(), true, e);
         }
     }
 

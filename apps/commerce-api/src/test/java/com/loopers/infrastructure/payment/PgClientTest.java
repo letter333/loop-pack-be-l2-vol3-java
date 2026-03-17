@@ -1,5 +1,7 @@
 package com.loopers.infrastructure.payment;
 
+import com.loopers.domain.payment.PaymentGatewayException;
+import com.loopers.domain.payment.PaymentGatewayResponse;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -92,8 +94,8 @@ class PgClientTest {
         }
 
         @Test
-        @DisplayName("PG가 성공 응답하면 transactionId를 반환한다")
-        void returnsTransactionId_whenPgSucceeds() {
+        @DisplayName("PG가 성공 응답하면 PaymentGatewayResponse를 반환한다")
+        void returnsPaymentGatewayResponse_whenPgSucceeds() {
             // arrange
             PgPaymentResponse pgResponse = new PgPaymentResponse("TXN-001", "ACCEPTED", "결제 요청 접수");
             given(restTemplate.exchange(
@@ -104,20 +106,21 @@ class PgClientTest {
             )).willReturn(ResponseEntity.ok(pgResponse));
 
             // act
-            PgPaymentResponse result = pgClient.requestPayment(
+            PaymentGatewayResponse result = pgClient.requestPayment(
                 "ORD20250318-0000001", "VISA", "4111111111111111", 10000L, MEMBER_ID
             );
 
             // assert
             assertAll(
                 () -> assertThat(result.transactionId()).isEqualTo("TXN-001"),
-                () -> assertThat(result.status()).isEqualTo("ACCEPTED")
+                () -> assertThat(result.status()).isEqualTo("ACCEPTED"),
+                () -> assertThat(result.message()).isEqualTo("결제 요청 접수")
             );
         }
 
         @Test
-        @DisplayName("PG가 실패 응답하면 PgPaymentFailedException을 던진다")
-        void throwsPgPaymentFailedException_whenPgRejects() {
+        @DisplayName("PG가 실패 응답하면 PaymentGatewayException(timeout=false)을 던진다")
+        void throwsPaymentGatewayException_whenPgRejects() {
             // arrange
             given(restTemplate.exchange(
                 eq(BASE_URL + "/api/v1/payments"),
@@ -129,12 +132,14 @@ class PgClientTest {
             // act & assert
             assertThatThrownBy(() -> pgClient.requestPayment(
                 "ORD20250318-0000001", "VISA", "4111111111111111", 10000L, MEMBER_ID
-            )).isInstanceOf(PgPaymentFailedException.class);
+            ))
+                .isInstanceOf(PaymentGatewayException.class)
+                .satisfies(ex -> assertThat(((PaymentGatewayException) ex).isTimeout()).isFalse());
         }
 
         @Test
-        @DisplayName("PG 호출 타임아웃 시 ResourceAccessException이 전파된다")
-        void propagatesResourceAccessException_whenTimeout() {
+        @DisplayName("PG 호출 타임아웃 시 PaymentGatewayException(timeout=true)을 던진다")
+        void throwsPaymentGatewayExceptionWithTimeout_whenTimeout() {
             // arrange
             given(restTemplate.exchange(
                 eq(BASE_URL + "/api/v1/payments"),
@@ -146,7 +151,9 @@ class PgClientTest {
             // act & assert
             assertThatThrownBy(() -> pgClient.requestPayment(
                 "ORD20250318-0000001", "VISA", "4111111111111111", 10000L, MEMBER_ID
-            )).isInstanceOf(ResourceAccessException.class);
+            ))
+                .isInstanceOf(PaymentGatewayException.class)
+                .satisfies(ex -> assertThat(((PaymentGatewayException) ex).isTimeout()).isTrue());
         }
     }
 
