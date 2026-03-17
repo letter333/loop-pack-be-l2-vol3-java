@@ -9,8 +9,8 @@ import org.springframework.web.client.RestTemplate;
 @Configuration
 public class RestTemplateConfig {
 
-    @Bean
-    public RestTemplate restTemplate(
+    @Bean("pgRestTemplate")
+    public RestTemplate pgRestTemplate(
         @Value("${pg.connect-timeout:1000}") int connectTimeout,
         @Value("${pg.read-timeout:3000}") int readTimeout
     ) {

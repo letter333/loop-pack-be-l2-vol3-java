@@ -1,6 +1,6 @@
 package com.loopers.infrastructure.payment;
 
-import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -11,11 +11,16 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 
+import java.util.Objects;
+
 @Component
-@RequiredArgsConstructor
 public class PgClient {
 
     private final RestTemplate restTemplate;
+
+    public PgClient(@Qualifier("pgRestTemplate") RestTemplate restTemplate) {
+        this.restTemplate = restTemplate;
+    }
 
     @Value("${pg.base-url}")
     private String baseUrl;
@@ -39,7 +44,7 @@ public class PgClient {
             ResponseEntity<PgPaymentResponse> response = restTemplate.exchange(
                 url, HttpMethod.POST, new HttpEntity<>(request, headers), PgPaymentResponse.class
             );
-            return response.getBody();
+            return Objects.requireNonNull(response.getBody(), "PG 응답 본문이 없습니다.");
         } catch (HttpClientErrorException e) {
             throw new PgPaymentFailedException("PG 결제 요청 실패: " + e.getResponseBodyAsString());
         }
@@ -54,7 +59,7 @@ public class PgClient {
         ResponseEntity<PgPaymentStatusResponse> response = restTemplate.exchange(
             url, HttpMethod.GET, new HttpEntity<>(headers), PgPaymentStatusResponse.class
         );
-        return response.getBody();
+        return Objects.requireNonNull(response.getBody(), "PG 응답 본문이 없습니다.");
     }
 
     public PgPaymentStatusResponse getPaymentByOrderId(String orderId, Long memberId) {
@@ -66,6 +71,6 @@ public class PgClient {
         ResponseEntity<PgPaymentStatusResponse> response = restTemplate.exchange(
             url, HttpMethod.GET, new HttpEntity<>(headers), PgPaymentStatusResponse.class
         );
-        return response.getBody();
+        return Objects.requireNonNull(response.getBody(), "PG 응답 본문이 없습니다.");
     }
 }
