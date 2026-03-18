@@ -312,4 +312,192 @@ class PaymentFacadeTest {
                 .satisfies(ex -> assertThat(((CoreException) ex).getErrorType()).isEqualTo(ErrorType.NOT_FOUND));
         }
     }
+
+    @DisplayName("결제 복구")
+    @Nested
+    class RecoverPayment {
+
+        private static final String TRANSACTION_ID = "20250318:TR:abc123";
+        private static final Long PAYMENT_ID = 1L;
+
+        @Test
+        @DisplayName("이미 SUCCESS 상태인 결제는 그대로 반환한다 (멱등성)")
+        void returnsAsIs_whenAlreadySuccess() {
+            // arrange
+            Member member = createMember();
+            Payment payment = createPayment(PaymentStatus.SUCCESS, TRANSACTION_ID);
+
+            given(memberService.authenticate(LOGIN_ID, PASSWORD)).willReturn(member);
+            given(paymentService.getPayment(PAYMENT_ID)).willReturn(payment);
+
+            // act
+            PaymentInfo result = paymentFacade.recoverPayment(LOGIN_ID, PASSWORD, PAYMENT_ID);
+
+            // assert
+            assertThat(result.status()).isEqualTo(PaymentStatus.SUCCESS);
+            verify(paymentGateway, never()).getPaymentStatus(anyString(), anyLong());
+            verify(paymentGateway, never()).getPaymentByOrderId(anyString(), anyLong());
+            verify(paymentService, never()).save(any(Payment.class));
+        }
+
+        @Test
+        @DisplayName("이미 FAILED 상태인 결제는 그대로 반환한다 (멱등성)")
+        void returnsAsIs_whenAlreadyFailed() {
+            // arrange
+            Member member = createMember();
+            Payment payment = new Payment(PAYMENT_ID, ORDER_ID, MEMBER_ID, ORDER_NUMBER,
+                TRANSACTION_ID, "VISA", "4111111111111111",
+                PAYMENT_AMOUNT, PaymentStatus.FAILED, "한도 초과", null);
+
+            given(memberService.authenticate(LOGIN_ID, PASSWORD)).willReturn(member);
+            given(paymentService.getPayment(PAYMENT_ID)).willReturn(payment);
+
+            // act
+            PaymentInfo result = paymentFacade.recoverPayment(LOGIN_ID, PASSWORD, PAYMENT_ID);
+
+            // assert
+            assertThat(result.status()).isEqualTo(PaymentStatus.FAILED);
+            verify(paymentGateway, never()).getPaymentStatus(anyString(), anyLong());
+            verify(paymentService, never()).save(any(Payment.class));
+        }
+
+        @Test
+        @DisplayName("TIMEOUT + txId 있음 + PG SUCCESS → markSuccess + 주문 PAID")
+        void recoversToSuccess_whenTimeoutWithTxIdAndPgSuccess() {
+            // arrange
+            Member member = createMember();
+            Payment payment = new Payment(PAYMENT_ID, ORDER_ID, MEMBER_ID, ORDER_NUMBER,
+                TRANSACTION_ID, "VISA", "4111111111111111",
+                PAYMENT_AMOUNT, PaymentStatus.TIMEOUT, null, null);
+
+            given(memberService.authenticate(LOGIN_ID, PASSWORD)).willReturn(member);
+            given(paymentService.getPayment(PAYMENT_ID)).willReturn(payment);
+            given(paymentGateway.getPaymentStatus(TRANSACTION_ID, MEMBER_ID))
+                .willReturn(new PaymentGatewayResponse(TRANSACTION_ID, "SUCCESS", "결제 완료"));
+            given(paymentService.save(any(Payment.class))).willAnswer(invocation -> invocation.getArgument(0));
+
+            // act
+            PaymentInfo result = paymentFacade.recoverPayment(LOGIN_ID, PASSWORD, PAYMENT_ID);
+
+            // assert
+            assertAll(
+                () -> assertThat(result.status()).isEqualTo(PaymentStatus.SUCCESS),
+                () -> assertThat(result.transactionId()).isEqualTo(TRANSACTION_ID)
+            );
+            verify(orderService).changeStatus(ORDER_ID, OrderStatus.PAID);
+        }
+
+        @Test
+        @DisplayName("TIMEOUT + txId 있음 + PG FAILED → markFailed")
+        void recoversToFailed_whenTimeoutWithTxIdAndPgFailed() {
+            // arrange
+            Member member = createMember();
+            Payment payment = new Payment(PAYMENT_ID, ORDER_ID, MEMBER_ID, ORDER_NUMBER,
+                TRANSACTION_ID, "VISA", "4111111111111111",
+                PAYMENT_AMOUNT, PaymentStatus.TIMEOUT, null, null);
+
+            given(memberService.authenticate(LOGIN_ID, PASSWORD)).willReturn(member);
+            given(paymentService.getPayment(PAYMENT_ID)).willReturn(payment);
+            given(paymentGateway.getPaymentStatus(TRANSACTION_ID, MEMBER_ID))
+                .willReturn(new PaymentGatewayResponse(TRANSACTION_ID, "FAILED", "잔액 부족"));
+            given(paymentService.save(any(Payment.class))).willAnswer(invocation -> invocation.getArgument(0));
+
+            // act
+            PaymentInfo result = paymentFacade.recoverPayment(LOGIN_ID, PASSWORD, PAYMENT_ID);
+
+            // assert
+            assertAll(
+                () -> assertThat(result.status()).isEqualTo(PaymentStatus.FAILED),
+                () -> assertThat(result.failReason()).isEqualTo("잔액 부족")
+            );
+            verify(orderService, never()).changeStatus(anyLong(), any(OrderStatus.class));
+        }
+
+        @Test
+        @DisplayName("TIMEOUT + txId 있음 + PG PENDING → 상태 변경 없음")
+        void noChange_whenTimeoutWithTxIdAndPgPending() {
+            // arrange
+            Member member = createMember();
+            Payment payment = new Payment(PAYMENT_ID, ORDER_ID, MEMBER_ID, ORDER_NUMBER,
+                TRANSACTION_ID, "VISA", "4111111111111111",
+                PAYMENT_AMOUNT, PaymentStatus.TIMEOUT, null, null);
+
+            given(memberService.authenticate(LOGIN_ID, PASSWORD)).willReturn(member);
+            given(paymentService.getPayment(PAYMENT_ID)).willReturn(payment);
+            given(paymentGateway.getPaymentStatus(TRANSACTION_ID, MEMBER_ID))
+                .willReturn(new PaymentGatewayResponse(TRANSACTION_ID, "PENDING", "처리 중"));
+
+            // act
+            PaymentInfo result = paymentFacade.recoverPayment(LOGIN_ID, PASSWORD, PAYMENT_ID);
+
+            // assert
+            assertThat(result.status()).isEqualTo(PaymentStatus.TIMEOUT);
+            verify(paymentService, never()).save(any(Payment.class));
+            verify(orderService, never()).changeStatus(anyLong(), any(OrderStatus.class));
+        }
+
+        @Test
+        @DisplayName("TIMEOUT + txId 없음 + orderNumber로 PG 조회 → SUCCESS → markSuccess + txId 할당 + 주문 PAID")
+        void recoversToSuccess_whenTimeoutWithoutTxIdAndPgSuccess() {
+            // arrange
+            Member member = createMember();
+            Payment payment = new Payment(PAYMENT_ID, ORDER_ID, MEMBER_ID, ORDER_NUMBER,
+                null, "VISA", "4111111111111111",
+                PAYMENT_AMOUNT, PaymentStatus.TIMEOUT, null, null);
+
+            given(memberService.authenticate(LOGIN_ID, PASSWORD)).willReturn(member);
+            given(paymentService.getPayment(PAYMENT_ID)).willReturn(payment);
+            given(paymentGateway.getPaymentByOrderId(ORDER_NUMBER, MEMBER_ID))
+                .willReturn(new PaymentGatewayResponse("TXN-NEW-001", "SUCCESS", "결제 완료"));
+            given(paymentService.save(any(Payment.class))).willAnswer(invocation -> invocation.getArgument(0));
+
+            // act
+            PaymentInfo result = paymentFacade.recoverPayment(LOGIN_ID, PASSWORD, PAYMENT_ID);
+
+            // assert
+            assertAll(
+                () -> assertThat(result.status()).isEqualTo(PaymentStatus.SUCCESS),
+                () -> assertThat(result.transactionId()).isEqualTo("TXN-NEW-001")
+            );
+            verify(orderService).changeStatus(ORDER_ID, OrderStatus.PAID);
+        }
+
+        @Test
+        @DisplayName("REQUESTED + txId 있음 + PG SUCCESS → markSuccess + 주문 PAID")
+        void recoversToSuccess_whenRequestedWithTxIdAndPgSuccess() {
+            // arrange
+            Member member = createMember();
+            Payment payment = new Payment(PAYMENT_ID, ORDER_ID, MEMBER_ID, ORDER_NUMBER,
+                TRANSACTION_ID, "VISA", "4111111111111111",
+                PAYMENT_AMOUNT, PaymentStatus.REQUESTED, null, null);
+
+            given(memberService.authenticate(LOGIN_ID, PASSWORD)).willReturn(member);
+            given(paymentService.getPayment(PAYMENT_ID)).willReturn(payment);
+            given(paymentGateway.getPaymentStatus(TRANSACTION_ID, MEMBER_ID))
+                .willReturn(new PaymentGatewayResponse(TRANSACTION_ID, "SUCCESS", "결제 완료"));
+            given(paymentService.save(any(Payment.class))).willAnswer(invocation -> invocation.getArgument(0));
+
+            // act
+            PaymentInfo result = paymentFacade.recoverPayment(LOGIN_ID, PASSWORD, PAYMENT_ID);
+
+            // assert
+            assertThat(result.status()).isEqualTo(PaymentStatus.SUCCESS);
+            verify(orderService).changeStatus(ORDER_ID, OrderStatus.PAID);
+        }
+
+        @Test
+        @DisplayName("존재하지 않는 paymentId → NOT_FOUND 예외")
+        void throwsNotFound_whenPaymentNotExists() {
+            // arrange
+            Member member = createMember();
+            given(memberService.authenticate(LOGIN_ID, PASSWORD)).willReturn(member);
+            given(paymentService.getPayment(999L))
+                .willThrow(new CoreException(ErrorType.NOT_FOUND, "결제를 찾을 수 없습니다."));
+
+            // act & assert
+            assertThatThrownBy(() -> paymentFacade.recoverPayment(LOGIN_ID, PASSWORD, 999L))
+                .isInstanceOf(CoreException.class)
+                .satisfies(ex -> assertThat(((CoreException) ex).getErrorType()).isEqualTo(ErrorType.NOT_FOUND));
+        }
+    }
 }

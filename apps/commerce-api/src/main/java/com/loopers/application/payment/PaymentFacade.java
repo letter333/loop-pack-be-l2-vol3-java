@@ -4,12 +4,14 @@ import com.loopers.domain.member.Member;
 import com.loopers.domain.member.MemberService;
 import com.loopers.domain.order.Order;
 import com.loopers.domain.order.OrderService;
+import com.loopers.domain.order.OrderStatus;
 import com.loopers.domain.payment.Payment;
 import com.loopers.domain.payment.PaymentGateway;
 import com.loopers.domain.payment.PaymentGatewayException;
 import com.loopers.domain.payment.PaymentGatewayResponse;
 import com.loopers.domain.payment.PaymentService;
-import com.loopers.domain.order.OrderStatus;
+import com.loopers.support.error.CoreException;
+import com.loopers.support.error.ErrorType;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -74,6 +76,57 @@ public class PaymentFacade {
             payment.markFailed(command.message());
             Payment saved = paymentService.save(payment);
             return PaymentInfo.from(saved);
+        }
+    }
+
+    @Transactional
+    public PaymentInfo recoverPayment(String loginId, String password, Long paymentId) {
+        Member member = memberService.authenticate(loginId, password);
+        Payment payment = paymentService.getPayment(paymentId);
+        validatePaymentOwnership(member.getId(), payment);
+
+        return doRecover(payment);
+    }
+
+    @Transactional
+    public PaymentInfo recoverPayment(Long paymentId) {
+        Payment payment = paymentService.getPayment(paymentId);
+        return doRecover(payment);
+    }
+
+    private PaymentInfo doRecover(Payment payment) {
+        if (payment.isTerminal()) {
+            return PaymentInfo.from(payment);
+        }
+
+        PaymentGatewayResponse pgResponse;
+        if (payment.getTransactionId() != null) {
+            pgResponse = paymentGateway.getPaymentStatus(
+                payment.getTransactionId(), payment.getMemberId());
+        } else {
+            pgResponse = paymentGateway.getPaymentByOrderId(
+                payment.getOrderNumber(), payment.getMemberId());
+        }
+
+        if ("SUCCESS".equals(pgResponse.status())) {
+            if (payment.getTransactionId() == null) {
+                payment.assignTransactionId(pgResponse.transactionId());
+            }
+            payment.markSuccess();
+            Payment saved = paymentService.save(payment);
+            orderService.changeStatus(payment.getOrderId(), OrderStatus.PAID);
+            return PaymentInfo.from(saved);
+        } else if ("FAILED".equals(pgResponse.status())) {
+            payment.markFailed(pgResponse.message());
+            return PaymentInfo.from(paymentService.save(payment));
+        }
+
+        return PaymentInfo.from(payment);
+    }
+
+    private void validatePaymentOwnership(Long memberId, Payment payment) {
+        if (!memberId.equals(payment.getMemberId())) {
+            throw new CoreException(ErrorType.FORBIDDEN, "해당 결제에 대한 권한이 없습니다.");
         }
     }
 }
