@@ -7,6 +7,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -35,5 +36,10 @@ public class PaymentService {
     @Transactional(readOnly = true, propagation = Propagation.SUPPORTS)
     public List<Payment> getPaymentsByOrderId(Long orderId) {
         return paymentRepository.findByOrderId(orderId);
+    }
+
+    @Transactional(readOnly = true, propagation = Propagation.SUPPORTS)
+    public List<Payment> getPaymentsForRecovery(List<PaymentStatus> statuses, LocalDateTime threshold) {
+        return paymentRepository.findByStatusInAndCreatedBefore(statuses, threshold);
     }
 }
