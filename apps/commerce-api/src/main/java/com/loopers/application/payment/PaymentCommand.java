@@ -8,4 +8,12 @@ public class PaymentCommand {
         String cardNo
     ) {
     }
+
+    public record Callback(
+        String transactionId,
+        String orderId,
+        String status,
+        String message
+    ) {
+    }
 }

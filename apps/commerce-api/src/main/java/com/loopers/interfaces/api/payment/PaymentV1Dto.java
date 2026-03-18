@@ -18,6 +18,17 @@ public class PaymentV1Dto {
         }
     }
 
+    public record CallbackRequest(
+        @NotBlank(message = "거래 ID는 필수입니다.") String transactionId,
+        @NotBlank(message = "주문 번호는 필수입니다.") String orderId,
+        @NotBlank(message = "결제 상태는 필수입니다.") String status,
+        String message
+    ) {
+        public PaymentCommand.Callback toCommand() {
+            return new PaymentCommand.Callback(transactionId, orderId, status, message);
+        }
+    }
+
     public record PaymentResponse(
         Long id,
         Long orderId,
