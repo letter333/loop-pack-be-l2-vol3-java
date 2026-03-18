@@ -60,27 +60,47 @@ public class PgClient implements PaymentGateway {
         }
     }
 
-    public PgPaymentStatusResponse getPaymentStatus(String transactionId, Long memberId) {
+    @Override
+    public PaymentGatewayResponse getPaymentStatus(String transactionId, Long memberId) {
         String url = baseUrl + "/api/v1/payments/" + transactionId;
 
         HttpHeaders headers = new HttpHeaders();
         headers.set("X-USER-ID", String.valueOf(memberId));
 
-        ResponseEntity<PgPaymentStatusResponse> response = restTemplate.exchange(
-            url, HttpMethod.GET, new HttpEntity<>(headers), PgPaymentStatusResponse.class
-        );
-        return Objects.requireNonNull(response.getBody(), "PG 응답 본문이 없습니다.");
+        try {
+            ResponseEntity<PgPaymentStatusResponse> response = restTemplate.exchange(
+                url, HttpMethod.GET, new HttpEntity<>(headers), PgPaymentStatusResponse.class
+            );
+            PgPaymentStatusResponse body = Objects.requireNonNull(response.getBody(), "PG 응답 본문이 없습니다.");
+            return new PaymentGatewayResponse(body.transactionId(), body.status(), body.message());
+        } catch (HttpClientErrorException e) {
+            throw new PaymentGatewayException(
+                "PG 결제 상태 조회 실패: " + e.getResponseBodyAsString(), false, e);
+        } catch (ResourceAccessException e) {
+            throw new PaymentGatewayException(
+                "PG 결제 상태 조회 타임아웃: " + e.getMessage(), true, e);
+        }
     }
 
-    public PgPaymentStatusResponse getPaymentByOrderId(String orderId, Long memberId) {
-        String url = baseUrl + "/api/v1/payments?orderId=" + orderId;
+    @Override
+    public PaymentGatewayResponse getPaymentByOrderId(String orderNumber, Long memberId) {
+        String url = baseUrl + "/api/v1/payments?orderId=" + orderNumber;
 
         HttpHeaders headers = new HttpHeaders();
         headers.set("X-USER-ID", String.valueOf(memberId));
 
-        ResponseEntity<PgPaymentStatusResponse> response = restTemplate.exchange(
-            url, HttpMethod.GET, new HttpEntity<>(headers), PgPaymentStatusResponse.class
-        );
-        return Objects.requireNonNull(response.getBody(), "PG 응답 본문이 없습니다.");
+        try {
+            ResponseEntity<PgPaymentStatusResponse> response = restTemplate.exchange(
+                url, HttpMethod.GET, new HttpEntity<>(headers), PgPaymentStatusResponse.class
+            );
+            PgPaymentStatusResponse body = Objects.requireNonNull(response.getBody(), "PG 응답 본문이 없습니다.");
+            return new PaymentGatewayResponse(body.transactionId(), body.status(), body.message());
+        } catch (HttpClientErrorException e) {
+            throw new PaymentGatewayException(
+                "PG 결제 상태 조회 실패: " + e.getResponseBodyAsString(), false, e);
+        } catch (ResourceAccessException e) {
+            throw new PaymentGatewayException(
+                "PG 결제 상태 조회 타임아웃: " + e.getMessage(), true, e);
+        }
     }
 }

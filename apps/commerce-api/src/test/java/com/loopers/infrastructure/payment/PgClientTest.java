@@ -162,8 +162,8 @@ class PgClientTest {
     class GetPaymentStatus {
 
         @Test
-        @DisplayName("PG에 올바른 URL/헤더로 GET 요청한다")
-        void sendsCorrectGetRequest() {
+        @DisplayName("PG에 올바른 URL/헤더로 GET 요청하고 PaymentGatewayResponse를 반환한다")
+        void sendsCorrectGetRequestAndReturnsGatewayResponse() {
             // arrange
             PgPaymentStatusResponse statusResponse = new PgPaymentStatusResponse(
                 "TXN-001", "ORD20250318-0000001", "SUCCESS", "결제 완료"
@@ -176,23 +176,58 @@ class PgClientTest {
             )).willReturn(ResponseEntity.ok(statusResponse));
 
             // act
-            PgPaymentStatusResponse result = pgClient.getPaymentStatus("TXN-001", MEMBER_ID);
+            PaymentGatewayResponse result = pgClient.getPaymentStatus("TXN-001", MEMBER_ID);
 
             // assert
             assertAll(
                 () -> assertThat(result.transactionId()).isEqualTo("TXN-001"),
-                () -> assertThat(result.status()).isEqualTo("SUCCESS")
+                () -> assertThat(result.status()).isEqualTo("SUCCESS"),
+                () -> assertThat(result.message()).isEqualTo("결제 완료")
             );
+        }
+
+        @Test
+        @DisplayName("PG가 4xx 응답하면 PaymentGatewayException(timeout=false)을 던진다")
+        void throwsPaymentGatewayException_whenPgRejects() {
+            // arrange
+            given(restTemplate.exchange(
+                eq(BASE_URL + "/api/v1/payments/TXN-001"),
+                eq(HttpMethod.GET),
+                any(HttpEntity.class),
+                eq(PgPaymentStatusResponse.class)
+            )).willThrow(new HttpClientErrorException(HttpStatus.NOT_FOUND, "Not Found"));
+
+            // act & assert
+            assertThatThrownBy(() -> pgClient.getPaymentStatus("TXN-001", MEMBER_ID))
+                .isInstanceOf(PaymentGatewayException.class)
+                .satisfies(ex -> assertThat(((PaymentGatewayException) ex).isTimeout()).isFalse());
+        }
+
+        @Test
+        @DisplayName("PG 호출 타임아웃 시 PaymentGatewayException(timeout=true)을 던진다")
+        void throwsPaymentGatewayExceptionWithTimeout_whenTimeout() {
+            // arrange
+            given(restTemplate.exchange(
+                eq(BASE_URL + "/api/v1/payments/TXN-001"),
+                eq(HttpMethod.GET),
+                any(HttpEntity.class),
+                eq(PgPaymentStatusResponse.class)
+            )).willThrow(new ResourceAccessException("Read timed out"));
+
+            // act & assert
+            assertThatThrownBy(() -> pgClient.getPaymentStatus("TXN-001", MEMBER_ID))
+                .isInstanceOf(PaymentGatewayException.class)
+                .satisfies(ex -> assertThat(((PaymentGatewayException) ex).isTimeout()).isTrue());
         }
     }
 
-    @DisplayName("결제 상태 조회 (orderId)")
+    @DisplayName("결제 상태 조회 (orderNumber)")
     @Nested
     class GetPaymentByOrderId {
 
         @Test
-        @DisplayName("PG에 올바른 URL/쿼리파라미터로 GET 요청한다")
-        void sendsCorrectGetRequestWithQueryParam() {
+        @DisplayName("PG에 올바른 URL/쿼리파라미터로 GET 요청하고 PaymentGatewayResponse를 반환한다")
+        void sendsCorrectGetRequestAndReturnsGatewayResponse() {
             // arrange
             PgPaymentStatusResponse statusResponse = new PgPaymentStatusResponse(
                 "TXN-001", "ORD20250318-0000001", "SUCCESS", "결제 완료"
@@ -205,13 +240,48 @@ class PgClientTest {
             )).willReturn(ResponseEntity.ok(statusResponse));
 
             // act
-            PgPaymentStatusResponse result = pgClient.getPaymentByOrderId("ORD20250318-0000001", MEMBER_ID);
+            PaymentGatewayResponse result = pgClient.getPaymentByOrderId("ORD20250318-0000001", MEMBER_ID);
 
             // assert
             assertAll(
-                () -> assertThat(result.orderId()).isEqualTo("ORD20250318-0000001"),
-                () -> assertThat(result.status()).isEqualTo("SUCCESS")
+                () -> assertThat(result.transactionId()).isEqualTo("TXN-001"),
+                () -> assertThat(result.status()).isEqualTo("SUCCESS"),
+                () -> assertThat(result.message()).isEqualTo("결제 완료")
             );
+        }
+
+        @Test
+        @DisplayName("PG가 4xx 응답하면 PaymentGatewayException(timeout=false)을 던진다")
+        void throwsPaymentGatewayException_whenPgRejects() {
+            // arrange
+            given(restTemplate.exchange(
+                eq(BASE_URL + "/api/v1/payments?orderId=ORD20250318-0000001"),
+                eq(HttpMethod.GET),
+                any(HttpEntity.class),
+                eq(PgPaymentStatusResponse.class)
+            )).willThrow(new HttpClientErrorException(HttpStatus.NOT_FOUND, "Not Found"));
+
+            // act & assert
+            assertThatThrownBy(() -> pgClient.getPaymentByOrderId("ORD20250318-0000001", MEMBER_ID))
+                .isInstanceOf(PaymentGatewayException.class)
+                .satisfies(ex -> assertThat(((PaymentGatewayException) ex).isTimeout()).isFalse());
+        }
+
+        @Test
+        @DisplayName("PG 호출 타임아웃 시 PaymentGatewayException(timeout=true)을 던진다")
+        void throwsPaymentGatewayExceptionWithTimeout_whenTimeout() {
+            // arrange
+            given(restTemplate.exchange(
+                eq(BASE_URL + "/api/v1/payments?orderId=ORD20250318-0000001"),
+                eq(HttpMethod.GET),
+                any(HttpEntity.class),
+                eq(PgPaymentStatusResponse.class)
+            )).willThrow(new ResourceAccessException("Read timed out"));
+
+            // act & assert
+            assertThatThrownBy(() -> pgClient.getPaymentByOrderId("ORD20250318-0000001", MEMBER_ID))
+                .isInstanceOf(PaymentGatewayException.class)
+                .satisfies(ex -> assertThat(((PaymentGatewayException) ex).isTimeout()).isTrue());
         }
     }
 }
