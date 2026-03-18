@@ -30,4 +30,12 @@ public class PaymentV1Controller implements PaymentV1ApiSpec {
         PaymentInfo info = paymentFacade.requestPayment(loginId, password, request.toCommand());
         return ApiResponse.success(PaymentV1Dto.PaymentResponse.from(info));
     }
+
+    @PostMapping("/callback")
+    @Override
+    public ApiResponse<PaymentV1Dto.PaymentResponse> handleCallback(
+        @Valid @RequestBody PaymentV1Dto.CallbackRequest request) {
+        PaymentInfo info = paymentFacade.handleCallback(request.toCommand());
+        return ApiResponse.success(PaymentV1Dto.PaymentResponse.from(info));
+    }
 }

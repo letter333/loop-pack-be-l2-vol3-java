@@ -17,4 +17,12 @@ public interface PaymentV1ApiSpec {
         @Parameter(description = "비밀번호", required = true) String password,
         PaymentV1Dto.CreatePaymentRequest request
     );
+
+    @Operation(
+        summary = "결제 콜백 수신",
+        description = "PG로부터 결제 결과 콜백을 수신합니다."
+    )
+    ApiResponse<PaymentV1Dto.PaymentResponse> handleCallback(
+        PaymentV1Dto.CallbackRequest request
+    );
 }
