@@ -33,6 +33,11 @@ Content-Type: application/json
   "message": "한도 초과"
 }
 
+### 결제 수동 복구
+POST localhost:8080/api/v1/payments/1/recover
+X-Loopers-LoginId: user1
+X-Loopers-LoginPw: password1
+
 ###
 
 ## PG-Simulator
