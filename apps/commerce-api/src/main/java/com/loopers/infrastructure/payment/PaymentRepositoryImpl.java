@@ -2,9 +2,11 @@ package com.loopers.infrastructure.payment;
 
 import com.loopers.domain.payment.Payment;
 import com.loopers.domain.payment.PaymentRepository;
+import com.loopers.domain.payment.PaymentStatus;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -47,6 +49,14 @@ public class PaymentRepositoryImpl implements PaymentRepository {
     @Override
     public List<Payment> findByOrderId(Long orderId) {
         return paymentJpaRepository.findByOrderId(orderId)
+            .stream()
+            .map(PaymentEntity::toDomain)
+            .toList();
+    }
+
+    @Override
+    public List<Payment> findByStatusInAndCreatedBefore(List<PaymentStatus> statuses, LocalDateTime threshold) {
+        return paymentJpaRepository.findByStatusInAndCreatedAtBefore(statuses, threshold)
             .stream()
             .map(PaymentEntity::toDomain)
             .toList();

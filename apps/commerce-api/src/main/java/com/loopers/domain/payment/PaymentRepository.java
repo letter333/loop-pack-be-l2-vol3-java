@@ -1,5 +1,6 @@
 package com.loopers.domain.payment;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -12,4 +13,6 @@ public interface PaymentRepository {
     Optional<Payment> findByTransactionId(String transactionId);
 
     List<Payment> findByOrderId(Long orderId);
+
+    List<Payment> findByStatusInAndCreatedBefore(List<PaymentStatus> statuses, LocalDateTime threshold);
 }
