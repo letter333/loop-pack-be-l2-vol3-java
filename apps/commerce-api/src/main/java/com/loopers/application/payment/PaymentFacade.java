@@ -9,8 +9,10 @@ import com.loopers.domain.payment.PaymentGateway;
 import com.loopers.domain.payment.PaymentGatewayException;
 import com.loopers.domain.payment.PaymentGatewayResponse;
 import com.loopers.domain.payment.PaymentService;
+import com.loopers.domain.order.OrderStatus;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 @Component
 @RequiredArgsConstructor
@@ -51,5 +53,27 @@ public class PaymentFacade {
         // TX2: 상태 업데이트 저장
         Payment updatedPayment = paymentService.save(savedPayment);
         return PaymentInfo.from(updatedPayment);
+    }
+
+    @Transactional
+    public PaymentInfo handleCallback(PaymentCommand.Callback command) {
+        Payment payment = paymentService.getPaymentByTransactionId(command.transactionId());
+
+        if (payment.isTerminal()) {
+            return PaymentInfo.from(payment);
+        }
+
+        payment.receiveCallback();
+
+        if ("SUCCESS".equals(command.status())) {
+            payment.markSuccess();
+            Payment saved = paymentService.save(payment);
+            orderService.changeStatus(payment.getOrderId(), OrderStatus.PAID);
+            return PaymentInfo.from(saved);
+        } else {
+            payment.markFailed(command.message());
+            Payment saved = paymentService.save(payment);
+            return PaymentInfo.from(saved);
+        }
     }
 }

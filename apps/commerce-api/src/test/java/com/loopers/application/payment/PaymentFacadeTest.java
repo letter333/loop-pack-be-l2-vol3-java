@@ -32,6 +32,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.willThrow;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
 @ExtendWith(MockitoExtension.class)
@@ -71,6 +72,12 @@ class PaymentFacadeTest {
 
     private PaymentCommand.Create createCommand() {
         return new PaymentCommand.Create(ORDER_ID, "VISA", "4111111111111111");
+    }
+
+    private Payment createPayment(PaymentStatus status, String transactionId) {
+        return new Payment(1L, ORDER_ID, MEMBER_ID, ORDER_NUMBER,
+            transactionId, "VISA", "4111111111111111",
+            PAYMENT_AMOUNT, status, null, null);
     }
 
     @DisplayName("결제 요청")
@@ -217,6 +224,92 @@ class PaymentFacadeTest {
             assertThatThrownBy(() -> paymentFacade.requestPayment(LOGIN_ID, PASSWORD, command))
                 .isInstanceOf(CoreException.class)
                 .satisfies(ex -> assertThat(((CoreException) ex).getErrorType()).isEqualTo(ErrorType.FORBIDDEN));
+        }
+    }
+
+    @DisplayName("콜백 처리")
+    @Nested
+    class HandleCallback {
+
+        private static final String TRANSACTION_ID = "20250318:TR:abc123";
+
+        @Test
+        @DisplayName("콜백 성공(SUCCESS) 시 Payment를 SUCCESS로 변경하고 주문을 PAID로 전이한다")
+        void marksPaymentSuccessAndOrderPaid_whenCallbackSuccess() {
+            // arrange
+            Payment payment = createPayment(PaymentStatus.REQUESTED, TRANSACTION_ID);
+            PaymentCommand.Callback command = new PaymentCommand.Callback(
+                TRANSACTION_ID, ORDER_NUMBER, "SUCCESS", "결제 성공");
+
+            given(paymentService.getPaymentByTransactionId(TRANSACTION_ID)).willReturn(payment);
+            given(paymentService.save(any(Payment.class))).willAnswer(invocation -> invocation.getArgument(0));
+
+            // act
+            PaymentInfo result = paymentFacade.handleCallback(command);
+
+            // assert
+            assertAll(
+                () -> assertThat(result.status()).isEqualTo(PaymentStatus.SUCCESS),
+                () -> assertThat(result.transactionId()).isEqualTo(TRANSACTION_ID)
+            );
+            verify(orderService).changeStatus(ORDER_ID, OrderStatus.PAID);
+        }
+
+        @Test
+        @DisplayName("콜백 실패 시 Payment를 FAILED로 변경하고 주문은 변경하지 않는다")
+        void marksPaymentFailed_whenCallbackFails() {
+            // arrange
+            Payment payment = createPayment(PaymentStatus.REQUESTED, TRANSACTION_ID);
+            PaymentCommand.Callback command = new PaymentCommand.Callback(
+                TRANSACTION_ID, ORDER_NUMBER, "LIMIT_EXCEEDED", "한도 초과");
+
+            given(paymentService.getPaymentByTransactionId(TRANSACTION_ID)).willReturn(payment);
+            given(paymentService.save(any(Payment.class))).willAnswer(invocation -> invocation.getArgument(0));
+
+            // act
+            PaymentInfo result = paymentFacade.handleCallback(command);
+
+            // assert
+            assertAll(
+                () -> assertThat(result.status()).isEqualTo(PaymentStatus.FAILED),
+                () -> assertThat(result.failReason()).isEqualTo("한도 초과")
+            );
+            verify(orderService, never()).changeStatus(anyLong(), any(OrderStatus.class));
+        }
+
+        @Test
+        @DisplayName("이미 terminal 상태인 Payment에 콜백이 오면 무시한다 (멱등성)")
+        void ignoresCallback_whenPaymentAlreadyTerminal() {
+            // arrange
+            Payment payment = createPayment(PaymentStatus.SUCCESS, TRANSACTION_ID);
+            PaymentCommand.Callback command = new PaymentCommand.Callback(
+                TRANSACTION_ID, ORDER_NUMBER, "SUCCESS", "결제 성공");
+
+            given(paymentService.getPaymentByTransactionId(TRANSACTION_ID)).willReturn(payment);
+
+            // act
+            PaymentInfo result = paymentFacade.handleCallback(command);
+
+            // assert
+            assertThat(result.status()).isEqualTo(PaymentStatus.SUCCESS);
+            verify(paymentService, never()).save(any(Payment.class));
+            verify(orderService, never()).changeStatus(anyLong(), any(OrderStatus.class));
+        }
+
+        @Test
+        @DisplayName("존재하지 않는 transactionId로 콜백이 오면 NOT_FOUND 예외가 발생한다")
+        void throwsNotFound_whenTransactionIdNotExists() {
+            // arrange
+            PaymentCommand.Callback command = new PaymentCommand.Callback(
+                "UNKNOWN_TX", ORDER_NUMBER, "SUCCESS", "결제 성공");
+
+            given(paymentService.getPaymentByTransactionId("UNKNOWN_TX"))
+                .willThrow(new CoreException(ErrorType.NOT_FOUND, "결제를 찾을 수 없습니다."));
+
+            // act & assert
+            assertThatThrownBy(() -> paymentFacade.handleCallback(command))
+                .isInstanceOf(CoreException.class)
+                .satisfies(ex -> assertThat(((CoreException) ex).getErrorType()).isEqualTo(ErrorType.NOT_FOUND));
         }
     }
 }
