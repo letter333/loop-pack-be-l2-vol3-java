@@ -1,7 +1,8 @@
 package com.loopers.infrastructure.payment;
 
-import com.loopers.domain.payment.PaymentGatewayException;
 import com.loopers.domain.payment.PaymentGatewayResponse;
+import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -32,6 +33,9 @@ class PgClientTest {
     @Mock
     private RestTemplate restTemplate;
 
+    @Mock
+    private CircuitBreakerRegistry circuitBreakerRegistry;
+
     private PgClient pgClient;
 
     private static final String BASE_URL = "http://localhost:8082";
@@ -40,7 +44,7 @@ class PgClientTest {
 
     @BeforeEach
     void setUp() {
-        pgClient = new PgClient(restTemplate);
+        pgClient = new PgClient(restTemplate, circuitBreakerRegistry);
         ReflectionTestUtils.setField(pgClient, "baseUrl", BASE_URL);
         ReflectionTestUtils.setField(pgClient, "callbackUrl", CALLBACK_URL);
     }
@@ -119,8 +123,8 @@ class PgClientTest {
         }
 
         @Test
-        @DisplayName("PG가 실패 응답하면 PaymentGatewayException(timeout=false)을 던진다")
-        void throwsPaymentGatewayException_whenPgRejects() {
+        @DisplayName("PG가 4xx 응답하면 HttpClientErrorException을 던진다")
+        void throwsHttpClientErrorException_whenPgRejects() {
             // arrange
             given(restTemplate.exchange(
                 eq(BASE_URL + "/api/v1/payments"),
@@ -133,13 +137,12 @@ class PgClientTest {
             assertThatThrownBy(() -> pgClient.requestPayment(
                 "ORD20250318-0000001", "VISA", "4111111111111111", 10000L, MEMBER_ID
             ))
-                .isInstanceOf(PaymentGatewayException.class)
-                .satisfies(ex -> assertThat(((PaymentGatewayException) ex).isTimeout()).isFalse());
+                .isInstanceOf(HttpClientErrorException.class);
         }
 
         @Test
-        @DisplayName("PG 호출 타임아웃 시 PaymentGatewayException(timeout=true)을 던진다")
-        void throwsPaymentGatewayExceptionWithTimeout_whenTimeout() {
+        @DisplayName("PG 호출 타임아웃 시 ResourceAccessException을 던진다")
+        void throwsResourceAccessException_whenTimeout() {
             // arrange
             given(restTemplate.exchange(
                 eq(BASE_URL + "/api/v1/payments"),
@@ -152,8 +155,7 @@ class PgClientTest {
             assertThatThrownBy(() -> pgClient.requestPayment(
                 "ORD20250318-0000001", "VISA", "4111111111111111", 10000L, MEMBER_ID
             ))
-                .isInstanceOf(PaymentGatewayException.class)
-                .satisfies(ex -> assertThat(((PaymentGatewayException) ex).isTimeout()).isTrue());
+                .isInstanceOf(ResourceAccessException.class);
         }
     }
 
@@ -187,8 +189,8 @@ class PgClientTest {
         }
 
         @Test
-        @DisplayName("PG가 4xx 응답하면 PaymentGatewayException(timeout=false)을 던진다")
-        void throwsPaymentGatewayException_whenPgRejects() {
+        @DisplayName("PG가 4xx 응답하면 HttpClientErrorException을 던진다")
+        void throwsHttpClientErrorException_whenPgRejects() {
             // arrange
             given(restTemplate.exchange(
                 eq(BASE_URL + "/api/v1/payments/TXN-001"),
@@ -199,13 +201,12 @@ class PgClientTest {
 
             // act & assert
             assertThatThrownBy(() -> pgClient.getPaymentStatus("TXN-001", MEMBER_ID))
-                .isInstanceOf(PaymentGatewayException.class)
-                .satisfies(ex -> assertThat(((PaymentGatewayException) ex).isTimeout()).isFalse());
+                .isInstanceOf(HttpClientErrorException.class);
         }
 
         @Test
-        @DisplayName("PG 호출 타임아웃 시 PaymentGatewayException(timeout=true)을 던진다")
-        void throwsPaymentGatewayExceptionWithTimeout_whenTimeout() {
+        @DisplayName("PG 호출 타임아웃 시 ResourceAccessException을 던진다")
+        void throwsResourceAccessException_whenTimeout() {
             // arrange
             given(restTemplate.exchange(
                 eq(BASE_URL + "/api/v1/payments/TXN-001"),
@@ -216,8 +217,7 @@ class PgClientTest {
 
             // act & assert
             assertThatThrownBy(() -> pgClient.getPaymentStatus("TXN-001", MEMBER_ID))
-                .isInstanceOf(PaymentGatewayException.class)
-                .satisfies(ex -> assertThat(((PaymentGatewayException) ex).isTimeout()).isTrue());
+                .isInstanceOf(ResourceAccessException.class);
         }
     }
 
@@ -251,8 +251,8 @@ class PgClientTest {
         }
 
         @Test
-        @DisplayName("PG가 4xx 응답하면 PaymentGatewayException(timeout=false)을 던진다")
-        void throwsPaymentGatewayException_whenPgRejects() {
+        @DisplayName("PG가 4xx 응답하면 HttpClientErrorException을 던진다")
+        void throwsHttpClientErrorException_whenPgRejects() {
             // arrange
             given(restTemplate.exchange(
                 eq(BASE_URL + "/api/v1/payments?orderId=ORD20250318-0000001"),
@@ -263,13 +263,12 @@ class PgClientTest {
 
             // act & assert
             assertThatThrownBy(() -> pgClient.getPaymentByOrderId("ORD20250318-0000001", MEMBER_ID))
-                .isInstanceOf(PaymentGatewayException.class)
-                .satisfies(ex -> assertThat(((PaymentGatewayException) ex).isTimeout()).isFalse());
+                .isInstanceOf(HttpClientErrorException.class);
         }
 
         @Test
-        @DisplayName("PG 호출 타임아웃 시 PaymentGatewayException(timeout=true)을 던진다")
-        void throwsPaymentGatewayExceptionWithTimeout_whenTimeout() {
+        @DisplayName("PG 호출 타임아웃 시 ResourceAccessException을 던진다")
+        void throwsResourceAccessException_whenTimeout() {
             // arrange
             given(restTemplate.exchange(
                 eq(BASE_URL + "/api/v1/payments?orderId=ORD20250318-0000001"),
@@ -280,8 +279,7 @@ class PgClientTest {
 
             // act & assert
             assertThatThrownBy(() -> pgClient.getPaymentByOrderId("ORD20250318-0000001", MEMBER_ID))
-                .isInstanceOf(PaymentGatewayException.class)
-                .satisfies(ex -> assertThat(((PaymentGatewayException) ex).isTimeout()).isTrue());
+                .isInstanceOf(ResourceAccessException.class);
         }
     }
 }

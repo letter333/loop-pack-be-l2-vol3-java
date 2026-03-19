@@ -13,13 +13,15 @@ import com.loopers.domain.payment.PaymentService;
 import com.loopers.domain.payment.PaymentStatus;
 import com.loopers.support.error.CoreException;
 import com.loopers.support.error.ErrorType;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.transaction.support.TransactionCallback;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.LocalDate;
 
@@ -38,7 +40,6 @@ import static org.mockito.Mockito.verify;
 @ExtendWith(MockitoExtension.class)
 class PaymentFacadeTest {
 
-    @InjectMocks
     private PaymentFacade paymentFacade;
 
     @Mock
@@ -53,12 +54,21 @@ class PaymentFacadeTest {
     @Mock
     private PaymentGateway paymentGateway;
 
+    @Mock
+    private TransactionTemplate transactionTemplate;
+
     private static final String LOGIN_ID = "user1";
     private static final String PASSWORD = "password1";
     private static final Long MEMBER_ID = 1L;
     private static final Long ORDER_ID = 100L;
     private static final String ORDER_NUMBER = "ORD20250318-0000001";
     private static final Long PAYMENT_AMOUNT = 50000L;
+
+    @BeforeEach
+    void setUp() {
+        paymentFacade = new PaymentFacade(
+            memberService, orderService, paymentService, paymentGateway, transactionTemplate);
+    }
 
     private Member createMember() {
         return new Member(MEMBER_ID, LOGIN_ID, "encodedPw", "테스트유저", LocalDate.of(1990, 1, 1), "test@test.com");
@@ -88,6 +98,7 @@ class PaymentFacadeTest {
         @DisplayName("PG 요청 성공 시 REQUESTED 상태로 생성되고 transactionId가 할당된다")
         void createsPaymentAndAssignsTransactionId_whenPgSucceeds() {
             // arrange
+            given(paymentGateway.isAvailable()).willReturn(true);
             Member member = createMember();
             Order order = createOrder();
             PaymentCommand.Create command = createCommand();
@@ -123,6 +134,7 @@ class PaymentFacadeTest {
         @DisplayName("PG 요청 실패(4xx) 시 FAILED 상태로 저장된다")
         void marksPaymentFailed_whenPgRejects() {
             // arrange
+            given(paymentGateway.isAvailable()).willReturn(true);
             Member member = createMember();
             Order order = createOrder();
             PaymentCommand.Create command = createCommand();
@@ -153,6 +165,7 @@ class PaymentFacadeTest {
         @DisplayName("PG 타임아웃 시 TIMEOUT 상태로 저장된다")
         void marksPaymentTimeout_whenPgTimesOut() {
             // arrange
+            given(paymentGateway.isAvailable()).willReturn(true);
             Member member = createMember();
             Order order = createOrder();
             PaymentCommand.Create command = createCommand();
@@ -180,6 +193,7 @@ class PaymentFacadeTest {
         @DisplayName("인증 실패 시 UNAUTHORIZED 예외가 발생한다")
         void throwsUnauthorized_whenAuthenticationFails() {
             // arrange
+            given(paymentGateway.isAvailable()).willReturn(true);
             PaymentCommand.Create command = createCommand();
             given(memberService.authenticate(LOGIN_ID, PASSWORD))
                 .willThrow(new CoreException(ErrorType.UNAUTHORIZED));
@@ -194,6 +208,7 @@ class PaymentFacadeTest {
         @DisplayName("존재하지 않는 주문 시 NOT_FOUND 예외가 발생한다")
         void throwsNotFound_whenOrderNotExists() {
             // arrange
+            given(paymentGateway.isAvailable()).willReturn(true);
             Member member = createMember();
             PaymentCommand.Create command = createCommand();
 
@@ -211,6 +226,7 @@ class PaymentFacadeTest {
         @DisplayName("주문 소유자가 아닌 경우 FORBIDDEN 예외가 발생한다")
         void throwsForbidden_whenNotOrderOwner() {
             // arrange
+            given(paymentGateway.isAvailable()).willReturn(true);
             Member member = createMember();
             Order order = createOrder();
             PaymentCommand.Create command = createCommand();
@@ -224,6 +240,21 @@ class PaymentFacadeTest {
             assertThatThrownBy(() -> paymentFacade.requestPayment(LOGIN_ID, PASSWORD, command))
                 .isInstanceOf(CoreException.class)
                 .satisfies(ex -> assertThat(((CoreException) ex).getErrorType()).isEqualTo(ErrorType.FORBIDDEN));
+        }
+
+        @Test
+        @DisplayName("CB OPEN 시 Payment 미생성 + SERVICE_UNAVAILABLE 예외가 발생한다")
+        void throwsServiceUnavailable_whenCircuitBreakerOpen() {
+            // arrange
+            given(paymentGateway.isAvailable()).willReturn(false);
+            PaymentCommand.Create command = createCommand();
+
+            // act & assert
+            assertThatThrownBy(() -> paymentFacade.requestPayment(LOGIN_ID, PASSWORD, command))
+                .isInstanceOf(CoreException.class)
+                .satisfies(ex -> assertThat(((CoreException) ex).getErrorType()).isEqualTo(ErrorType.SERVICE_UNAVAILABLE));
+
+            verify(paymentService, never()).save(any(Payment.class));
         }
     }
 
@@ -363,6 +394,7 @@ class PaymentFacadeTest {
 
         @Test
         @DisplayName("TIMEOUT + txId 있음 + PG SUCCESS → markSuccess + 주문 PAID")
+        @SuppressWarnings("unchecked")
         void recoversToSuccess_whenTimeoutWithTxIdAndPgSuccess() {
             // arrange
             Member member = createMember();
@@ -374,6 +406,11 @@ class PaymentFacadeTest {
             given(paymentService.getPayment(PAYMENT_ID)).willReturn(payment);
             given(paymentGateway.getPaymentStatus(TRANSACTION_ID, MEMBER_ID))
                 .willReturn(new PaymentGatewayResponse(TRANSACTION_ID, "SUCCESS", "결제 완료"));
+            given(transactionTemplate.execute(any(TransactionCallback.class)))
+                .willAnswer(invocation -> {
+                    TransactionCallback<PaymentInfo> callback = invocation.getArgument(0);
+                    return callback.doInTransaction(null);
+                });
             given(paymentService.save(any(Payment.class))).willAnswer(invocation -> invocation.getArgument(0));
 
             // act
@@ -438,6 +475,7 @@ class PaymentFacadeTest {
 
         @Test
         @DisplayName("TIMEOUT + txId 없음 + orderNumber로 PG 조회 → SUCCESS → markSuccess + txId 할당 + 주문 PAID")
+        @SuppressWarnings("unchecked")
         void recoversToSuccess_whenTimeoutWithoutTxIdAndPgSuccess() {
             // arrange
             Member member = createMember();
@@ -449,6 +487,11 @@ class PaymentFacadeTest {
             given(paymentService.getPayment(PAYMENT_ID)).willReturn(payment);
             given(paymentGateway.getPaymentByOrderId(ORDER_NUMBER, MEMBER_ID))
                 .willReturn(new PaymentGatewayResponse("TXN-NEW-001", "SUCCESS", "결제 완료"));
+            given(transactionTemplate.execute(any(TransactionCallback.class)))
+                .willAnswer(invocation -> {
+                    TransactionCallback<PaymentInfo> callback = invocation.getArgument(0);
+                    return callback.doInTransaction(null);
+                });
             given(paymentService.save(any(Payment.class))).willAnswer(invocation -> invocation.getArgument(0));
 
             // act
@@ -464,6 +507,7 @@ class PaymentFacadeTest {
 
         @Test
         @DisplayName("REQUESTED + txId 있음 + PG SUCCESS → markSuccess + 주문 PAID")
+        @SuppressWarnings("unchecked")
         void recoversToSuccess_whenRequestedWithTxIdAndPgSuccess() {
             // arrange
             Member member = createMember();
@@ -475,6 +519,11 @@ class PaymentFacadeTest {
             given(paymentService.getPayment(PAYMENT_ID)).willReturn(payment);
             given(paymentGateway.getPaymentStatus(TRANSACTION_ID, MEMBER_ID))
                 .willReturn(new PaymentGatewayResponse(TRANSACTION_ID, "SUCCESS", "결제 완료"));
+            given(transactionTemplate.execute(any(TransactionCallback.class)))
+                .willAnswer(invocation -> {
+                    TransactionCallback<PaymentInfo> callback = invocation.getArgument(0);
+                    return callback.doInTransaction(null);
+                });
             given(paymentService.save(any(Payment.class))).willAnswer(invocation -> invocation.getArgument(0));
 
             // act
@@ -498,6 +547,29 @@ class PaymentFacadeTest {
             assertThatThrownBy(() -> paymentFacade.recoverPayment(LOGIN_ID, PASSWORD, 999L))
                 .isInstanceOf(CoreException.class)
                 .satisfies(ex -> assertThat(((CoreException) ex).getErrorType()).isEqualTo(ErrorType.NOT_FOUND));
+        }
+
+        @Test
+        @DisplayName("결제 복구 중 PG 조회 실패 시 현재 결제 상태를 반환한다")
+        void returnsCurrentState_whenPgQueryFails() {
+            // arrange
+            Member member = createMember();
+            Payment payment = new Payment(PAYMENT_ID, ORDER_ID, MEMBER_ID, ORDER_NUMBER,
+                TRANSACTION_ID, "VISA", "4111111111111111",
+                PAYMENT_AMOUNT, PaymentStatus.TIMEOUT, null, null);
+
+            given(memberService.authenticate(LOGIN_ID, PASSWORD)).willReturn(member);
+            given(paymentService.getPayment(PAYMENT_ID)).willReturn(payment);
+            given(paymentGateway.getPaymentStatus(TRANSACTION_ID, MEMBER_ID))
+                .willThrow(new PaymentGatewayException("PG 연결 실패", true));
+
+            // act
+            PaymentInfo result = paymentFacade.recoverPayment(LOGIN_ID, PASSWORD, PAYMENT_ID);
+
+            // assert
+            assertThat(result.status()).isEqualTo(PaymentStatus.TIMEOUT);
+            verify(paymentService, never()).save(any(Payment.class));
+            verify(orderService, never()).changeStatus(anyLong(), any(OrderStatus.class));
         }
     }
 }
