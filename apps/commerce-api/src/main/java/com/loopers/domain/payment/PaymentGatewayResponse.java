@@ -5,4 +5,11 @@ public record PaymentGatewayResponse(
     String status,
     String message
 ) {
+    public boolean isSuccess() {
+        return "SUCCESS".equals(status);
+    }
+
+    public boolean isFailed() {
+        return "FAILED".equals(status);
+    }
 }

@@ -4,6 +4,7 @@ import com.loopers.domain.payment.Payment;
 import com.loopers.domain.payment.PaymentRepository;
 import com.loopers.domain.payment.PaymentStatus;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
@@ -55,8 +56,8 @@ public class PaymentRepositoryImpl implements PaymentRepository {
     }
 
     @Override
-    public List<Payment> findByStatusInAndCreatedBefore(List<PaymentStatus> statuses, LocalDateTime threshold) {
-        return paymentJpaRepository.findByStatusInAndCreatedAtBefore(statuses, threshold)
+    public List<Payment> findByStatusInAndCreatedBefore(List<PaymentStatus> statuses, LocalDateTime threshold, int limit) {
+        return paymentJpaRepository.findByStatusInAndCreatedAtBefore(statuses, threshold, PageRequest.of(0, limit))
             .stream()
             .map(PaymentEntity::toDomain)
             .toList();

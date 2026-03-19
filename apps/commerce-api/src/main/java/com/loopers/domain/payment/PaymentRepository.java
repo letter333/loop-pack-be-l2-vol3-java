@@ -14,5 +14,5 @@ public interface PaymentRepository {
 
     List<Payment> findByOrderId(Long orderId);
 
-    List<Payment> findByStatusInAndCreatedBefore(List<PaymentStatus> statuses, LocalDateTime threshold);
+    List<Payment> findByStatusInAndCreatedBefore(List<PaymentStatus> statuses, LocalDateTime threshold, int limit);
 }

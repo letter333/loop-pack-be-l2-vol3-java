@@ -14,7 +14,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.never;
@@ -24,7 +24,6 @@ import static org.mockito.Mockito.verify;
 @ExtendWith(MockitoExtension.class)
 class PaymentRecoverySchedulerTest {
 
-    @InjectMocks
     private PaymentRecoveryScheduler paymentRecoveryScheduler;
 
     @Mock
@@ -32,6 +31,11 @@ class PaymentRecoverySchedulerTest {
 
     @Mock
     private PaymentFacade paymentFacade;
+
+    @org.junit.jupiter.api.BeforeEach
+    void setUp() {
+        paymentRecoveryScheduler = new PaymentRecoveryScheduler(paymentService, paymentFacade, 100);
+    }
 
     @Test
     @DisplayName("미완료 결제 2건 존재 → 각각 recoverPayment() 호출")
@@ -46,16 +50,17 @@ class PaymentRecoverySchedulerTest {
 
         given(paymentService.getPaymentsForRecovery(
             eq(List.of(PaymentStatus.TIMEOUT, PaymentStatus.REQUESTED)),
-            any(LocalDateTime.class)
+            any(LocalDateTime.class),
+            anyInt()
         )).willReturn(List.of(payment1, payment2));
 
         // act
         paymentRecoveryScheduler.recoverPendingPayments();
 
         // assert
-        verify(paymentFacade).recoverPayment(1L);
-        verify(paymentFacade).recoverPayment(2L);
-        verify(paymentFacade, times(2)).recoverPayment(anyLong());
+        verify(paymentFacade).recoverPayment(payment1);
+        verify(paymentFacade).recoverPayment(payment2);
+        verify(paymentFacade, times(2)).recoverPayment(any(Payment.class));
     }
 
     @Test
@@ -64,14 +69,15 @@ class PaymentRecoverySchedulerTest {
         // arrange
         given(paymentService.getPaymentsForRecovery(
             eq(List.of(PaymentStatus.TIMEOUT, PaymentStatus.REQUESTED)),
-            any(LocalDateTime.class)
+            any(LocalDateTime.class),
+            anyInt()
         )).willReturn(List.of());
 
         // act
         paymentRecoveryScheduler.recoverPendingPayments();
 
         // assert
-        verify(paymentFacade, never()).recoverPayment(anyLong());
+        verify(paymentFacade, never()).recoverPayment(any(Payment.class));
     }
 
     @Test
@@ -87,15 +93,16 @@ class PaymentRecoverySchedulerTest {
 
         given(paymentService.getPaymentsForRecovery(
             eq(List.of(PaymentStatus.TIMEOUT, PaymentStatus.REQUESTED)),
-            any(LocalDateTime.class)
+            any(LocalDateTime.class),
+            anyInt()
         )).willReturn(List.of(payment1, payment2));
-        given(paymentFacade.recoverPayment(1L)).willThrow(new RuntimeException("PG 연결 실패"));
+        given(paymentFacade.recoverPayment(payment1)).willThrow(new RuntimeException("PG 연결 실패"));
 
         // act
         paymentRecoveryScheduler.recoverPendingPayments();
 
         // assert
-        verify(paymentFacade).recoverPayment(1L);
-        verify(paymentFacade).recoverPayment(2L);
+        verify(paymentFacade).recoverPayment(payment1);
+        verify(paymentFacade).recoverPayment(payment2);
     }
 }

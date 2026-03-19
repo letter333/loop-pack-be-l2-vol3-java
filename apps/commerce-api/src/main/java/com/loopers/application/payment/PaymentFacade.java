@@ -76,7 +76,7 @@ public class PaymentFacade {
 
         payment.receiveCallback();
 
-        if ("SUCCESS".equals(command.status())) {
+        if (command.isSuccess()) {
             payment.markSuccess();
             Payment saved = paymentService.save(payment);
             orderService.changeStatus(payment.getOrderId(), OrderStatus.PAID);
@@ -124,7 +124,7 @@ public class PaymentFacade {
     }
 
     private PaymentInfo applyRecoveryResult(Payment payment, PaymentGatewayResponse pgResponse) {
-        if ("SUCCESS".equals(pgResponse.status())) {
+        if (pgResponse.isSuccess()) {
             if (payment.getTransactionId() == null) {
                 payment.assignTransactionId(pgResponse.transactionId());
             }
@@ -134,7 +134,7 @@ public class PaymentFacade {
                 orderService.changeStatus(payment.getOrderId(), OrderStatus.PAID);
                 return PaymentInfo.from(saved);
             });
-        } else if ("FAILED".equals(pgResponse.status())) {
+        } else if (pgResponse.isFailed()) {
             payment.markFailed(pgResponse.message());
             return PaymentInfo.from(paymentService.save(payment));
         }

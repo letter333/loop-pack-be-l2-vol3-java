@@ -20,6 +20,8 @@ import org.springframework.web.client.RestTemplate;
 
 import java.util.Objects;
 
+import static io.github.resilience4j.circuitbreaker.CircuitBreaker.State;
+
 @Component
 public class PgClient implements PaymentGateway {
 
@@ -40,9 +42,8 @@ public class PgClient implements PaymentGateway {
 
     @Override
     public boolean isAvailable() {
-        io.github.resilience4j.circuitbreaker.CircuitBreaker cb =
-            circuitBreakerRegistry.circuitBreaker("pgPayment");
-        return cb.getState() != io.github.resilience4j.circuitbreaker.CircuitBreaker.State.OPEN;
+        var cb = circuitBreakerRegistry.circuitBreaker("pgPayment");
+        return cb.getState() != State.OPEN;
     }
 
     @Override
@@ -51,9 +52,8 @@ public class PgClient implements PaymentGateway {
                                                   Long amount, Long memberId) {
         String url = baseUrl + "/api/v1/payments";
 
-        HttpHeaders headers = new HttpHeaders();
+        HttpHeaders headers = createHeaders(memberId);
         headers.setContentType(MediaType.APPLICATION_JSON);
-        headers.set("X-USER-ID", String.valueOf(memberId));
 
         PgPaymentRequest request = new PgPaymentRequest(
             orderNumber, cardType, cardNo, String.valueOf(amount), callbackUrl
@@ -72,11 +72,8 @@ public class PgClient implements PaymentGateway {
     public PaymentGatewayResponse getPaymentStatus(String transactionId, Long memberId) {
         String url = baseUrl + "/api/v1/payments/" + transactionId;
 
-        HttpHeaders headers = new HttpHeaders();
-        headers.set("X-USER-ID", String.valueOf(memberId));
-
         ResponseEntity<PgPaymentStatusResponse> response = restTemplate.exchange(
-            url, HttpMethod.GET, new HttpEntity<>(headers), PgPaymentStatusResponse.class
+            url, HttpMethod.GET, new HttpEntity<>(createHeaders(memberId)), PgPaymentStatusResponse.class
         );
         PgPaymentStatusResponse body = Objects.requireNonNull(response.getBody(), "PG 응답 본문이 없습니다.");
         return new PaymentGatewayResponse(body.transactionId(), body.status(), body.message());
@@ -88,14 +85,17 @@ public class PgClient implements PaymentGateway {
     public PaymentGatewayResponse getPaymentByOrderId(String orderNumber, Long memberId) {
         String url = baseUrl + "/api/v1/payments?orderId=" + orderNumber;
 
-        HttpHeaders headers = new HttpHeaders();
-        headers.set("X-USER-ID", String.valueOf(memberId));
-
         ResponseEntity<PgPaymentStatusResponse> response = restTemplate.exchange(
-            url, HttpMethod.GET, new HttpEntity<>(headers), PgPaymentStatusResponse.class
+            url, HttpMethod.GET, new HttpEntity<>(createHeaders(memberId)), PgPaymentStatusResponse.class
         );
         PgPaymentStatusResponse body = Objects.requireNonNull(response.getBody(), "PG 응답 본문이 없습니다.");
         return new PaymentGatewayResponse(body.transactionId(), body.status(), body.message());
+    }
+
+    private HttpHeaders createHeaders(Long memberId) {
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("X-USER-ID", String.valueOf(memberId));
+        return headers;
     }
 
     private PaymentGatewayResponse requestPaymentFallback(String orderNumber, String cardType, String cardNo,

@@ -1,6 +1,7 @@
 package com.loopers.infrastructure.payment;
 
 import com.loopers.domain.payment.PaymentStatus;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.time.LocalDateTime;
@@ -13,5 +14,5 @@ public interface PaymentJpaRepository extends JpaRepository<PaymentEntity, Long>
 
     List<PaymentEntity> findByOrderId(Long orderId);
 
-    List<PaymentEntity> findByStatusInAndCreatedAtBefore(List<PaymentStatus> statuses, LocalDateTime threshold);
+    List<PaymentEntity> findByStatusInAndCreatedAtBefore(List<PaymentStatus> statuses, LocalDateTime threshold, Pageable pageable);
 }

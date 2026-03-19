@@ -15,5 +15,8 @@ public class PaymentCommand {
         String status,
         String message
     ) {
+        public boolean isSuccess() {
+            return "SUCCESS".equals(status);
+        }
     }
 }

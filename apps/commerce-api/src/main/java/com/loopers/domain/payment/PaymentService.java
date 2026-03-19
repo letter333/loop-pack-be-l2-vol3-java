@@ -39,7 +39,7 @@ public class PaymentService {
     }
 
     @Transactional(readOnly = true, propagation = Propagation.SUPPORTS)
-    public List<Payment> getPaymentsForRecovery(List<PaymentStatus> statuses, LocalDateTime threshold) {
-        return paymentRepository.findByStatusInAndCreatedBefore(statuses, threshold);
+    public List<Payment> getPaymentsForRecovery(List<PaymentStatus> statuses, LocalDateTime threshold, int limit) {
+        return paymentRepository.findByStatusInAndCreatedBefore(statuses, threshold, limit);
     }
 }
