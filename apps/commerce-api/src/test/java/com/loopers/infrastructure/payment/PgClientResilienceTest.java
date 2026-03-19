@@ -22,6 +22,7 @@ import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestTemplate;
 
 import io.github.resilience4j.springboot3.circuitbreaker.autoconfigure.CircuitBreakerAutoConfiguration;
+import io.github.resilience4j.springboot3.retry.autoconfigure.RetryAutoConfiguration;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -30,12 +31,15 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 
 @SpringBootTest(
     classes = {
         PgClientResilienceTest.TestConfig.class,
         AopAutoConfiguration.class,
-        CircuitBreakerAutoConfiguration.class
+        CircuitBreakerAutoConfiguration.class,
+        RetryAutoConfiguration.class
     },
     properties = {
         "resilience4j.circuitbreaker.instances.pgPayment.sliding-window-type=COUNT_BASED",
@@ -55,7 +59,13 @@ import static org.mockito.Mockito.mock;
         "resilience4j.circuitbreaker.instances.pgQuery.minimum-number-of-calls=2",
         "resilience4j.circuitbreaker.instances.pgQuery.record-exceptions[0]=org.springframework.web.client.ResourceAccessException",
         "resilience4j.circuitbreaker.instances.pgQuery.record-exceptions[1]=org.springframework.web.client.HttpServerErrorException",
-        "resilience4j.circuitbreaker.instances.pgQuery.ignore-exceptions[0]=org.springframework.web.client.HttpClientErrorException"
+        "resilience4j.circuitbreaker.instances.pgQuery.ignore-exceptions[0]=org.springframework.web.client.HttpClientErrorException",
+        "resilience4j.circuitbreaker.circuit-breaker-aspect-order=1",
+        "resilience4j.retry.retry-aspect-order=2",
+        "resilience4j.retry.instances.pgQuery.max-attempts=2",
+        "resilience4j.retry.instances.pgQuery.wait-duration=100ms",
+        "resilience4j.retry.instances.pgQuery.retry-exceptions[0]=org.springframework.web.client.ResourceAccessException",
+        "resilience4j.retry.instances.pgQuery.ignore-exceptions[0]=org.springframework.web.client.HttpClientErrorException"
     }
 )
 class PgClientResilienceTest {
@@ -223,6 +233,105 @@ class PgClientResilienceTest {
             assertThat(result.status()).isEqualTo("SUCCESS");
             assertThat(pgPaymentCb.getState()).isEqualTo(CircuitBreaker.State.OPEN);
             assertThat(pgQueryCb.getState()).isEqualTo(CircuitBreaker.State.CLOSED);
+        }
+    }
+
+    @DisplayName("Retry")
+    @Nested
+    class RetryTest {
+
+        @Test
+        @DisplayName("일시적 실패 후 재시도 성공 시 정상 응답을 반환한다")
+        void retry_succeedsAfterTransientFailure() {
+            // arrange — 1차 실패, 2차 성공
+            PgPaymentStatusResponse statusResponse = new PgPaymentStatusResponse(
+                "TXN-001", "ORD-001", "SUCCESS", "결제 완료");
+            given(pgRestTemplate.exchange(
+                anyString(), eq(HttpMethod.GET), any(HttpEntity.class), eq(PgPaymentStatusResponse.class)
+            ))
+                .willThrow(new ResourceAccessException("Read timed out"))
+                .willReturn(ResponseEntity.ok(statusResponse));
+
+            // act
+            PaymentGatewayResponse result = pgClient.getPaymentStatus("TXN-001", 1L);
+
+            // assert
+            assertThat(result.status()).isEqualTo("SUCCESS");
+            verify(pgRestTemplate, times(2)).exchange(
+                anyString(), eq(HttpMethod.GET), any(HttpEntity.class), eq(PgPaymentStatusResponse.class));
+        }
+
+        @Test
+        @DisplayName("HttpClientErrorException은 재시도하지 않는다")
+        void retry_doesNotRetryOnHttpClientErrorException() {
+            // arrange
+            given(pgRestTemplate.exchange(
+                anyString(), eq(HttpMethod.GET), any(HttpEntity.class), eq(PgPaymentStatusResponse.class)
+            )).willThrow(new HttpClientErrorException(HttpStatus.NOT_FOUND, "Not Found"));
+
+            // act & assert
+            assertThatThrownBy(() -> pgClient.getPaymentStatus("TXN-001", 1L))
+                .isInstanceOf(PaymentGatewayException.class);
+
+            verify(pgRestTemplate, times(1)).exchange(
+                anyString(), eq(HttpMethod.GET), any(HttpEntity.class), eq(PgPaymentStatusResponse.class));
+        }
+
+        @Test
+        @DisplayName("최대 재시도 횟수 소진 후 PaymentGatewayException(timeout=true)을 던진다")
+        void retry_exhaustsMaxAttemptsAndFallbackThrows() {
+            // arrange — maxAttempts=2 → 2회 모두 실패
+            given(pgRestTemplate.exchange(
+                anyString(), eq(HttpMethod.GET), any(HttpEntity.class), eq(PgPaymentStatusResponse.class)
+            )).willThrow(new ResourceAccessException("Read timed out"));
+
+            // act & assert
+            assertThatThrownBy(() -> pgClient.getPaymentStatus("TXN-001", 1L))
+                .isInstanceOf(PaymentGatewayException.class)
+                .satisfies(ex -> assertThat(((PaymentGatewayException) ex).isTimeout()).isTrue());
+
+            verify(pgRestTemplate, times(2)).exchange(
+                anyString(), eq(HttpMethod.GET), any(HttpEntity.class), eq(PgPaymentStatusResponse.class));
+        }
+
+        @Test
+        @DisplayName("requestPayment에는 Retry가 적용되지 않는다")
+        void retry_notAppliedToRequestPayment() {
+            // arrange
+            given(pgRestTemplate.exchange(
+                anyString(), eq(HttpMethod.POST), any(HttpEntity.class), eq(PgPaymentResponse.class)
+            )).willThrow(new ResourceAccessException("Read timed out"));
+
+            // act & assert
+            assertThatThrownBy(() -> pgClient.requestPayment(
+                "ORD-001", "VISA", "4111111111111111", 10000L, 1L
+            ))
+                .isInstanceOf(PaymentGatewayException.class);
+
+            // RestTemplate 1회만 호출 (Retry 없음)
+            verify(pgRestTemplate, times(1)).exchange(
+                anyString(), eq(HttpMethod.POST), any(HttpEntity.class), eq(PgPaymentResponse.class));
+        }
+
+        @Test
+        @DisplayName("재시도 모두 실패해도 CB 실패 카운트는 1회만 증가한다")
+        void retry_thenCircuitBreakerCountsFinalResult() {
+            // arrange — maxAttempts=2 → 2회 모두 실패
+            given(pgRestTemplate.exchange(
+                anyString(), eq(HttpMethod.GET), any(HttpEntity.class), eq(PgPaymentStatusResponse.class)
+            )).willThrow(new ResourceAccessException("Read timed out"));
+
+            CircuitBreaker cb = circuitBreakerRegistry.circuitBreaker("pgQuery");
+
+            // act
+            try {
+                pgClient.getPaymentStatus("TXN-001", 1L);
+            } catch (PaymentGatewayException ignored) {
+            }
+
+            // assert — CB 실패 카운트 1회 (Retry 내부 2회 호출이지만 CB에는 1회로 기록)
+            CircuitBreaker.Metrics metrics = cb.getMetrics();
+            assertThat(metrics.getNumberOfFailedCalls()).isEqualTo(1);
         }
     }
 }

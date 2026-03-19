@@ -3,9 +3,9 @@ package com.loopers.infrastructure.payment;
 import com.loopers.domain.payment.PaymentGateway;
 import com.loopers.domain.payment.PaymentGatewayException;
 import com.loopers.domain.payment.PaymentGatewayResponse;
-import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
+import io.github.resilience4j.retry.annotation.Retry;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
@@ -67,6 +67,7 @@ public class PgClient implements PaymentGateway {
     }
 
     @Override
+    @Retry(name = "pgQuery")
     @CircuitBreaker(name = "pgQuery", fallbackMethod = "getPaymentStatusFallback")
     public PaymentGatewayResponse getPaymentStatus(String transactionId, Long memberId) {
         String url = baseUrl + "/api/v1/payments/" + transactionId;
@@ -82,6 +83,7 @@ public class PgClient implements PaymentGateway {
     }
 
     @Override
+    @Retry(name = "pgQuery")
     @CircuitBreaker(name = "pgQuery", fallbackMethod = "getPaymentByOrderIdFallback")
     public PaymentGatewayResponse getPaymentByOrderId(String orderNumber, Long memberId) {
         String url = baseUrl + "/api/v1/payments?orderId=" + orderNumber;

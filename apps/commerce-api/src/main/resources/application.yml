@@ -31,6 +31,7 @@ springdoc:
 
 resilience4j:
   circuitbreaker:
+    circuit-breaker-aspect-order: 1
     instances:
       pgPayment:
         sliding-window-type: COUNT_BASED
@@ -54,6 +55,16 @@ resilience4j:
         record-exceptions:
           - org.springframework.web.client.ResourceAccessException
           - org.springframework.web.client.HttpServerErrorException
+        ignore-exceptions:
+          - org.springframework.web.client.HttpClientErrorException
+  retry:
+    retry-aspect-order: 2
+    instances:
+      pgQuery:
+        max-attempts: 3
+        wait-duration: 500ms
+        retry-exceptions:
+          - org.springframework.web.client.ResourceAccessException
         ignore-exceptions:
           - org.springframework.web.client.HttpClientErrorException
 
@@ -80,6 +91,11 @@ resilience4j:
         sliding-window-size: 4
         minimum-number-of-calls: 2
         wait-duration-in-open-state: 1s
+  retry:
+    instances:
+      pgQuery:
+        max-attempts: 2
+        wait-duration: 100ms
 
 ---
 spring:
