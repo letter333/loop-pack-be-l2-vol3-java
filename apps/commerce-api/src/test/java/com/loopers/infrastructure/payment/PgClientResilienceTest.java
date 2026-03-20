@@ -2,6 +2,7 @@ package com.loopers.infrastructure.payment;
 
 import com.loopers.domain.payment.PaymentGatewayException;
 import com.loopers.domain.payment.PaymentGatewayResponse;
+import io.github.resilience4j.bulkhead.BulkheadRegistry;
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
 import org.junit.jupiter.api.BeforeEach;
@@ -21,8 +22,17 @@ import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestTemplate;
 
+import io.github.resilience4j.springboot3.bulkhead.autoconfigure.BulkheadAutoConfiguration;
 import io.github.resilience4j.springboot3.circuitbreaker.autoconfigure.CircuitBreakerAutoConfiguration;
 import io.github.resilience4j.springboot3.retry.autoconfigure.RetryAutoConfiguration;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -39,7 +49,8 @@ import static org.mockito.Mockito.verify;
         PgClientResilienceTest.TestConfig.class,
         AopAutoConfiguration.class,
         CircuitBreakerAutoConfiguration.class,
-        RetryAutoConfiguration.class
+        RetryAutoConfiguration.class,
+        BulkheadAutoConfiguration.class
     },
     properties = {
         "resilience4j.circuitbreaker.instances.pgPayment.sliding-window-type=COUNT_BASED",
@@ -51,6 +62,7 @@ import static org.mockito.Mockito.verify;
         "resilience4j.circuitbreaker.instances.pgPayment.record-exceptions[0]=org.springframework.web.client.ResourceAccessException",
         "resilience4j.circuitbreaker.instances.pgPayment.record-exceptions[1]=org.springframework.web.client.HttpServerErrorException",
         "resilience4j.circuitbreaker.instances.pgPayment.ignore-exceptions[0]=org.springframework.web.client.HttpClientErrorException",
+        "resilience4j.circuitbreaker.instances.pgPayment.ignore-exceptions[1]=io.github.resilience4j.bulkhead.BulkheadFullException",
         "resilience4j.circuitbreaker.instances.pgQuery.sliding-window-type=COUNT_BASED",
         "resilience4j.circuitbreaker.instances.pgQuery.sliding-window-size=4",
         "resilience4j.circuitbreaker.instances.pgQuery.failure-rate-threshold=50",
@@ -60,12 +72,17 @@ import static org.mockito.Mockito.verify;
         "resilience4j.circuitbreaker.instances.pgQuery.record-exceptions[0]=org.springframework.web.client.ResourceAccessException",
         "resilience4j.circuitbreaker.instances.pgQuery.record-exceptions[1]=org.springframework.web.client.HttpServerErrorException",
         "resilience4j.circuitbreaker.instances.pgQuery.ignore-exceptions[0]=org.springframework.web.client.HttpClientErrorException",
+        "resilience4j.circuitbreaker.instances.pgQuery.ignore-exceptions[1]=io.github.resilience4j.bulkhead.BulkheadFullException",
         "resilience4j.circuitbreaker.circuit-breaker-aspect-order=1",
         "resilience4j.retry.retry-aspect-order=2",
         "resilience4j.retry.instances.pgQuery.max-attempts=2",
         "resilience4j.retry.instances.pgQuery.wait-duration=100ms",
         "resilience4j.retry.instances.pgQuery.retry-exceptions[0]=org.springframework.web.client.ResourceAccessException",
-        "resilience4j.retry.instances.pgQuery.ignore-exceptions[0]=org.springframework.web.client.HttpClientErrorException"
+        "resilience4j.retry.instances.pgQuery.ignore-exceptions[0]=org.springframework.web.client.HttpClientErrorException",
+        "resilience4j.bulkhead.instances.pgPayment.max-concurrent-calls=2",
+        "resilience4j.bulkhead.instances.pgPayment.max-wait-duration=0ms",
+        "resilience4j.bulkhead.instances.pgQuery.max-concurrent-calls=2",
+        "resilience4j.bulkhead.instances.pgQuery.max-wait-duration=0ms"
     }
 )
 class PgClientResilienceTest {
@@ -94,6 +111,9 @@ class PgClientResilienceTest {
 
     @Autowired
     private CircuitBreakerRegistry circuitBreakerRegistry;
+
+    @Autowired
+    private BulkheadRegistry bulkheadRegistry;
 
     @BeforeEach
     void setUp() {
@@ -332,6 +352,114 @@ class PgClientResilienceTest {
             // assert — CB 실패 카운트 1회 (Retry 내부 2회 호출이지만 CB에는 1회로 기록)
             CircuitBreaker.Metrics metrics = cb.getMetrics();
             assertThat(metrics.getNumberOfFailedCalls()).isEqualTo(1);
+        }
+    }
+
+    @DisplayName("Bulkhead")
+    @Nested
+    class BulkheadTest {
+
+        @Test
+        @DisplayName("동시 호출이 maxConcurrentCalls 이하이면 정상 통과한다")
+        void bulkhead_allowsCallsWithinLimit() {
+            // arrange
+            PgPaymentResponse pgResponse = new PgPaymentResponse("TXN-001", "ACCEPTED", "결제 요청 접수");
+            given(pgRestTemplate.exchange(
+                anyString(), eq(HttpMethod.POST), any(HttpEntity.class), eq(PgPaymentResponse.class)
+            )).willReturn(ResponseEntity.ok(pgResponse));
+
+            // act
+            PaymentGatewayResponse result = pgClient.requestPayment(
+                "ORD-001", "VISA", "4111111111111111", 10000L, 1L);
+
+            // assert
+            assertThat(result.transactionId()).isEqualTo("TXN-001");
+        }
+
+        @Test
+        @DisplayName("동시 호출이 maxConcurrentCalls 초과 시 PaymentGatewayException을 던진다")
+        void bulkhead_rejectsCallsExceedingLimit() throws InterruptedException {
+            // arrange — maxConcurrentCalls=2, 3개 동시 호출
+            CountDownLatch enteredLatch = new CountDownLatch(2);
+            CountDownLatch blockLatch = new CountDownLatch(1);
+
+            given(pgRestTemplate.exchange(
+                anyString(), eq(HttpMethod.POST), any(HttpEntity.class), eq(PgPaymentResponse.class)
+            )).willAnswer(invocation -> {
+                enteredLatch.countDown();
+                blockLatch.await(5, TimeUnit.SECONDS);
+                return ResponseEntity.ok(new PgPaymentResponse("TXN-001", "ACCEPTED", "결제 요청 접수"));
+            });
+
+            ExecutorService executor = Executors.newFixedThreadPool(3);
+            List<Future<?>> futures = new ArrayList<>();
+
+            try {
+                // act — 2개 슬롯을 점유하는 호출
+                for (int i = 0; i < 2; i++) {
+                    futures.add(executor.submit(() ->
+                        pgClient.requestPayment("ORD-001", "VISA", "4111111111111111", 10000L, 1L)
+                    ));
+                }
+
+                // 2개 호출이 RestTemplate에 진입할 때까지 대기
+                assertThat(enteredLatch.await(5, TimeUnit.SECONDS)).isTrue();
+
+                // 3번째 호출은 Bulkhead에 의해 거절되어야 함
+                assertThatThrownBy(() ->
+                    pgClient.requestPayment("ORD-002", "VISA", "4111111111111111", 10000L, 1L)
+                )
+                    .isInstanceOf(PaymentGatewayException.class)
+                    .satisfies(ex -> assertThat(((PaymentGatewayException) ex).isTimeout()).isFalse());
+            } finally {
+                blockLatch.countDown();
+                executor.shutdown();
+                executor.awaitTermination(5, TimeUnit.SECONDS);
+            }
+        }
+
+        @Test
+        @DisplayName("pgPayment와 pgQuery Bulkhead는 독립적으로 동작한다")
+        void bulkhead_separateInstances() throws InterruptedException {
+            // arrange — pgPayment Bulkhead를 가득 채움
+            CountDownLatch enteredLatch = new CountDownLatch(2);
+            CountDownLatch blockLatch = new CountDownLatch(1);
+
+            given(pgRestTemplate.exchange(
+                anyString(), eq(HttpMethod.POST), any(HttpEntity.class), eq(PgPaymentResponse.class)
+            )).willAnswer(invocation -> {
+                enteredLatch.countDown();
+                blockLatch.await(5, TimeUnit.SECONDS);
+                return ResponseEntity.ok(new PgPaymentResponse("TXN-001", "ACCEPTED", "결제 요청 접수"));
+            });
+
+            PgPaymentStatusResponse statusResponse = new PgPaymentStatusResponse(
+                "TXN-001", "ORD-001", "SUCCESS", "결제 완료");
+            given(pgRestTemplate.exchange(
+                anyString(), eq(HttpMethod.GET), any(HttpEntity.class), eq(PgPaymentStatusResponse.class)
+            )).willReturn(ResponseEntity.ok(statusResponse));
+
+            ExecutorService executor = Executors.newFixedThreadPool(2);
+
+            try {
+                // pgPayment Bulkhead 2슬롯 점유
+                for (int i = 0; i < 2; i++) {
+                    executor.submit(() ->
+                        pgClient.requestPayment("ORD-001", "VISA", "4111111111111111", 10000L, 1L)
+                    );
+                }
+                assertThat(enteredLatch.await(5, TimeUnit.SECONDS)).isTrue();
+
+                // act — pgQuery는 독립 Bulkhead이므로 정상 동작
+                PaymentGatewayResponse result = pgClient.getPaymentStatus("TXN-001", 1L);
+
+                // assert
+                assertThat(result.status()).isEqualTo("SUCCESS");
+            } finally {
+                blockLatch.countDown();
+                executor.shutdown();
+                executor.awaitTermination(5, TimeUnit.SECONDS);
+            }
         }
     }
 }

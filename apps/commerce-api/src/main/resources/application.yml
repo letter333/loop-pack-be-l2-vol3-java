@@ -45,6 +45,7 @@ resilience4j:
           - org.springframework.web.client.HttpServerErrorException
         ignore-exceptions:
           - org.springframework.web.client.HttpClientErrorException
+          - io.github.resilience4j.bulkhead.BulkheadFullException
       pgQuery:
         sliding-window-type: COUNT_BASED
         sliding-window-size: 10
@@ -57,6 +58,15 @@ resilience4j:
           - org.springframework.web.client.HttpServerErrorException
         ignore-exceptions:
           - org.springframework.web.client.HttpClientErrorException
+          - io.github.resilience4j.bulkhead.BulkheadFullException
+  bulkhead:
+    instances:
+      pgPayment:
+        max-concurrent-calls: 20
+        max-wait-duration: 0ms
+      pgQuery:
+        max-concurrent-calls: 10
+        max-wait-duration: 0ms
   retry:
     retry-aspect-order: 2
     instances:
@@ -91,6 +101,12 @@ resilience4j:
         sliding-window-size: 4
         minimum-number-of-calls: 2
         wait-duration-in-open-state: 1s
+  bulkhead:
+    instances:
+      pgPayment:
+        max-concurrent-calls: 2
+      pgQuery:
+        max-concurrent-calls: 2
   retry:
     instances:
       pgQuery:
