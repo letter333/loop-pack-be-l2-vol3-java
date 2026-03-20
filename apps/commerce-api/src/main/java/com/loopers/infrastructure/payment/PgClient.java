@@ -3,6 +3,8 @@ package com.loopers.infrastructure.payment;
 import com.loopers.domain.payment.PaymentGateway;
 import com.loopers.domain.payment.PaymentGatewayException;
 import com.loopers.domain.payment.PaymentGatewayResponse;
+import io.github.resilience4j.bulkhead.BulkheadFullException;
+import io.github.resilience4j.bulkhead.annotation.Bulkhead;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import io.github.resilience4j.retry.annotation.Retry;
@@ -48,6 +50,7 @@ public class PgClient implements PaymentGateway {
 
     @Override
     @CircuitBreaker(name = "pgPayment", fallbackMethod = "requestPaymentFallback")
+    @Bulkhead(name = "pgPayment", fallbackMethod = "requestPaymentBulkheadFallback")
     public PaymentGatewayResponse requestPayment(String orderNumber, String cardType, String cardNo,
                                                   Long amount, Long memberId) {
         String url = baseUrl + "/api/v1/payments";
@@ -69,6 +72,7 @@ public class PgClient implements PaymentGateway {
     @Override
     @Retry(name = "pgQuery")
     @CircuitBreaker(name = "pgQuery", fallbackMethod = "getPaymentStatusFallback")
+    @Bulkhead(name = "pgQuery", fallbackMethod = "getPaymentStatusBulkheadFallback")
     public PaymentGatewayResponse getPaymentStatus(String transactionId, Long memberId) {
         String url = baseUrl + "/api/v1/payments/" + transactionId;
 
@@ -82,6 +86,7 @@ public class PgClient implements PaymentGateway {
     @Override
     @Retry(name = "pgQuery")
     @CircuitBreaker(name = "pgQuery", fallbackMethod = "getPaymentByOrderIdFallback")
+    @Bulkhead(name = "pgQuery", fallbackMethod = "getPaymentByOrderIdBulkheadFallback")
     public PaymentGatewayResponse getPaymentByOrderId(String orderNumber, Long memberId) {
         String url = baseUrl + "/api/v1/payments?orderId=" + orderNumber;
 
@@ -109,6 +114,21 @@ public class PgClient implements PaymentGateway {
 
     private PaymentGatewayResponse getPaymentByOrderIdFallback(String orderNumber, Long memberId, Throwable t) {
         throw toPaymentGatewayException("PG 결제 상태 조회", t);
+    }
+
+    private PaymentGatewayResponse requestPaymentBulkheadFallback(String orderNumber, String cardType, String cardNo,
+                                                                    Long amount, Long memberId, BulkheadFullException e) {
+        throw new PaymentGatewayException("PG 결제 요청 과부하: 동시 요청 한도 초과", false, e);
+    }
+
+    private PaymentGatewayResponse getPaymentStatusBulkheadFallback(String transactionId, Long memberId,
+                                                                     BulkheadFullException e) {
+        throw new PaymentGatewayException("PG 결제 상태 조회 과부하: 동시 요청 한도 초과", false, e);
+    }
+
+    private PaymentGatewayResponse getPaymentByOrderIdBulkheadFallback(String orderNumber, Long memberId,
+                                                                        BulkheadFullException e) {
+        throw new PaymentGatewayException("PG 결제 상태 조회 과부하: 동시 요청 한도 초과", false, e);
     }
 
     private PaymentGatewayException toPaymentGatewayException(String context, Throwable t) {
