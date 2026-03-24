@@ -2,26 +2,38 @@ package com.loopers.application.event;
 
 import com.loopers.domain.actionlog.UserActionLog;
 import com.loopers.domain.actionlog.UserActionLogRepository;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.SimpleTransactionStatus;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 @DisplayName("UserActionEventListener 단위 테스트")
 @ExtendWith(MockitoExtension.class)
 class UserActionEventListenerTest {
 
-    @InjectMocks
     private UserActionEventListener listener;
 
     @Mock
     private UserActionLogRepository userActionLogRepository;
+
+    @Mock
+    private PlatformTransactionManager transactionManager;
+
+    @BeforeEach
+    void setUp() {
+        when(transactionManager.getTransaction(any())).thenReturn(new SimpleTransactionStatus());
+        listener = new UserActionEventListener(userActionLogRepository, transactionManager);
+    }
 
     @Test
     @DisplayName("UserActionEvent 수신 시 UserActionLog를 저장한다")
