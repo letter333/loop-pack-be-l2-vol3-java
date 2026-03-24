@@ -1,7 +1,9 @@
 package com.loopers.application.like;
 
+import com.loopers.application.event.ActionType;
 import com.loopers.application.event.ProductLikedEvent;
 import com.loopers.application.event.ProductUnlikedEvent;
+import com.loopers.application.event.UserActionEvent;
 import com.loopers.application.product.ProductCacheEvictEvent;
 import com.loopers.domain.brand.BrandService;
 import com.loopers.domain.like.LikeService;
@@ -44,6 +46,12 @@ public class LikeFacade {
         }
 
         applicationEventPublisher.publishEvent(ProductCacheEvictEvent.of(productId));
+
+        // 부가 로직: 유저 행동 로깅
+        applicationEventPublisher.publishEvent(new UserActionEvent(
+            member.getId(), ActionType.LIKE, productId, "PRODUCT", null
+        ));
+
         return new LikeInfo(liked, expectedCount);
     }
 
