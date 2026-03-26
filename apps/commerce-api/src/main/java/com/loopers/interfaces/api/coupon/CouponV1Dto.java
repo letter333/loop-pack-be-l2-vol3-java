@@ -1,6 +1,8 @@
 package com.loopers.interfaces.api.coupon;
 
 import com.loopers.application.coupon.CouponInfo;
+import com.loopers.application.coupon.CouponIssueRequestInfo;
+import com.loopers.application.coupon.CouponIssueRequestStatusInfo;
 import com.loopers.application.coupon.MemberCouponInfo;
 import com.loopers.application.coupon.MemberCouponListInfo;
 import com.loopers.domain.coupon.CouponType;
@@ -75,6 +77,26 @@ public class CouponV1Dto {
                 info.usedAt(),
                 info.isAvailable()
             );
+        }
+    }
+
+    public record CouponIssueAsyncResponse(
+        String requestId,
+        Long couponId,
+        String status
+    ) {
+        public static CouponIssueAsyncResponse from(CouponIssueRequestInfo info) {
+            return new CouponIssueAsyncResponse(info.requestId(), info.couponId(), info.status());
+        }
+    }
+
+    public record CouponIssueRequestStatusResponse(
+        String requestId,
+        String status,
+        Long couponId
+    ) {
+        public static CouponIssueRequestStatusResponse from(CouponIssueRequestStatusInfo info) {
+            return new CouponIssueRequestStatusResponse(info.requestId(), info.status(), info.couponId());
         }
     }
 
