@@ -73,8 +73,7 @@ public class CouponV1Controller implements CouponV1ApiSpec {
         @RequestHeader("X-Loopers-LoginPw") String loginPw,
         @PathVariable String requestId
     ) {
-        // Sub-step 3-3에서 구현 예정 — 임시로 PENDING 반환
-        var info = com.loopers.application.coupon.CouponIssueRequestStatusInfo.pending(requestId);
+        var info = couponFacade.getCouponIssueRequestStatus(loginId, loginPw, requestId);
         return ApiResponse.success(CouponV1Dto.CouponIssueRequestStatusResponse.from(info));
     }
 

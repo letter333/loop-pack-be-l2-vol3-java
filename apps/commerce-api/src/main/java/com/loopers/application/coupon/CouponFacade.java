@@ -12,6 +12,7 @@ import com.loopers.domain.coupon.MemberCouponStatus;
 import com.loopers.domain.coupon.MemberCouponStatusCounts;
 import com.loopers.domain.member.Member;
 import com.loopers.domain.member.MemberService;
+import com.loopers.infrastructure.coupon.CouponIssueStatusRedisRepository;
 import com.loopers.support.auth.AdminValidator;
 import com.loopers.support.error.CoreException;
 import com.loopers.support.error.ErrorType;
@@ -26,6 +27,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 
 @Slf4j
@@ -39,6 +41,7 @@ public class CouponFacade {
     private final AdminValidator adminValidator;
     private final KafkaTemplate<Object, Object> kafkaTemplate;
     private final ObjectMapper objectMapper;
+    private final CouponIssueStatusRedisRepository couponIssueStatusRedisRepository;
 
     @Transactional(readOnly = true)
     public Page<CouponDetailInfo> getCouponsForAdmin(String ldap, Pageable pageable) {
@@ -142,6 +145,15 @@ public class CouponFacade {
         }
 
         return CouponIssueRequestInfo.pending(requestId, couponId);
+    }
+
+    public CouponIssueRequestStatusInfo getCouponIssueRequestStatus(String loginId, String loginPw, String requestId) {
+        memberService.authenticate(loginId, loginPw);
+
+        Optional<String> status = couponIssueStatusRedisRepository.getRequestStatus(requestId);
+        return status
+            .map(s -> CouponIssueRequestStatusInfo.of(requestId, s, null))
+            .orElse(CouponIssueRequestStatusInfo.pending(requestId));
     }
 
     @Transactional(readOnly = true)
