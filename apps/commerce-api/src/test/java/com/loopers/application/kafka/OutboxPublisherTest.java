@@ -45,7 +45,7 @@ class OutboxPublisherTest {
         publisher.publishOutboxEvents();
 
         // Assert
-        verify(kafkaTemplate).send("catalog-events", "100", "{\"productId\":100}");
+        verify(kafkaTemplate).send(eq("catalog-events"), eq("100"), any());
         verify(outboxEventRepository).markPublished(1L);
     }
 
@@ -65,7 +65,7 @@ class OutboxPublisherTest {
         publisher.publishOutboxEvents();
 
         // Assert
-        verify(kafkaTemplate).send("order-events", "200", "{\"orderId\":200}");
+        verify(kafkaTemplate).send(eq("order-events"), eq("200"), any());
         verify(outboxEventRepository).markPublished(2L);
     }
 

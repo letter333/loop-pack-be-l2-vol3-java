@@ -44,12 +44,21 @@ public class OutboxPublisher {
         for (OutboxEvent event : events) {
             try {
                 String topic = resolveTopicName(event.getAggregateType());
-                kafkaTemplate.send(topic, event.getAggregateId(), event.getPayload()).get();
+                String message = buildMessage(event);
+                kafkaTemplate.send(topic, event.getAggregateId(), message).get();
                 outboxEventRepository.markPublished(event.getId());
             } catch (Exception e) {
                 log.warn("Outbox 이벤트 발행 실패: eventId={}, error={}", event.getId(), e.getMessage());
             }
         }
+    }
+
+    private String buildMessage(OutboxEvent event) {
+        return "{\"eventId\":" + event.getId()
+            + ",\"eventType\":\"" + event.getEventType() + "\""
+            + ",\"aggregateId\":\"" + event.getAggregateId() + "\""
+            + ",\"payload\":" + event.getPayload()
+            + ",\"createdAt\":\"" + event.getCreatedAt() + "\"}";
     }
 
     private String resolveTopicName(String aggregateType) {
