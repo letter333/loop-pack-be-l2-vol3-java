@@ -9,7 +9,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.util.Optional;
 
@@ -22,6 +22,7 @@ public class CouponIssueService {
     private final MemberCouponIssueRepository memberCouponIssueRepository;
     private final CouponIssueRedisRepository couponIssueRedisRepository;
     private final CouponCodeGenerator couponCodeGenerator;
+    private final TransactionTemplate transactionTemplate;
 
     public void processCouponIssue(String requestId, Long memberId, Long couponId) {
         // 1. Redis INCR pre-check
@@ -47,7 +48,26 @@ public class CouponIssueService {
 
         // 4. DB 비관적 락으로 실제 발급
         try {
-            issueCouponWithLock(requestId, memberId, couponId);
+            transactionTemplate.executeWithoutResult(status -> {
+                CouponIssueDomain coupon = couponIssueRepository.findByIdForUpdate(couponId)
+                    .orElseThrow(() -> new IllegalStateException("쿠폰을 찾을 수 없습니다: " + couponId));
+
+                if (!coupon.canIssue()) {
+                    log.info("쿠폰 발급 불가: couponId={}, deleted={}, period={}, remaining={}",
+                        couponId, coupon.isDeleted(), coupon.isWithinIssuePeriod(), coupon.hasRemainingQuantity());
+                    couponIssueRedisRepository.setRequestStatus(requestId, "FAILED");
+                    return;
+                }
+
+                coupon.issue();
+                couponIssueRepository.save(coupon);
+
+                String couponCode = couponCodeGenerator.generate();
+                memberCouponIssueRepository.save(memberId, couponId, couponCode, "AVAILABLE", coupon.getValidUntil());
+
+                couponIssueRedisRepository.setRequestStatus(requestId, "SUCCESS");
+                log.debug("쿠폰 발급 성공: couponId={}, memberId={}, requestId={}", couponId, memberId, requestId);
+            });
         } catch (DataIntegrityViolationException e) {
             couponIssueRedisRepository.decrementIssuedCount(couponId);
             couponIssueRedisRepository.setRequestStatus(requestId, "DUPLICATE");
@@ -60,39 +80,16 @@ public class CouponIssueService {
         }
     }
 
-    @Transactional
-    protected void issueCouponWithLock(String requestId, Long memberId, Long couponId) {
-        CouponIssueDomain coupon = couponIssueRepository.findByIdForUpdate(couponId)
-            .orElseThrow(() -> {
-                log.warn("쿠폰을 찾을 수 없음: couponId={}", couponId);
-                return new IllegalStateException("쿠폰을 찾을 수 없습니다: " + couponId);
-            });
-
-        if (!coupon.canIssue()) {
-            log.info("쿠폰 발급 불가: couponId={}, deleted={}, period={}, remaining={}",
-                couponId, coupon.isDeleted(), coupon.isWithinIssuePeriod(), coupon.hasRemainingQuantity());
-            couponIssueRedisRepository.setRequestStatus(requestId, "FAILED");
-            return;
-        }
-
-        coupon.issue();
-        couponIssueRepository.save(coupon);
-
-        String couponCode = couponCodeGenerator.generate();
-        memberCouponIssueRepository.save(memberId, couponId, couponCode, "AVAILABLE", coupon.getValidUntil());
-
-        couponIssueRedisRepository.setRequestStatus(requestId, "SUCCESS");
-        log.debug("쿠폰 발급 성공: couponId={}, memberId={}, requestId={}", couponId, memberId, requestId);
-    }
-
     private int loadTotalQuantityFromDb(Long couponId) {
-        CouponIssueDomain coupon = couponIssueRepository.findByIdForUpdate(couponId)
-            .orElseThrow(() -> new IllegalStateException("쿠폰을 찾을 수 없습니다: " + couponId));
+        return transactionTemplate.execute(status -> {
+            CouponIssueDomain coupon = couponIssueRepository.findByIdForUpdate(couponId)
+                .orElseThrow(() -> new IllegalStateException("쿠폰을 찾을 수 없습니다: " + couponId));
 
-        int totalQuantity = coupon.getTotalQuantity();
-        couponIssueRedisRepository.setTotalQuantity(couponId, totalQuantity, coupon.getValidUntil());
-        couponIssueRedisRepository.initIssuedCountIfAbsent(couponId, coupon.getIssuedQuantity(), coupon.getValidUntil());
+            int total = coupon.getTotalQuantity();
+            couponIssueRedisRepository.setTotalQuantity(couponId, total, coupon.getValidUntil());
+            couponIssueRedisRepository.initIssuedCountIfAbsent(couponId, coupon.getIssuedQuantity(), coupon.getValidUntil());
 
-        return totalQuantity;
+            return total;
+        });
     }
 }

@@ -8,6 +8,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 import jakarta.persistence.Version;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -17,7 +18,13 @@ import java.time.LocalDateTime;
 import java.time.ZonedDateTime;
 
 @Entity
-@Table(name = "member_coupons")
+@Table(
+    name = "member_coupons",
+    uniqueConstraints = {
+        @UniqueConstraint(name = "uk_member_coupons_code", columnNames = {"coupon_code"}),
+        @UniqueConstraint(name = "uk_member_coupons_member_coupon", columnNames = {"member_id", "coupon_id"})
+    }
+)
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class MemberCouponIssueEntity {
