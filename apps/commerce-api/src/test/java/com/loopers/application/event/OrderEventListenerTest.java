@@ -1,11 +1,13 @@
 package com.loopers.application.event;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
 
@@ -23,6 +25,9 @@ class OrderEventListenerTest {
 
     @Mock
     private ApplicationEventPublisher applicationEventPublisher;
+
+    @Spy
+    private ObjectMapper objectMapper;
 
     @Test
     @DisplayName("OrderCompletedEvent 수신 시 UserActionEvent(ORDER)를 발행한다")

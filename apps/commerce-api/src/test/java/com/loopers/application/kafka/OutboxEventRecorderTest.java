@@ -1,5 +1,6 @@
 package com.loopers.application.kafka;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.loopers.application.event.OrderCompletedEvent;
 import com.loopers.application.event.ProductLikedEvent;
 import com.loopers.application.event.ProductUnlikedEvent;
@@ -9,6 +10,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.Set;
@@ -24,6 +26,9 @@ class OutboxEventRecorderTest {
 
     @Mock
     private OutboxEventService outboxEventService;
+
+    @Spy
+    private ObjectMapper objectMapper;
 
     @Test
     @DisplayName("ProductLikedEvent 수신 시 PRODUCT 타입으로 outbox에 기록한다")

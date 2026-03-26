@@ -69,8 +69,8 @@ public class OutboxEventEntity {
             aggregateId,
             eventType,
             payload,
-            createdAt != null ? createdAt.toLocalDateTime() : null,
-            publishedAt != null ? publishedAt.toLocalDateTime() : null
+            createdAt,
+            publishedAt
         );
     }
 

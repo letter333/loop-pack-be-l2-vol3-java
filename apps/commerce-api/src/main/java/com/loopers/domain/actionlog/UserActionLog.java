@@ -2,7 +2,7 @@ package com.loopers.domain.actionlog;
 
 import lombok.Getter;
 
-import java.time.LocalDateTime;
+import java.time.ZonedDateTime;
 
 @Getter
 public class UserActionLog {
@@ -13,7 +13,7 @@ public class UserActionLog {
     private Long targetId;
     private String targetType;
     private String metadata;
-    private LocalDateTime createdAt;
+    private ZonedDateTime createdAt;
 
     public UserActionLog(Long memberId, String actionType, Long targetId, String targetType, String metadata) {
         this.memberId = memberId;
@@ -21,11 +21,11 @@ public class UserActionLog {
         this.targetId = targetId;
         this.targetType = targetType;
         this.metadata = metadata;
-        this.createdAt = LocalDateTime.now();
+        this.createdAt = ZonedDateTime.now();
     }
 
     public UserActionLog(Long id, Long memberId, String actionType, Long targetId, String targetType,
-                         String metadata, LocalDateTime createdAt) {
+                         String metadata, ZonedDateTime createdAt) {
         this.id = id;
         this.memberId = memberId;
         this.actionType = actionType;

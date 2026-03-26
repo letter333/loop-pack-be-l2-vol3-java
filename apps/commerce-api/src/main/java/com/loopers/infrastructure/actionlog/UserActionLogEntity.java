@@ -72,7 +72,7 @@ public class UserActionLogEntity {
             targetId,
             targetType,
             metadata,
-            createdAt != null ? createdAt.toLocalDateTime() : null
+            createdAt
         );
     }
 }

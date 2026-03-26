@@ -57,7 +57,7 @@ public class ProductMetricsEntity {
     public ProductMetrics toDomain() {
         return new ProductMetrics(
             productId, likeCount, viewCount, salesCount, salesAmount,
-            updatedAt != null ? updatedAt.toLocalDateTime() : null
+            updatedAt
         );
     }
 }

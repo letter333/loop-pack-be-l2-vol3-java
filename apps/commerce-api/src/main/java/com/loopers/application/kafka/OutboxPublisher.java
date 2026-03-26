@@ -1,5 +1,7 @@
 package com.loopers.application.kafka;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.loopers.domain.outbox.OutboxEvent;
 import com.loopers.domain.outbox.OutboxEventRepository;
 import lombok.extern.slf4j.Slf4j;
@@ -8,7 +10,9 @@ import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Outbox 테이블에서 미발행 이벤트를 폴링하여 Kafka로 발행하는 Scheduler.
@@ -25,15 +29,18 @@ public class OutboxPublisher {
 
     private final OutboxEventRepository outboxEventRepository;
     private final KafkaTemplate<Object, Object> kafkaTemplate;
+    private final ObjectMapper objectMapper;
     private final int batchSize;
 
     public OutboxPublisher(
         OutboxEventRepository outboxEventRepository,
         KafkaTemplate<Object, Object> kafkaTemplate,
+        ObjectMapper objectMapper,
         @Value("${outbox.publisher.batch-size:100}") int batchSize
     ) {
         this.outboxEventRepository = outboxEventRepository;
         this.kafkaTemplate = kafkaTemplate;
+        this.objectMapper = objectMapper;
         this.batchSize = batchSize;
     }
 
@@ -54,18 +61,24 @@ public class OutboxPublisher {
     }
 
     private String buildMessage(OutboxEvent event) {
-        return "{\"eventId\":" + event.getId()
-            + ",\"eventType\":\"" + event.getEventType() + "\""
-            + ",\"aggregateId\":\"" + event.getAggregateId() + "\""
-            + ",\"payload\":" + event.getPayload()
-            + ",\"createdAt\":\"" + event.getCreatedAt() + "\"}";
+        try {
+            Map<String, Object> message = new LinkedHashMap<>();
+            message.put("eventId", String.valueOf(event.getId()));
+            message.put("eventType", event.getEventType());
+            message.put("aggregateId", event.getAggregateId());
+            message.put("payload", objectMapper.readTree(event.getPayload()));
+            message.put("createdAt", String.valueOf(event.getCreatedAt()));
+            return objectMapper.writeValueAsString(message);
+        } catch (JsonProcessingException e) {
+            throw new IllegalStateException("Outbox 메시지 직렬화 실패", e);
+        }
     }
 
     private String resolveTopicName(String aggregateType) {
         return switch (aggregateType) {
-            case "PRODUCT" -> KafkaTopic.CATALOG_EVENTS;
-            case "ORDER" -> KafkaTopic.ORDER_EVENTS;
-            case "COUPON" -> KafkaTopic.COUPON_ISSUE_REQUESTS;
+            case OutboxAggregateType.PRODUCT -> KafkaTopic.CATALOG_EVENTS;
+            case OutboxAggregateType.ORDER -> KafkaTopic.ORDER_EVENTS;
+            case OutboxAggregateType.COUPON -> KafkaTopic.COUPON_ISSUE_REQUESTS;
             default -> throw new IllegalArgumentException("알 수 없는 aggregate type: " + aggregateType);
         };
     }

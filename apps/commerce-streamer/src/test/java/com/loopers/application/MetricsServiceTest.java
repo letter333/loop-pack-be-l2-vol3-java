@@ -8,8 +8,10 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.dao.DataIntegrityViolationException;
 
-import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
@@ -30,7 +32,7 @@ class MetricsServiceTest {
     @DisplayName("PRODUCT_LIKED 이벤트 수신 시 likeCount를 +1 한다")
     void incrementsLikeCount_whenProductLiked() {
         // Arrange
-        given(eventHandledRepository.existsByEventId("1")).willReturn(false);
+        doNothing().when(eventHandledRepository).save("1");
 
         // Act
         metricsService.processEvent("1", "PRODUCT_LIKED", "100");
@@ -44,7 +46,7 @@ class MetricsServiceTest {
     @DisplayName("PRODUCT_UNLIKED 이벤트 수신 시 likeCount를 -1 한다")
     void decrementsLikeCount_whenProductUnliked() {
         // Arrange
-        given(eventHandledRepository.existsByEventId("2")).willReturn(false);
+        doNothing().when(eventHandledRepository).save("2");
 
         // Act
         metricsService.processEvent("2", "PRODUCT_UNLIKED", "100");
@@ -58,13 +60,13 @@ class MetricsServiceTest {
     @DisplayName("이미 처리된 이벤트는 skip 한다")
     void skips_whenEventAlreadyHandled() {
         // Arrange
-        given(eventHandledRepository.existsByEventId("3")).willReturn(true);
+        doThrow(new DataIntegrityViolationException("Duplicate entry"))
+            .when(eventHandledRepository).save("3");
 
         // Act
         metricsService.processEvent("3", "PRODUCT_LIKED", "100");
 
         // Assert
         verify(productMetricsRepository, never()).incrementLikeCount(100L, 1);
-        verify(eventHandledRepository, never()).save("3");
     }
 }

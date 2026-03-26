@@ -2,7 +2,7 @@ package com.loopers.domain.metrics;
 
 import lombok.Getter;
 
-import java.time.LocalDateTime;
+import java.time.ZonedDateTime;
 
 @Getter
 public class ProductMetrics {
@@ -12,7 +12,7 @@ public class ProductMetrics {
     private Long viewCount;
     private Long salesCount;
     private Long salesAmount;
-    private LocalDateTime updatedAt;
+    private ZonedDateTime updatedAt;
 
     public ProductMetrics(Long productId) {
         this.productId = productId;
@@ -20,11 +20,11 @@ public class ProductMetrics {
         this.viewCount = 0L;
         this.salesCount = 0L;
         this.salesAmount = 0L;
-        this.updatedAt = LocalDateTime.now();
+        this.updatedAt = ZonedDateTime.now();
     }
 
     public ProductMetrics(Long productId, Long likeCount, Long viewCount,
-                          Long salesCount, Long salesAmount, LocalDateTime updatedAt) {
+                          Long salesCount, Long salesAmount, ZonedDateTime updatedAt) {
         this.productId = productId;
         this.likeCount = likeCount;
         this.viewCount = viewCount;

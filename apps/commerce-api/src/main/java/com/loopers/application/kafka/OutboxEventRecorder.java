@@ -1,5 +1,7 @@
 package com.loopers.application.kafka;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.loopers.application.event.OrderCompletedEvent;
 import com.loopers.application.event.ProductLikedEvent;
 import com.loopers.application.event.ProductUnlikedEvent;
@@ -7,6 +9,9 @@ import com.loopers.domain.outbox.OutboxEventService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
+
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 /**
  * ApplicationEvent를 수신하여 Outbox 테이블에 기록하는 리스너.
@@ -24,36 +29,51 @@ import org.springframework.stereotype.Component;
 public class OutboxEventRecorder {
 
     private final OutboxEventService outboxEventService;
+    private final ObjectMapper objectMapper;
 
     @EventListener
     public void handleProductLiked(ProductLikedEvent event) {
         outboxEventService.recordEvent(
-            "PRODUCT",
+            OutboxAggregateType.PRODUCT,
             String.valueOf(event.productId()),
-            "PRODUCT_LIKED",
-            "{\"productId\":" + event.productId() + "}"
+            OutboxEventType.PRODUCT_LIKED,
+            toJson(Map.of("productId", event.productId()))
         );
     }
 
     @EventListener
     public void handleProductUnliked(ProductUnlikedEvent event) {
         outboxEventService.recordEvent(
-            "PRODUCT",
+            OutboxAggregateType.PRODUCT,
             String.valueOf(event.productId()),
-            "PRODUCT_UNLIKED",
-            "{\"productId\":" + event.productId() + "}"
+            OutboxEventType.PRODUCT_UNLIKED,
+            toJson(Map.of("productId", event.productId()))
         );
     }
 
     @EventListener
     public void handleOrderCompleted(OrderCompletedEvent event) {
         outboxEventService.recordEvent(
-            "ORDER",
+            OutboxAggregateType.ORDER,
             String.valueOf(event.orderId()),
-            "ORDER_COMPLETED",
-            "{\"orderId\":" + event.orderId()
-                + ",\"memberId\":" + event.memberId()
-                + ",\"totalAmount\":" + event.totalAmount() + "}"
+            OutboxEventType.ORDER_COMPLETED,
+            toJson(orderPayload(event))
         );
+    }
+
+    private Map<String, Object> orderPayload(OrderCompletedEvent event) {
+        Map<String, Object> payload = new LinkedHashMap<>();
+        payload.put("orderId", event.orderId());
+        payload.put("memberId", event.memberId());
+        payload.put("totalAmount", event.totalAmount());
+        return payload;
+    }
+
+    private String toJson(Object obj) {
+        try {
+            return objectMapper.writeValueAsString(obj);
+        } catch (JsonProcessingException e) {
+            throw new IllegalStateException("JSON 직렬화 실패", e);
+        }
     }
 }

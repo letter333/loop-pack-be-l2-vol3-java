@@ -2,7 +2,7 @@ package com.loopers.domain.outbox;
 
 import lombok.Getter;
 
-import java.time.LocalDateTime;
+import java.time.ZonedDateTime;
 
 @Getter
 public class OutboxEvent {
@@ -12,19 +12,19 @@ public class OutboxEvent {
     private String aggregateId;
     private String eventType;
     private String payload;
-    private LocalDateTime createdAt;
-    private LocalDateTime publishedAt;
+    private ZonedDateTime createdAt;
+    private ZonedDateTime publishedAt;
 
     public OutboxEvent(String aggregateType, String aggregateId, String eventType, String payload) {
         this.aggregateType = aggregateType;
         this.aggregateId = aggregateId;
         this.eventType = eventType;
         this.payload = payload;
-        this.createdAt = LocalDateTime.now();
+        this.createdAt = ZonedDateTime.now();
     }
 
     public OutboxEvent(Long id, String aggregateType, String aggregateId, String eventType,
-                       String payload, LocalDateTime createdAt, LocalDateTime publishedAt) {
+                       String payload, ZonedDateTime createdAt, ZonedDateTime publishedAt) {
         this.id = id;
         this.aggregateType = aggregateType;
         this.aggregateId = aggregateId;
@@ -35,7 +35,7 @@ public class OutboxEvent {
     }
 
     public void markPublished() {
-        this.publishedAt = LocalDateTime.now();
+        this.publishedAt = ZonedDateTime.now();
     }
 
     public boolean isPublished() {

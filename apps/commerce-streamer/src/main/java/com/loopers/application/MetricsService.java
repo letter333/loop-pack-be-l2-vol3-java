@@ -4,6 +4,7 @@ import com.loopers.domain.eventhandled.EventHandledRepository;
 import com.loopers.domain.metrics.ProductMetricsRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -17,7 +18,9 @@ public class MetricsService {
 
     @Transactional
     public void processEvent(String eventId, String eventType, String aggregateId) {
-        if (eventHandledRepository.existsByEventId(eventId)) {
+        try {
+            eventHandledRepository.save(eventId);
+        } catch (DataIntegrityViolationException e) {
             log.debug("이미 처리된 이벤트: eventId={}", eventId);
             return;
         }
@@ -30,7 +33,5 @@ public class MetricsService {
             case "ORDER_COMPLETED" -> log.info("주문 완료 이벤트 수신: orderId={}", targetId);
             default -> log.warn("알 수 없는 이벤트 타입: eventType={}", eventType);
         }
-
-        eventHandledRepository.save(eventId);
     }
 }

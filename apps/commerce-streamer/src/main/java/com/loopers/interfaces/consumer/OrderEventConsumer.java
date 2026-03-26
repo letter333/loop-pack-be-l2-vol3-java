@@ -29,6 +29,7 @@ public class OrderEventConsumer {
         List<ConsumerRecord<Object, Object>> messages,
         Acknowledgment acknowledgment
     ) {
+        int failCount = 0;
         for (ConsumerRecord<Object, Object> message : messages) {
             try {
                 JsonNode node = objectMapper.readTree(message.value().toString());
@@ -38,9 +39,13 @@ public class OrderEventConsumer {
 
                 metricsService.processEvent(eventId, eventType, aggregateId);
             } catch (Exception e) {
-                log.error("order-events 메시지 처리 실패: offset={}, error={}",
-                    message.offset(), e.getMessage());
+                failCount++;
+                log.error("order-events 메시지 처리 실패: partition={}, offset={}, error={}",
+                    message.partition(), message.offset(), e.getMessage());
             }
+        }
+        if (failCount > 0) {
+            log.warn("order-events 배치 처리 완료: total={}, failed={}", messages.size(), failCount);
         }
         acknowledgment.acknowledge();
     }
