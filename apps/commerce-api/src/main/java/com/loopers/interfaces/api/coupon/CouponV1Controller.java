@@ -2,6 +2,7 @@ package com.loopers.interfaces.api.coupon;
 
 import com.loopers.application.coupon.CouponFacade;
 import com.loopers.application.coupon.CouponInfo;
+import com.loopers.application.coupon.CouponIssueRequestInfo;
 import com.loopers.application.coupon.MemberCouponInfo;
 import com.loopers.application.coupon.MemberCouponListInfo;
 import com.loopers.domain.coupon.MemberCouponStatus;
@@ -51,6 +52,29 @@ public class CouponV1Controller implements CouponV1ApiSpec {
         MemberCouponInfo info = couponFacade.issueCoupon(loginId, loginPw, couponId);
         CouponV1Dto.MemberCouponResponse response = CouponV1Dto.MemberCouponResponse.from(info);
         return ApiResponse.success(response);
+    }
+
+    @PostMapping("/{couponId}/issue/async")
+    @ResponseStatus(HttpStatus.ACCEPTED)
+    @Override
+    public ApiResponse<CouponV1Dto.CouponIssueAsyncResponse> issueCouponAsync(
+        @RequestHeader("X-Loopers-LoginId") String loginId,
+        @RequestHeader("X-Loopers-LoginPw") String loginPw,
+        @PathVariable Long couponId
+    ) {
+        CouponIssueRequestInfo info = couponFacade.requestCouponIssueAsync(loginId, loginPw, couponId);
+        return ApiResponse.success(CouponV1Dto.CouponIssueAsyncResponse.from(info));
+    }
+
+    @GetMapping("/issue-requests/{requestId}")
+    @Override
+    public ApiResponse<CouponV1Dto.CouponIssueRequestStatusResponse> getCouponIssueRequestStatus(
+        @RequestHeader("X-Loopers-LoginId") String loginId,
+        @RequestHeader("X-Loopers-LoginPw") String loginPw,
+        @PathVariable String requestId
+    ) {
+        var info = couponFacade.getCouponIssueRequestStatus(loginId, loginPw, requestId);
+        return ApiResponse.success(CouponV1Dto.CouponIssueRequestStatusResponse.from(info));
     }
 
     @GetMapping("/my")

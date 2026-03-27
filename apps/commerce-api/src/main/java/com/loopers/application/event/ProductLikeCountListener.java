@@ -2,19 +2,14 @@ package com.loopers.application.event;
 
 import com.loopers.domain.product.ProductService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Component;
-import org.springframework.transaction.PlatformTransactionManager;
-import org.springframework.transaction.TransactionDefinition;
 import org.springframework.context.event.EventListener;
+import org.springframework.stereotype.Component;
 
 @Component
+@RequiredArgsConstructor
 public class ProductLikeCountListener {
 
     private final ProductService productService;
-
-    public ProductLikeCountListener(ProductService productService) {
-        this.productService = productService;
-    }
 
     @EventListener
     public void handleProductLiked(ProductLikedEvent event) {
