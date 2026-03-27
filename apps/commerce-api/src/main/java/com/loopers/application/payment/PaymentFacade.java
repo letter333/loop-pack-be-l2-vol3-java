@@ -1,5 +1,6 @@
 package com.loopers.application.payment;
 
+import com.loopers.application.event.PaymentSuccessEvent;
 import com.loopers.domain.member.Member;
 import com.loopers.domain.member.MemberService;
 import com.loopers.domain.order.Order;
@@ -14,6 +15,7 @@ import com.loopers.support.error.CoreException;
 import com.loopers.support.error.ErrorType;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -28,6 +30,7 @@ public class PaymentFacade {
     private final PaymentService paymentService;
     private final PaymentGateway paymentGateway;
     private final TransactionTemplate transactionTemplate;
+    private final ApplicationEventPublisher applicationEventPublisher;
 
     public PaymentInfo requestPayment(String loginId, String password, PaymentCommand.Create command) {
         // CB OPEN 시 Fast Fail — Payment 생성 안 함
@@ -80,6 +83,12 @@ public class PaymentFacade {
             payment.markSuccess();
             Payment saved = paymentService.save(payment);
             orderService.changeStatus(payment.getOrderId(), OrderStatus.PAID);
+
+            // 부가 로직: 결제 성공 이벤트 발행 (유저 행동 로깅용)
+            applicationEventPublisher.publishEvent(new PaymentSuccessEvent(
+                saved.getId(), saved.getOrderId(), saved.getMemberId(), saved.getAmount()
+            ));
+
             return PaymentInfo.from(saved);
         } else {
             payment.markFailed(command.message());

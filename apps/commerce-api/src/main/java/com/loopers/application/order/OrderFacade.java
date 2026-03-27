@@ -1,5 +1,6 @@
 package com.loopers.application.order;
 
+import com.loopers.application.event.OrderCompletedEvent;
 import com.loopers.application.product.ProductCacheEvictEvent;
 import com.loopers.domain.address.Address;
 import com.loopers.domain.address.AddressService;
@@ -112,6 +113,11 @@ public class OrderFacade {
         if (memberCoupon != null) {
             memberCouponService.useCoupon(command.memberCouponId(), savedOrder.getId());
         }
+
+        // 부가 로직: 주문 완료 이벤트 발행 (유저 행동 로깅용)
+        applicationEventPublisher.publishEvent(new OrderCompletedEvent(
+            savedOrder.getId(), member.getId(), productIds, savedOrder.getPaymentAmount()
+        ));
 
         return OrderDetailInfo.from(savedOrder);
     }

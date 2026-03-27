@@ -1,5 +1,7 @@
 package com.loopers.application.like;
 
+import com.loopers.application.event.ProductLikedEvent;
+import com.loopers.application.event.ProductUnlikedEvent;
 import com.loopers.application.product.ProductCacheEvictEvent;
 import com.loopers.domain.brand.Brand;
 import com.loopers.domain.brand.BrandService;
@@ -92,54 +94,52 @@ class LikeFacadeTest {
         }
 
         @Test
-        @DisplayName("좋아요 생성 시 liked=true와 증가된 likeCount를 반환한다")
-        void returnsLikedTrueAndIncreasedCount_whenLikeCreated() {
+        @DisplayName("좋아요 생성 시 liked=true와 낙관적 count+1을 반환하고 ProductLikedEvent를 발행한다")
+        void returnsLikedTrueAndOptimisticCount_whenLikeCreated() {
             // Arrange
             String loginId = "user1";
             String password = "password123";
             Long productId = 100L;
             Long memberId = 1L;
             Member member = createMember(memberId, loginId);
-            Product product = createProduct(productId);
+            Product product = createProduct(productId); // likeCount = 0
 
             given(memberService.authenticate(loginId, password)).willReturn(member);
             given(productService.getActiveProduct(productId)).willReturn(product);
             given(likeService.toggleLike(memberId, productId, TargetType.PRODUCT)).willReturn(true);
-            given(productService.increaseLikeCount(productId)).willReturn(1L);
 
             // Act
             LikeInfo result = likeFacade.toggleProductLike(loginId, password, productId);
 
             // Assert
             assertThat(result.liked()).isTrue();
-            assertThat(result.likeCount()).isEqualTo(1L);
-            verify(productService).increaseLikeCount(productId);
+            assertThat(result.likeCount()).isEqualTo(1L); // 낙관적 count: 0 + 1
+            verify(applicationEventPublisher).publishEvent(any(ProductLikedEvent.class));
             verify(applicationEventPublisher).publishEvent(any(ProductCacheEvictEvent.class));
         }
 
         @Test
-        @DisplayName("좋아요 삭제 시 liked=false와 감소된 likeCount를 반환한다")
-        void returnsLikedFalseAndDecreasedCount_whenLikeDeleted() {
+        @DisplayName("좋아요 삭제 시 liked=false와 낙관적 count-1을 반환하고 ProductUnlikedEvent를 발행한다")
+        void returnsLikedFalseAndOptimisticCount_whenLikeDeleted() {
             // Arrange
             String loginId = "user1";
             String password = "password123";
             Long productId = 100L;
             Long memberId = 1L;
             Member member = createMember(memberId, loginId);
-            Product product = createProduct(productId);
+            Product product = createProduct(productId); // likeCount = 0
 
             given(memberService.authenticate(loginId, password)).willReturn(member);
             given(productService.getActiveProduct(productId)).willReturn(product);
             given(likeService.toggleLike(memberId, productId, TargetType.PRODUCT)).willReturn(false);
-            given(productService.decreaseLikeCount(productId)).willReturn(0L);
 
             // Act
             LikeInfo result = likeFacade.toggleProductLike(loginId, password, productId);
 
             // Assert
             assertThat(result.liked()).isFalse();
-            assertThat(result.likeCount()).isEqualTo(0L);
-            verify(productService).decreaseLikeCount(productId);
+            assertThat(result.likeCount()).isEqualTo(0L); // 낙관적 count: max(0, 0-1) = 0
+            verify(applicationEventPublisher).publishEvent(any(ProductUnlikedEvent.class));
             verify(applicationEventPublisher).publishEvent(any(ProductCacheEvictEvent.class));
         }
     }

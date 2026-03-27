@@ -20,6 +20,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.transaction.support.TransactionCallback;
 import org.springframework.transaction.support.TransactionTemplate;
 
@@ -57,6 +58,9 @@ class PaymentFacadeTest {
     @Mock
     private TransactionTemplate transactionTemplate;
 
+    @Mock
+    private ApplicationEventPublisher applicationEventPublisher;
+
     private static final String LOGIN_ID = "user1";
     private static final String PASSWORD = "password1";
     private static final Long MEMBER_ID = 1L;
@@ -67,7 +71,7 @@ class PaymentFacadeTest {
     @BeforeEach
     void setUp() {
         paymentFacade = new PaymentFacade(
-            memberService, orderService, paymentService, paymentGateway, transactionTemplate);
+            memberService, orderService, paymentService, paymentGateway, transactionTemplate, applicationEventPublisher);
     }
 
     private Member createMember() {
