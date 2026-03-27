@@ -15,7 +15,11 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.Set;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
+
+import org.mockito.ArgumentCaptor;
 
 @DisplayName("OutboxEventRecorder 단위 테스트")
 @ExtendWith(MockitoExtension.class)
@@ -72,9 +76,16 @@ class OutboxEventRecorderTest {
         recorder.handleOrderCompleted(event);
 
         // Assert
+        ArgumentCaptor<String> payloadCaptor = ArgumentCaptor.forClass(String.class);
         verify(outboxEventService).recordEvent(
-            "ORDER", "300", "ORDER_COMPLETED",
-            "{\"orderId\":300,\"memberId\":10,\"totalAmount\":50000}"
+            eq("ORDER"), eq("300"), eq("ORDER_COMPLETED"), payloadCaptor.capture()
         );
+        String payload = payloadCaptor.getValue();
+        assertThat(payload).contains("\"orderId\":300");
+        assertThat(payload).contains("\"memberId\":10");
+        assertThat(payload).contains("\"totalAmount\":50000");
+        assertThat(payload).contains("\"productIds\":");
+        assertThat(payload).contains("100");
+        assertThat(payload).contains("200");
     }
 }

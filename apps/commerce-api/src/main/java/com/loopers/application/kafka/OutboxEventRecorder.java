@@ -66,6 +66,7 @@ public class OutboxEventRecorder {
         payload.put("orderId", event.orderId());
         payload.put("memberId", event.memberId());
         payload.put("totalAmount", event.totalAmount());
+        payload.put("productIds", event.productIds());
         return payload;
     }
 

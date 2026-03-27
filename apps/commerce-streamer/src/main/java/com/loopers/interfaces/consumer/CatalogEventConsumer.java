@@ -11,6 +11,7 @@ import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.support.Acknowledgment;
 import org.springframework.stereotype.Component;
 
+import java.time.ZonedDateTime;
 import java.util.List;
 
 @Slf4j
@@ -36,8 +37,9 @@ public class CatalogEventConsumer {
                 String eventId = node.get("eventId").asText();
                 String eventType = node.get("eventType").asText();
                 String aggregateId = node.get("aggregateId").asText();
+                ZonedDateTime eventCreatedAt = ZonedDateTime.parse(node.get("createdAt").asText());
 
-                metricsService.processEvent(eventId, eventType, aggregateId);
+                metricsService.processEvent(eventId, eventType, aggregateId, eventCreatedAt);
             } catch (Exception e) {
                 failCount++;
                 log.error("catalog-events 메시지 처리 실패: partition={}, offset={}, error={}",
