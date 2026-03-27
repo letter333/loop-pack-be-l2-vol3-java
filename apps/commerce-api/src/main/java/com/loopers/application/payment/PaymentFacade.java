@@ -141,6 +141,11 @@ public class PaymentFacade {
             return transactionTemplate.execute(status -> {
                 Payment saved = paymentService.save(payment);
                 orderService.changeStatus(payment.getOrderId(), OrderStatus.PAID);
+
+                applicationEventPublisher.publishEvent(new PaymentSuccessEvent(
+                    saved.getId(), saved.getOrderId(), saved.getMemberId(), saved.getAmount()
+                ));
+
                 return PaymentInfo.from(saved);
             });
         } else if (pgResponse.isFailed()) {
