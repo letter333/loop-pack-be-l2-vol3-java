@@ -19,6 +19,7 @@ import com.loopers.domain.product.Product;
 import com.loopers.domain.product.ProductOption;
 import com.loopers.domain.product.ProductService;
 import com.loopers.domain.product.ProductStatus;
+import com.loopers.domain.queue.QueueService;
 import com.loopers.domain.queue.QueueTokenService;
 import com.loopers.support.auth.AdminValidator;
 import com.loopers.support.error.CoreException;
@@ -65,6 +66,9 @@ class OrderFacadeTest {
 
     @Mock
     private MemberCouponService memberCouponService;
+
+    @Mock
+    private QueueService queueService;
 
     @Mock
     private QueueTokenService queueTokenService;

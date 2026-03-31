@@ -15,6 +15,7 @@ public class QueueRepositoryImpl implements QueueRepository {
 
     private static final String KEY_PREFIX = "queue:";
     private static final String KEY_SUFFIX = ":waiting";
+    private static final String ACTIVE_KEY_SUFFIX = ":active";
 
     private final RedisTemplate<String, String> defaultRedisTemplate;
     private final RedisTemplate<String, String> masterRedisTemplate;
@@ -59,7 +60,26 @@ public class QueueRepositoryImpl implements QueueRepository {
                 .toList();
     }
 
+    @Override
+    public void activate(String eventType) {
+        masterRedisTemplate.opsForValue().set(generateActiveKey(eventType), "true");
+    }
+
+    @Override
+    public void deactivate(String eventType) {
+        masterRedisTemplate.delete(generateActiveKey(eventType));
+    }
+
+    @Override
+    public boolean isActive(String eventType) {
+        return Boolean.TRUE.equals(defaultRedisTemplate.hasKey(generateActiveKey(eventType)));
+    }
+
     private String generateKey(String eventType) {
         return KEY_PREFIX + eventType + KEY_SUFFIX;
+    }
+
+    private String generateActiveKey(String eventType) {
+        return KEY_PREFIX + eventType + ACTIVE_KEY_SUFFIX;
     }
 }

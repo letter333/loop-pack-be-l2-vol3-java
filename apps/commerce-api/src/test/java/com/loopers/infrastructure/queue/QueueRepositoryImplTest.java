@@ -196,4 +196,50 @@ class QueueRepositoryImplTest {
             assertThat(queueRepository.getTotalWaiting(EVENT_TYPE)).isEqualTo(0L);
         }
     }
+
+    @DisplayName("activate / deactivate / isActive")
+    @Nested
+    class ActivateDeactivate {
+
+        @Test
+        @DisplayName("활성화 후 isActive가 true를 반환한다")
+        void returnsTrue_afterActivate() {
+            // act
+            queueRepository.activate(EVENT_TYPE);
+
+            // assert
+            assertThat(queueRepository.isActive(EVENT_TYPE)).isTrue();
+        }
+
+        @Test
+        @DisplayName("비활성화 후 isActive가 false를 반환한다")
+        void returnsFalse_afterDeactivate() {
+            // arrange
+            queueRepository.activate(EVENT_TYPE);
+
+            // act
+            queueRepository.deactivate(EVENT_TYPE);
+
+            // assert
+            assertThat(queueRepository.isActive(EVENT_TYPE)).isFalse();
+        }
+
+        @Test
+        @DisplayName("초기 상태는 비활성이다")
+        void returnsFalse_byDefault() {
+            // act & assert
+            assertThat(queueRepository.isActive(EVENT_TYPE)).isFalse();
+        }
+
+        @Test
+        @DisplayName("서로 다른 eventType은 독립적으로 관리된다")
+        void activatesIndependently() {
+            // arrange
+            queueRepository.activate("order");
+
+            // act & assert
+            assertThat(queueRepository.isActive("order")).isTrue();
+            assertThat(queueRepository.isActive("flash-sale")).isFalse();
+        }
+    }
 }

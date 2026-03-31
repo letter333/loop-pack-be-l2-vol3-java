@@ -18,6 +18,7 @@ import com.loopers.domain.product.Product;
 import com.loopers.domain.product.ProductImage;
 import com.loopers.domain.product.ProductOption;
 import com.loopers.domain.product.ProductService;
+import com.loopers.domain.queue.QueueService;
 import com.loopers.domain.queue.QueueTokenService;
 import com.loopers.support.auth.AdminValidator;
 import com.loopers.support.error.CoreException;
@@ -45,6 +46,7 @@ public class OrderFacade {
     private final AddressService addressService;
     private final ProductService productService;
     private final MemberCouponService memberCouponService;
+    private final QueueService queueService;
     private final QueueTokenService queueTokenService;
     private final AdminValidator adminValidator;
     private final ApplicationEventPublisher applicationEventPublisher;
@@ -60,14 +62,21 @@ public class OrderFacade {
     public OrderDetailInfo createOrder(String loginId, String password, String queueToken, OrderCommand.Create command) {
         Member member = memberService.authenticate(loginId, password);
 
-        long tokenTtl = queueTokenService.validateAndConsume(ORDER_EVENT_TYPE, member.getId(), queueToken);
-
-        try {
-            return executeCreateOrder(member, command);
-        } catch (Exception e) {
-            queueTokenService.restoreToken(ORDER_EVENT_TYPE, member.getId(), queueToken, tokenTtl);
-            throw e;
+        boolean queueActive = queueService.isQueueActive(ORDER_EVENT_TYPE);
+        if (queueActive) {
+            if (queueToken == null || queueToken.isBlank()) {
+                throw new CoreException(ErrorType.FORBIDDEN, "대기열 진입이 필요합니다.");
+            }
+            long tokenTtl = queueTokenService.validateAndConsume(ORDER_EVENT_TYPE, member.getId(), queueToken);
+            try {
+                return executeCreateOrder(member, command);
+            } catch (Exception e) {
+                queueTokenService.restoreToken(ORDER_EVENT_TYPE, member.getId(), queueToken, tokenTtl);
+                throw e;
+            }
         }
+
+        return executeCreateOrder(member, command);
     }
 
     private OrderDetailInfo executeCreateOrder(Member member, OrderCommand.Create command) {

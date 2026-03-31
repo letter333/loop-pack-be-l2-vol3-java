@@ -12,4 +12,9 @@ public class QueueV1Dto {
             return new EnterResponse(info.position(), info.totalWaiting());
         }
     }
+
+    public record QueueStatusResponse(
+        boolean active
+    ) {
+    }
 }

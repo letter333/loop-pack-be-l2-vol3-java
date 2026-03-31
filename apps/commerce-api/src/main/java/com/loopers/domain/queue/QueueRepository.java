@@ -11,4 +11,10 @@ public interface QueueRepository {
     long getTotalWaiting(String eventType);
 
     List<Long> popMin(String eventType, int count);
+
+    void activate(String eventType);
+
+    void deactivate(String eventType);
+
+    boolean isActive(String eventType);
 }

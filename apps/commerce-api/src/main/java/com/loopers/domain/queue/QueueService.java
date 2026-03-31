@@ -38,4 +38,16 @@ public class QueueService {
     public List<Long> dequeueBatch(String eventType, int count) {
         return queueRepository.popMin(eventType, count);
     }
+
+    public void activateQueue(String eventType) {
+        queueRepository.activate(eventType);
+    }
+
+    public void deactivateQueue(String eventType) {
+        queueRepository.deactivate(eventType);
+    }
+
+    public boolean isQueueActive(String eventType) {
+        return queueRepository.isActive(eventType);
+    }
 }
