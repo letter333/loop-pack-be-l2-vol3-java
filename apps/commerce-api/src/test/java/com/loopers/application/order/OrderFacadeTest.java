@@ -19,6 +19,7 @@ import com.loopers.domain.product.Product;
 import com.loopers.domain.product.ProductOption;
 import com.loopers.domain.product.ProductService;
 import com.loopers.domain.product.ProductStatus;
+import com.loopers.domain.queue.QueueTokenService;
 import com.loopers.support.auth.AdminValidator;
 import com.loopers.support.error.CoreException;
 import com.loopers.support.error.ErrorType;
@@ -66,6 +67,9 @@ class OrderFacadeTest {
     private MemberCouponService memberCouponService;
 
     @Mock
+    private QueueTokenService queueTokenService;
+
+    @Mock
     private AdminValidator adminValidator;
 
     @Mock
@@ -79,6 +83,7 @@ class OrderFacadeTest {
     private static final Long MEMBER_ID = 1L;
     private static final Long ADDRESS_ID = 1L;
     private static final Long ORDER_ID = 1L;
+    private static final String QUEUE_TOKEN = "test-queue-token";
 
     @DisplayName("주문 생성")
     @Nested
@@ -108,7 +113,7 @@ class OrderFacadeTest {
             given(orderService.createOrder(any(Order.class))).willReturn(savedOrder);
 
             // act
-            OrderDetailInfo result = orderFacade.createOrder(LOGIN_ID, PASSWORD, command);
+            OrderDetailInfo result = orderFacade.createOrder(LOGIN_ID, PASSWORD, QUEUE_TOKEN, command);
 
             // assert
             assertAll(
@@ -130,7 +135,7 @@ class OrderFacadeTest {
             given(addressService.getAddresses(MEMBER_ID)).willReturn(List.of());
 
             // act & assert
-            assertThatThrownBy(() -> orderFacade.createOrder(LOGIN_ID, PASSWORD, command))
+            assertThatThrownBy(() -> orderFacade.createOrder(LOGIN_ID, PASSWORD, QUEUE_TOKEN, command))
                 .isInstanceOf(CoreException.class)
                 .extracting("errorType")
                 .isEqualTo(ErrorType.NOT_FOUND);
@@ -152,7 +157,7 @@ class OrderFacadeTest {
                 .willThrow(new CoreException(ErrorType.BAD_REQUEST, "판매중지된 상품입니다."));
 
             // act & assert
-            assertThatThrownBy(() -> orderFacade.createOrder(LOGIN_ID, PASSWORD, command))
+            assertThatThrownBy(() -> orderFacade.createOrder(LOGIN_ID, PASSWORD, QUEUE_TOKEN, command))
                 .isInstanceOf(CoreException.class)
                 .extracting("errorType")
                 .isEqualTo(ErrorType.BAD_REQUEST);
@@ -195,7 +200,7 @@ class OrderFacadeTest {
             given(orderService.createOrder(any(Order.class))).willReturn(savedOrder);
 
             // act
-            OrderDetailInfo result = orderFacade.createOrder(LOGIN_ID, PASSWORD, command);
+            OrderDetailInfo result = orderFacade.createOrder(LOGIN_ID, PASSWORD, QUEUE_TOKEN, command);
 
             // assert
             assertAll(
@@ -230,7 +235,7 @@ class OrderFacadeTest {
                 .willThrow(new CoreException(ErrorType.FORBIDDEN, "해당 쿠폰에 대한 권한이 없습니다."));
 
             // act & assert
-            assertThatThrownBy(() -> orderFacade.createOrder(LOGIN_ID, PASSWORD, command))
+            assertThatThrownBy(() -> orderFacade.createOrder(LOGIN_ID, PASSWORD, QUEUE_TOKEN, command))
                 .isInstanceOf(CoreException.class)
                 .extracting("errorType")
                 .isEqualTo(ErrorType.FORBIDDEN);
@@ -261,7 +266,7 @@ class OrderFacadeTest {
                 .willThrow(new CoreException(ErrorType.BAD_REQUEST, "사용할 수 없는 쿠폰입니다."));
 
             // act & assert
-            assertThatThrownBy(() -> orderFacade.createOrder(LOGIN_ID, PASSWORD, command))
+            assertThatThrownBy(() -> orderFacade.createOrder(LOGIN_ID, PASSWORD, QUEUE_TOKEN, command))
                 .isInstanceOf(CoreException.class)
                 .extracting("errorType")
                 .isEqualTo(ErrorType.BAD_REQUEST);
@@ -287,7 +292,7 @@ class OrderFacadeTest {
                 .when(productService).decreaseStock(eq(1L), eq(10L), anyInt());
 
             // act & assert
-            assertThatThrownBy(() -> orderFacade.createOrder(LOGIN_ID, PASSWORD, command))
+            assertThatThrownBy(() -> orderFacade.createOrder(LOGIN_ID, PASSWORD, QUEUE_TOKEN, command))
                 .isInstanceOf(CoreException.class)
                 .extracting("errorType")
                 .isEqualTo(ErrorType.BAD_REQUEST);

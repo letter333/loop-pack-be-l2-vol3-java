@@ -18,6 +18,7 @@ import com.loopers.domain.product.Product;
 import com.loopers.domain.product.ProductImage;
 import com.loopers.domain.product.ProductOption;
 import com.loopers.domain.product.ProductService;
+import com.loopers.domain.queue.QueueTokenService;
 import com.loopers.support.auth.AdminValidator;
 import com.loopers.support.error.CoreException;
 import com.loopers.support.error.ErrorType;
@@ -44,8 +45,11 @@ public class OrderFacade {
     private final AddressService addressService;
     private final ProductService productService;
     private final MemberCouponService memberCouponService;
+    private final QueueTokenService queueTokenService;
     private final AdminValidator adminValidator;
     private final ApplicationEventPublisher applicationEventPublisher;
+
+    private static final String ORDER_EVENT_TYPE = "order";
 
     @Retryable(
         retryFor = ObjectOptimisticLockingFailureException.class,
@@ -53,9 +57,20 @@ public class OrderFacade {
         backoff = @Backoff(delay = 50, multiplier = 2)
     )
     @Transactional
-    public OrderDetailInfo createOrder(String loginId, String password, OrderCommand.Create command) {
+    public OrderDetailInfo createOrder(String loginId, String password, String queueToken, OrderCommand.Create command) {
         Member member = memberService.authenticate(loginId, password);
 
+        long tokenTtl = queueTokenService.validateAndConsume(ORDER_EVENT_TYPE, member.getId(), queueToken);
+
+        try {
+            return executeCreateOrder(member, command);
+        } catch (Exception e) {
+            queueTokenService.restoreToken(ORDER_EVENT_TYPE, member.getId(), queueToken, tokenTtl);
+            throw e;
+        }
+    }
+
+    private OrderDetailInfo executeCreateOrder(Member member, OrderCommand.Create command) {
         Address address = findAddressForMember(member.getId(), command.addressId());
 
         Order order = new Order(

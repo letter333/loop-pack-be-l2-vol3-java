@@ -18,6 +18,7 @@ public interface OrderV1ApiSpec {
     ApiResponse<OrderV1Dto.OrderDetailResponse> createOrder(
         @Parameter(description = "로그인 ID", required = true) String loginId,
         @Parameter(description = "비밀번호", required = true) String password,
+        @Parameter(description = "대기열 입장 토큰", required = true) String queueToken,
         OrderV1Dto.CreateOrderRequest request
     );
 
