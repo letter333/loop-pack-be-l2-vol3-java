@@ -5,6 +5,8 @@ import com.loopers.support.error.ErrorType;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
+
 @Service
 @RequiredArgsConstructor
 public class QueueService {
@@ -31,5 +33,9 @@ public class QueueService {
 
         long totalWaiting = queueRepository.getTotalWaiting(eventType);
         return new QueueInfo(position, totalWaiting);
+    }
+
+    public List<Long> dequeueBatch(String eventType, int count) {
+        return queueRepository.popMin(eventType, count);
     }
 }

@@ -9,6 +9,8 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 
+import java.util.List;
+
 import static org.assertj.core.api.Assertions.assertThat;
 
 @SpringBootTest
@@ -139,6 +141,53 @@ class QueueRepositoryImplTest {
             // act & assert
             assertThat(queueRepository.getTotalWaiting("order")).isEqualTo(2L);
             assertThat(queueRepository.getTotalWaiting("flash-sale")).isEqualTo(1L);
+        }
+    }
+
+    @DisplayName("popMin")
+    @Nested
+    class PopMin {
+
+        @Test
+        @DisplayName("score가 낮은 순서대로 N명을 추출한다")
+        void popsLowestScoreMembers() {
+            // arrange
+            queueRepository.addIfAbsent(EVENT_TYPE, 1L, 1000.0);
+            queueRepository.addIfAbsent(EVENT_TYPE, 2L, 2000.0);
+            queueRepository.addIfAbsent(EVENT_TYPE, 3L, 3000.0);
+
+            // act
+            List<Long> popped = queueRepository.popMin(EVENT_TYPE, 2);
+
+            // assert
+            assertThat(popped).containsExactly(1L, 2L);
+            assertThat(queueRepository.getTotalWaiting(EVENT_TYPE)).isEqualTo(1L);
+            assertThat(queueRepository.getPosition(EVENT_TYPE, 3L)).isEqualTo(1L);
+        }
+
+        @Test
+        @DisplayName("빈 대기열에서 popMin 시 빈 리스트를 반환한다")
+        void returnsEmptyList_whenQueueEmpty() {
+            // act
+            List<Long> popped = queueRepository.popMin(EVENT_TYPE, 5);
+
+            // assert
+            assertThat(popped).isEmpty();
+        }
+
+        @Test
+        @DisplayName("대기 인원보다 큰 count로 popMin 시 전원 추출한다")
+        void popsAll_whenCountExceedsSize() {
+            // arrange
+            queueRepository.addIfAbsent(EVENT_TYPE, 1L, 1000.0);
+            queueRepository.addIfAbsent(EVENT_TYPE, 2L, 2000.0);
+
+            // act
+            List<Long> popped = queueRepository.popMin(EVENT_TYPE, 10);
+
+            // assert
+            assertThat(popped).containsExactly(1L, 2L);
+            assertThat(queueRepository.getTotalWaiting(EVENT_TYPE)).isEqualTo(0L);
         }
     }
 }

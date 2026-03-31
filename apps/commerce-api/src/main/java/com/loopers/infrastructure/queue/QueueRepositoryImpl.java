@@ -3,7 +3,12 @@ package com.loopers.infrastructure.queue;
 import com.loopers.domain.queue.QueueRepository;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.ZSetOperations;
 import org.springframework.stereotype.Repository;
+
+import java.util.Collections;
+import java.util.List;
+import java.util.Set;
 
 @Repository
 public class QueueRepositoryImpl implements QueueRepository {
@@ -40,6 +45,18 @@ public class QueueRepositoryImpl implements QueueRepository {
     public long getTotalWaiting(String eventType) {
         Long size = defaultRedisTemplate.opsForZSet().zCard(generateKey(eventType));
         return size != null ? size : 0L;
+    }
+
+    @Override
+    public List<Long> popMin(String eventType, int count) {
+        Set<ZSetOperations.TypedTuple<String>> tuples =
+                masterRedisTemplate.opsForZSet().popMin(generateKey(eventType), count);
+        if (tuples == null || tuples.isEmpty()) {
+            return Collections.emptyList();
+        }
+        return tuples.stream()
+                .map(tuple -> Long.parseLong(tuple.getValue()))
+                .toList();
     }
 
     private String generateKey(String eventType) {
