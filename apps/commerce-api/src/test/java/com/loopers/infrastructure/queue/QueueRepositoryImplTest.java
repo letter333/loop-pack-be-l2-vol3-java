@@ -3,6 +3,7 @@ package com.loopers.infrastructure.queue;
 import com.loopers.domain.queue.QueueRepository;
 import com.loopers.utils.RedisCleanUp;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -24,6 +25,11 @@ class QueueRepositoryImplTest {
     private RedisCleanUp redisCleanUp;
 
     private static final String EVENT_TYPE = "order";
+
+    @BeforeEach
+    void setUp() {
+        redisCleanUp.truncateAll();
+    }
 
     @AfterEach
     void tearDown() {

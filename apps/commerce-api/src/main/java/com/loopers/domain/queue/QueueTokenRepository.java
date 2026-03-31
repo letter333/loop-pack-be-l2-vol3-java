@@ -11,4 +11,6 @@ public interface QueueTokenRepository {
     String get(String eventType, Long userId);
 
     Long getExpire(String eventType, Long userId);
+
+    TokenConsumeResult getAndDeleteWithTtl(String eventType, Long userId);
 }

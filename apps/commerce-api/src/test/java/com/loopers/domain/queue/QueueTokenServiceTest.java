@@ -2,11 +2,11 @@ package com.loopers.domain.queue;
 
 import com.loopers.support.error.CoreException;
 import com.loopers.support.error.ErrorType;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -27,11 +27,16 @@ class QueueTokenServiceTest {
     @Mock
     private QueueTokenRepository queueTokenRepository;
 
-    @InjectMocks
     private QueueTokenService queueTokenService;
 
     private static final String EVENT_TYPE = "order";
     private static final Long USER_ID = 1L;
+    private static final long TTL_MINUTES = 5;
+
+    @BeforeEach
+    void setUp() {
+        queueTokenService = new QueueTokenService(queueTokenRepository, TTL_MINUTES);
+    }
 
     @DisplayName("토큰 발급")
     @Nested
@@ -45,7 +50,7 @@ class QueueTokenServiceTest {
 
             // assert
             assertThat(token).isNotNull().isNotEmpty();
-            verify(queueTokenRepository).save(eq(EVENT_TYPE), eq(USER_ID), eq(token), any(Duration.class));
+            verify(queueTokenRepository).save(eq(EVENT_TYPE), eq(USER_ID), eq(token), eq(Duration.ofMinutes(TTL_MINUTES)));
         }
     }
 
@@ -58,8 +63,8 @@ class QueueTokenServiceTest {
         void returnsRemainingTtl_whenTokenValid() {
             // arrange
             String token = "valid-token";
-            given(queueTokenRepository.getExpire(EVENT_TYPE, USER_ID)).willReturn(180L);
-            given(queueTokenRepository.getAndDelete(EVENT_TYPE, USER_ID)).willReturn(token);
+            given(queueTokenRepository.getAndDeleteWithTtl(EVENT_TYPE, USER_ID))
+                .willReturn(new TokenConsumeResult(token, 180L));
 
             // act
             long ttl = queueTokenService.validateAndConsume(EVENT_TYPE, USER_ID, token);
@@ -72,8 +77,8 @@ class QueueTokenServiceTest {
         @DisplayName("토큰이 없으면 UNAUTHORIZED 예외가 발생한다")
         void throwsUnauthorized_whenNoToken() {
             // arrange
-            given(queueTokenRepository.getExpire(EVENT_TYPE, USER_ID)).willReturn(-2L);
-            given(queueTokenRepository.getAndDelete(EVENT_TYPE, USER_ID)).willReturn(null);
+            given(queueTokenRepository.getAndDeleteWithTtl(EVENT_TYPE, USER_ID))
+                .willReturn(new TokenConsumeResult(null, 0));
 
             // act & assert
             assertThatThrownBy(() -> queueTokenService.validateAndConsume(EVENT_TYPE, USER_ID, "any-token"))
@@ -85,8 +90,8 @@ class QueueTokenServiceTest {
         @DisplayName("토큰이 일치하지 않으면 UNAUTHORIZED 예외가 발생한다")
         void throwsUnauthorized_whenTokenMismatch() {
             // arrange
-            given(queueTokenRepository.getExpire(EVENT_TYPE, USER_ID)).willReturn(180L);
-            given(queueTokenRepository.getAndDelete(EVENT_TYPE, USER_ID)).willReturn("stored-token");
+            given(queueTokenRepository.getAndDeleteWithTtl(EVENT_TYPE, USER_ID))
+                .willReturn(new TokenConsumeResult("stored-token", 180L));
 
             // act & assert
             assertThatThrownBy(() -> queueTokenService.validateAndConsume(EVENT_TYPE, USER_ID, "wrong-token"))

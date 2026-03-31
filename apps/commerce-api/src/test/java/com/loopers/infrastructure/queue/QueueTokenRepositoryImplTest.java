@@ -1,6 +1,7 @@
 package com.loopers.infrastructure.queue;
 
 import com.loopers.domain.queue.QueueTokenRepository;
+import com.loopers.domain.queue.TokenConsumeResult;
 import com.loopers.utils.RedisCleanUp;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
@@ -118,6 +119,52 @@ class QueueTokenRepositoryImplTest {
             // assert — 5분 = 300초, 저장 직후이므로 299~300초 사이
             assertThat(ttl).isNotNull();
             assertThat(ttl).isBetween(295L, 300L);
+        }
+    }
+
+    @DisplayName("getAndDeleteWithTtl (Lua Script 원자적 TTL+GETDEL)")
+    @Nested
+    class GetAndDeleteWithTtl {
+
+        @Test
+        @DisplayName("토큰과 잔여 TTL을 원자적으로 반환하고 키를 삭제한다")
+        void returnsTokenAndTtlAtomically() {
+            // arrange
+            queueTokenRepository.save(EVENT_TYPE, USER_ID, TOKEN, Duration.ofMinutes(5));
+
+            // act
+            TokenConsumeResult result = queueTokenRepository.getAndDeleteWithTtl(EVENT_TYPE, USER_ID);
+
+            // assert
+            assertThat(result.token()).isEqualTo(TOKEN);
+            assertThat(result.ttlSeconds()).isBetween(295L, 300L);
+            assertThat(queueTokenRepository.get(EVENT_TYPE, USER_ID)).isNull();
+        }
+
+        @Test
+        @DisplayName("두 번 호출 시 첫 번째만 토큰을 반환한다 (원자성)")
+        void returnsNullTokenOnSecondCall() {
+            // arrange
+            queueTokenRepository.save(EVENT_TYPE, USER_ID, TOKEN, Duration.ofMinutes(5));
+
+            // act
+            TokenConsumeResult first = queueTokenRepository.getAndDeleteWithTtl(EVENT_TYPE, USER_ID);
+            TokenConsumeResult second = queueTokenRepository.getAndDeleteWithTtl(EVENT_TYPE, USER_ID);
+
+            // assert
+            assertThat(first.token()).isEqualTo(TOKEN);
+            assertThat(second.token()).isNull();
+        }
+
+        @Test
+        @DisplayName("존재하지 않는 키에 대해 null 토큰을 반환한다")
+        void returnsNullToken_whenNotExists() {
+            // act
+            TokenConsumeResult result = queueTokenRepository.getAndDeleteWithTtl(EVENT_TYPE, 999L);
+
+            // assert
+            assertThat(result.token()).isNull();
+            assertThat(result.ttlSeconds()).isEqualTo(0L);
         }
     }
 
