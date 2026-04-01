@@ -62,6 +62,19 @@ public class QueueService {
         return batchCycles * intervalMs / 1000;
     }
 
+    public long suggestPollIntervalMs(long position) {
+        if (position <= 0) {
+            return 1000;
+        }
+        if (position <= batchSize) {
+            return 1000;
+        }
+        if (position <= batchSize * 3) {
+            return 2000;
+        }
+        return 5000;
+    }
+
     public void activateQueue(String eventType) {
         queueRepository.activate(eventType);
     }

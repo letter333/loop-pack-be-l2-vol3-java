@@ -141,4 +141,36 @@ class QueueServiceTest {
             assertThat(queueService.calculateEstimatedWaitSeconds(-1)).isEqualTo(0);
         }
     }
+
+    @DisplayName("Polling 주기 동적 조절")
+    @Nested
+    class SuggestPollIntervalMs {
+
+        @Test
+        @DisplayName("순번이 배치 크기 이하이면 1초를 제안한다")
+        void returns1s_whenPositionWithinBatchSize() {
+            assertThat(queueService.suggestPollIntervalMs(1)).isEqualTo(1000);
+            assertThat(queueService.suggestPollIntervalMs(BATCH_SIZE)).isEqualTo(1000);
+        }
+
+        @Test
+        @DisplayName("순번이 배치 크기의 3배 이하이면 2초를 제안한다")
+        void returns2s_whenPositionWithin3xBatchSize() {
+            assertThat(queueService.suggestPollIntervalMs(BATCH_SIZE + 1)).isEqualTo(2000);
+            assertThat(queueService.suggestPollIntervalMs(BATCH_SIZE * 3)).isEqualTo(2000);
+        }
+
+        @Test
+        @DisplayName("순번이 배치 크기의 3배 초과이면 5초를 제안한다")
+        void returns5s_whenPositionExceeds3xBatchSize() {
+            assertThat(queueService.suggestPollIntervalMs(BATCH_SIZE * 3 + 1)).isEqualTo(5000);
+        }
+
+        @Test
+        @DisplayName("순번이 0 이하이면 1초를 제안한다")
+        void returns1s_whenPositionIsZeroOrNegative() {
+            assertThat(queueService.suggestPollIntervalMs(0)).isEqualTo(1000);
+            assertThat(queueService.suggestPollIntervalMs(-1)).isEqualTo(1000);
+        }
+    }
 }

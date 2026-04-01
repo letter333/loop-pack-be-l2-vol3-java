@@ -33,12 +33,13 @@ public class QueueFacade {
         String token = queueTokenService.getToken(ORDER_EVENT_TYPE, userId);
         if (token != null) {
             long totalWaiting = queueService.getTotalWaiting(ORDER_EVENT_TYPE);
-            return new QueuePositionInfo("ADMITTED", 0, totalWaiting, 0, token);
+            return new QueuePositionInfo("ADMITTED", 0, totalWaiting, 0, 0, token);
         }
 
         QueueInfo queueInfo = queueService.getQueueInfo(ORDER_EVENT_TYPE, userId);
         long estimatedWait = queueService.calculateEstimatedWaitSeconds(queueInfo.position());
-        return new QueuePositionInfo("WAITING", queueInfo.position(), queueInfo.totalWaiting(), estimatedWait, null);
+        long pollInterval = queueService.suggestPollIntervalMs(queueInfo.position());
+        return new QueuePositionInfo("WAITING", queueInfo.position(), queueInfo.totalWaiting(), estimatedWait, pollInterval, null);
     }
 
     public void activateQueue(String ldap) {

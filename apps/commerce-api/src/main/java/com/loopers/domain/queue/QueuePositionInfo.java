@@ -5,6 +5,7 @@ public record QueuePositionInfo(
     long position,
     long totalWaiting,
     long estimatedWaitSeconds,
+    long suggestedPollIntervalMs,
     String token
 ) {
 }

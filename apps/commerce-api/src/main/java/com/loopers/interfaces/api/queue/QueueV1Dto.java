@@ -19,12 +19,13 @@ public class QueueV1Dto {
         long position,
         long totalWaiting,
         long estimatedWaitSeconds,
+        long suggestedPollIntervalMs,
         String token
     ) {
         public static PositionResponse from(QueuePositionInfo info) {
             return new PositionResponse(
                 info.status(), info.position(), info.totalWaiting(),
-                info.estimatedWaitSeconds(), info.token()
+                info.estimatedWaitSeconds(), info.suggestedPollIntervalMs(), info.token()
             );
         }
     }
