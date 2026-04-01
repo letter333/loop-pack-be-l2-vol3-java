@@ -2,16 +2,27 @@ package com.loopers.domain.queue;
 
 import com.loopers.support.error.CoreException;
 import com.loopers.support.error.ErrorType;
-import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 
 @Service
-@RequiredArgsConstructor
 public class QueueService {
 
     private final QueueRepository queueRepository;
+    private final int batchSize;
+    private final long intervalMs;
+
+    public QueueService(
+        QueueRepository queueRepository,
+        @Value("${queue.admission.batch-size:50}") int batchSize,
+        @Value("${queue.admission.interval-ms:10000}") long intervalMs
+    ) {
+        this.queueRepository = queueRepository;
+        this.batchSize = batchSize;
+        this.intervalMs = intervalMs;
+    }
 
     public QueueInfo enter(String eventType, Long userId) {
         boolean added = queueRepository.addIfAbsent(eventType, userId, System.currentTimeMillis());
@@ -35,8 +46,20 @@ public class QueueService {
         return new QueueInfo(position, totalWaiting);
     }
 
+    public long getTotalWaiting(String eventType) {
+        return queueRepository.getTotalWaiting(eventType);
+    }
+
     public List<Long> dequeueBatch(String eventType, int count) {
         return queueRepository.popMin(eventType, count);
+    }
+
+    public long calculateEstimatedWaitSeconds(long position) {
+        if (position <= 0) {
+            return 0;
+        }
+        long batchCycles = (position + batchSize - 1) / batchSize;
+        return batchCycles * intervalMs / 1000;
     }
 
     public void activateQueue(String eventType) {

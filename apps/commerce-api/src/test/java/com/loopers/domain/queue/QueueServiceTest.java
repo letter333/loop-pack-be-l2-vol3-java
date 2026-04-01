@@ -2,11 +2,11 @@ package com.loopers.domain.queue;
 
 import com.loopers.support.error.CoreException;
 import com.loopers.support.error.ErrorType;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -23,11 +23,17 @@ class QueueServiceTest {
     @Mock
     private QueueRepository queueRepository;
 
-    @InjectMocks
     private QueueService queueService;
 
     private static final String EVENT_TYPE = "order";
     private static final Long USER_ID = 1L;
+    private static final int BATCH_SIZE = 50;
+    private static final long INTERVAL_MS = 10000;
+
+    @BeforeEach
+    void setUp() {
+        queueService = new QueueService(queueRepository, BATCH_SIZE, INTERVAL_MS);
+    }
 
     @DisplayName("대기열 진입")
     @Nested
@@ -95,6 +101,44 @@ class QueueServiceTest {
             assertThatThrownBy(() -> queueService.getQueueInfo(EVENT_TYPE, USER_ID))
                 .isInstanceOf(CoreException.class)
                 .satisfies(e -> assertThat(((CoreException) e).getErrorType()).isEqualTo(ErrorType.NOT_FOUND));
+        }
+    }
+
+    @DisplayName("예상 대기 시간 계산")
+    @Nested
+    class CalculateEstimatedWaitSeconds {
+
+        @Test
+        @DisplayName("position이 0이면 0초를 반환한다")
+        void returnsZero_whenPositionIsZero() {
+            assertThat(queueService.calculateEstimatedWaitSeconds(0)).isEqualTo(0);
+        }
+
+        @Test
+        @DisplayName("position이 1이면 1 배치 주기를 반환한다")
+        void returnsOneCycle_whenPositionIsOne() {
+            // 1명 → ceil(1/50) = 1 배치 → 1 * 10000 / 1000 = 10초
+            assertThat(queueService.calculateEstimatedWaitSeconds(1)).isEqualTo(10);
+        }
+
+        @Test
+        @DisplayName("position이 배치 크기와 같으면 1 배치 주기를 반환한다")
+        void returnsOneCycle_whenPositionEqualsBatchSize() {
+            // 50명 → ceil(50/50) = 1 배치 → 10초
+            assertThat(queueService.calculateEstimatedWaitSeconds(BATCH_SIZE)).isEqualTo(10);
+        }
+
+        @Test
+        @DisplayName("position이 배치 크기 + 1이면 2 배치 주기를 반환한다")
+        void returnsTwoCycles_whenPositionExceedsBatchSize() {
+            // 51명 → ceil(51/50) = 2 배치 → 2 * 10 = 20초
+            assertThat(queueService.calculateEstimatedWaitSeconds(BATCH_SIZE + 1)).isEqualTo(20);
+        }
+
+        @Test
+        @DisplayName("position이 음수이면 0초를 반환한다")
+        void returnsZero_whenPositionIsNegative() {
+            assertThat(queueService.calculateEstimatedWaitSeconds(-1)).isEqualTo(0);
         }
     }
 }
