@@ -24,9 +24,11 @@ import com.loopers.domain.queue.QueueTokenService;
 import com.loopers.support.auth.AdminValidator;
 import com.loopers.support.error.CoreException;
 import com.loopers.support.error.ErrorType;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.springframework.context.ApplicationEventPublisher;
 import org.junit.jupiter.api.Nested;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -81,6 +83,11 @@ class OrderFacadeTest {
 
     @InjectMocks
     private OrderFacade orderFacade;
+
+    @BeforeEach
+    void setUp() {
+        ReflectionTestUtils.setField(orderFacade, "self", orderFacade);
+    }
 
     private static final String LOGIN_ID = "testuser";
     private static final String PASSWORD = "Password123!";

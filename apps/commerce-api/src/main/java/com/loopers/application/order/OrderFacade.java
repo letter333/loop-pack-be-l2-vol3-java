@@ -23,8 +23,9 @@ import com.loopers.domain.queue.QueueTokenService;
 import com.loopers.support.auth.AdminValidator;
 import com.loopers.support.error.CoreException;
 import com.loopers.support.error.ErrorType;
-import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.retry.annotation.Backoff;
 import org.springframework.retry.annotation.Retryable;
@@ -38,7 +39,6 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 @Component
-@RequiredArgsConstructor
 public class OrderFacade {
 
     private final OrderService orderService;
@@ -51,14 +51,33 @@ public class OrderFacade {
     private final AdminValidator adminValidator;
     private final ApplicationEventPublisher applicationEventPublisher;
 
+    @Lazy @Autowired
+    private OrderFacade self;
+
     private static final String ORDER_EVENT_TYPE = "order";
 
-    @Retryable(
-        retryFor = ObjectOptimisticLockingFailureException.class,
-        maxAttempts = 3,
-        backoff = @Backoff(delay = 50, multiplier = 2)
-    )
-    @Transactional
+    public OrderFacade(
+        OrderService orderService,
+        MemberService memberService,
+        AddressService addressService,
+        ProductService productService,
+        MemberCouponService memberCouponService,
+        QueueService queueService,
+        QueueTokenService queueTokenService,
+        AdminValidator adminValidator,
+        ApplicationEventPublisher applicationEventPublisher
+    ) {
+        this.orderService = orderService;
+        this.memberService = memberService;
+        this.addressService = addressService;
+        this.productService = productService;
+        this.memberCouponService = memberCouponService;
+        this.queueService = queueService;
+        this.queueTokenService = queueTokenService;
+        this.adminValidator = adminValidator;
+        this.applicationEventPublisher = applicationEventPublisher;
+    }
+
     public OrderDetailInfo createOrder(String loginId, String password, String queueToken, OrderCommand.Create command) {
         Member member = memberService.authenticate(loginId, password);
 
@@ -69,13 +88,23 @@ public class OrderFacade {
             }
             long tokenTtl = queueTokenService.validateAndConsume(ORDER_EVENT_TYPE, member.getId(), queueToken);
             try {
-                return executeCreateOrder(member, command);
+                return self.executeCreateOrderWithRetry(member, command);
             } catch (Exception e) {
                 queueTokenService.restoreToken(ORDER_EVENT_TYPE, member.getId(), queueToken, tokenTtl);
                 throw e;
             }
         }
 
+        return self.executeCreateOrderWithRetry(member, command);
+    }
+
+    @Retryable(
+        retryFor = ObjectOptimisticLockingFailureException.class,
+        maxAttempts = 3,
+        backoff = @Backoff(delay = 50, multiplier = 2)
+    )
+    @Transactional
+    public OrderDetailInfo executeCreateOrderWithRetry(Member member, OrderCommand.Create command) {
         return executeCreateOrder(member, command);
     }
 

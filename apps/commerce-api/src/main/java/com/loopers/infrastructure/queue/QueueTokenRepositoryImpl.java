@@ -46,12 +46,12 @@ public class QueueTokenRepositoryImpl implements QueueTokenRepository {
 
     @Override
     public String get(String eventType, Long userId) {
-        return defaultRedisTemplate.opsForValue().get(generateKey(eventType, userId));
+        return masterRedisTemplate.opsForValue().get(generateKey(eventType, userId));
     }
 
     @Override
     public Long getExpire(String eventType, Long userId) {
-        return defaultRedisTemplate.getExpire(generateKey(eventType, userId), TimeUnit.SECONDS);
+        return masterRedisTemplate.getExpire(generateKey(eventType, userId), TimeUnit.SECONDS);
     }
 
     @Override
