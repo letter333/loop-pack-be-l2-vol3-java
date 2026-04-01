@@ -2,9 +2,11 @@ package com.loopers.interfaces.api.queue;
 
 import com.loopers.application.queue.QueueFacade;
 import com.loopers.domain.queue.QueueInfo;
+import com.loopers.domain.queue.QueuePositionInfo;
 import com.loopers.interfaces.api.ApiResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -27,5 +29,15 @@ public class QueueV1Controller implements QueueV1ApiSpec {
     ) {
         QueueInfo info = queueFacade.enter(loginId, password);
         return ApiResponse.success(QueueV1Dto.EnterResponse.from(info));
+    }
+
+    @GetMapping("/position")
+    @Override
+    public ApiResponse<QueueV1Dto.PositionResponse> getPosition(
+        @RequestHeader("X-Loopers-LoginId") String loginId,
+        @RequestHeader("X-Loopers-LoginPw") String password
+    ) {
+        QueuePositionInfo info = queueFacade.getPosition(loginId, password);
+        return ApiResponse.success(QueueV1Dto.PositionResponse.from(info));
     }
 }

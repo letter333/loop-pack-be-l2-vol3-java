@@ -16,4 +16,13 @@ public interface QueueV1ApiSpec {
         @Parameter(description = "로그인 ID", required = true) String loginId,
         @Parameter(description = "비밀번호", required = true) String password
     );
+
+    @Operation(
+        summary = "순번 조회",
+        description = "대기열 순번과 예상 대기 시간을 조회합니다. 토큰이 발급된 경우 토큰을 함께 반환합니다."
+    )
+    ApiResponse<QueueV1Dto.PositionResponse> getPosition(
+        @Parameter(description = "로그인 ID", required = true) String loginId,
+        @Parameter(description = "비밀번호", required = true) String password
+    );
 }

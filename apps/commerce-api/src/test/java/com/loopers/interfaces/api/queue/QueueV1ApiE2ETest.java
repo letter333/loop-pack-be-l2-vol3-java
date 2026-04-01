@@ -2,6 +2,7 @@ package com.loopers.interfaces.api.queue;
 
 import com.loopers.domain.member.Member;
 import com.loopers.domain.member.MemberRepository;
+import com.loopers.domain.queue.QueueTokenService;
 import com.loopers.interfaces.api.ApiResponse;
 import com.loopers.utils.DatabaseCleanUp;
 import com.loopers.utils.RedisCleanUp;
@@ -36,6 +37,7 @@ class QueueV1ApiE2ETest {
     private final TestRestTemplate testRestTemplate;
     private final MemberRepository memberRepository;
     private final PasswordEncoder passwordEncoder;
+    private final QueueTokenService queueTokenService;
     private final DatabaseCleanUp databaseCleanUp;
     private final RedisCleanUp redisCleanUp;
 
@@ -44,12 +46,14 @@ class QueueV1ApiE2ETest {
         TestRestTemplate testRestTemplate,
         MemberRepository memberRepository,
         PasswordEncoder passwordEncoder,
+        QueueTokenService queueTokenService,
         DatabaseCleanUp databaseCleanUp,
         RedisCleanUp redisCleanUp
     ) {
         this.testRestTemplate = testRestTemplate;
         this.memberRepository = memberRepository;
         this.passwordEncoder = passwordEncoder;
+        this.queueTokenService = queueTokenService;
         this.databaseCleanUp = databaseCleanUp;
         this.redisCleanUp = redisCleanUp;
     }
@@ -168,6 +172,113 @@ class QueueV1ApiE2ETest {
                 HttpMethod.POST,
                 new HttpEntity<>(headers),
                 responseType
+            );
+        }
+    }
+
+    @DisplayName("GET /api/v1/queue/position")
+    @Nested
+    class GetPosition {
+
+        private Member member;
+
+        @BeforeEach
+        void setUp() {
+            member = saveMember("user1", RAW_PASSWORD);
+        }
+
+        @Test
+        @DisplayName("대기열 진입 후 조회하면 WAITING 상태와 순번을 반환한다")
+        void returnsWaiting_whenInQueue() {
+            // arrange
+            enterQueue(member.getLoginId(), RAW_PASSWORD);
+
+            // act
+            ResponseEntity<ApiResponse<QueueV1Dto.PositionResponse>> response = getPosition(
+                member.getLoginId(), RAW_PASSWORD
+            );
+
+            // assert
+            assertAll(
+                () -> assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK),
+                () -> assertThat(response.getBody().data().status()).isEqualTo("WAITING"),
+                () -> assertThat(response.getBody().data().position()).isEqualTo(1L),
+                () -> assertThat(response.getBody().data().token()).isNull()
+            );
+        }
+
+        @Test
+        @DisplayName("토큰이 발급된 유저는 ADMITTED 상태와 토큰을 반환한다")
+        void returnsAdmitted_whenTokenIssued() {
+            // arrange
+            queueTokenService.issueToken("order", member.getId());
+
+            // act
+            ResponseEntity<ApiResponse<QueueV1Dto.PositionResponse>> response = getPosition(
+                member.getLoginId(), RAW_PASSWORD
+            );
+
+            // assert
+            assertAll(
+                () -> assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK),
+                () -> assertThat(response.getBody().data().status()).isEqualTo("ADMITTED"),
+                () -> assertThat(response.getBody().data().position()).isEqualTo(0L),
+                () -> assertThat(response.getBody().data().token()).isNotNull()
+            );
+        }
+
+        @Test
+        @DisplayName("대기열에도 없고 토큰도 없는 유저는 404를 반환한다")
+        void returnsNotFound_whenNotInQueueAndNoToken() {
+            // act
+            ResponseEntity<ApiResponse<Object>> response = getPositionWithError(
+                member.getLoginId(), RAW_PASSWORD
+            );
+
+            // assert
+            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+        }
+
+        private ResponseEntity<ApiResponse<QueueV1Dto.PositionResponse>> getPosition(
+            String loginId, String password
+        ) {
+            HttpHeaders headers = new HttpHeaders();
+            headers.set("X-Loopers-LoginId", loginId);
+            headers.set("X-Loopers-LoginPw", password);
+
+            return testRestTemplate.exchange(
+                "/api/v1/queue/position",
+                HttpMethod.GET,
+                new HttpEntity<>(headers),
+                new ParameterizedTypeReference<>() {}
+            );
+        }
+
+        private ResponseEntity<ApiResponse<Object>> getPositionWithError(
+            String loginId, String password
+        ) {
+            HttpHeaders headers = new HttpHeaders();
+            headers.set("X-Loopers-LoginId", loginId);
+            headers.set("X-Loopers-LoginPw", password);
+
+            return testRestTemplate.exchange(
+                "/api/v1/queue/position",
+                HttpMethod.GET,
+                new HttpEntity<>(headers),
+                new ParameterizedTypeReference<>() {}
+            );
+        }
+
+        private void enterQueue(String loginId, String password) {
+            HttpHeaders headers = new HttpHeaders();
+            headers.set("X-Loopers-LoginId", loginId);
+            headers.set("X-Loopers-LoginPw", password);
+
+            testRestTemplate.exchange(
+                ENDPOINT,
+                HttpMethod.POST,
+                new HttpEntity<>(headers),
+                new ParameterizedTypeReference<ApiResponse<QueueV1Dto.EnterResponse>>() {}
             );
         }
     }
