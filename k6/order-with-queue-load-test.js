@@ -18,6 +18,7 @@ const PASSWORD = 'Test1234!';
 const USER_COUNT = 100;
 const MAX_POLL_ATTEMPTS = 120;     // 60 → 120 (동적 Polling으로 충분한 대기)
 const POLL_INTERVAL_SEC = 2;
+const CONFIG_LABEL = __ENV.CONFIG_LABEL || 'default';
 
 // 테스트 #1과 동일한 Ramp-up 시나리오
 export const options = {
@@ -41,11 +42,13 @@ export const options = {
   setupTimeout: '300s',
   thresholds: {
     order_error_rate: ['rate<0.3'],
+    order_duration: ['p(99)<5000'],
+    total_flow_duration: ['p(99)<30000'],
   },
 };
 
 export function setup() {
-  console.log('=== Setup: 대기열 활성화 + 유저/상품 준비 ===');
+  console.log(`=== Setup: 대기열 활성화 + 유저/상품 준비 [${CONFIG_LABEL}] ===`);
 
   // 1. Admin API로 대기열 활성화
   const activateRes = http.post(`${BASE_URL}/api/v1/admin/queue/activate`, null, {
@@ -84,7 +87,7 @@ export function setup() {
         const d = JSON.parse(detail.body).data;
         if (d && d.status === 'SALE' && d.options?.length > 0) {
           // 재고가 충분한 옵션만 선택
-          const validOption = d.options.find(opt => opt.stockQuantity > 1000);
+          const validOption = d.options.find(opt => opt.stockQuantity > 100);
           if (validOption) {
             products.push({ productId: d.id, optionId: validOption.id });
           }
@@ -248,5 +251,5 @@ export function teardown(data) {
   http.post(`${BASE_URL}/api/v1/admin/queue/deactivate`, null, {
     headers: { 'X-Loopers-Ldap': 'loopers.admin' },
   });
-  console.log('=== 부하 테스트 #2 완료 (대기열 적용) ===');
+  console.log(`=== 부하 테스트 #2 완료 [${CONFIG_LABEL}] ===`);
 }

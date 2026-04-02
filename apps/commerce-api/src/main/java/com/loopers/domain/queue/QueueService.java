@@ -66,10 +66,11 @@ public class QueueService {
         if (position <= 0) {
             return 1000;
         }
-        if (position <= batchSize) {
+        long batchCycles = (position + batchSize - 1) / batchSize;
+        if (batchCycles <= 1) {
             return 1000;
         }
-        if (position <= batchSize * 3) {
+        if (batchCycles <= 3) {
             return 2000;
         }
         return 5000;

@@ -81,8 +81,8 @@ resilience4j:
 
 queue:
   admission:
-    batch-size: 50
-    interval-ms: 5000
+    batch-size: 10
+    interval-ms: 1000
   token:
     ttl-minutes: 5
 
