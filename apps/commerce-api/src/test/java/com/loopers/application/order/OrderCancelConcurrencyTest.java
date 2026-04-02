@@ -14,8 +14,10 @@ import com.loopers.domain.order.OrderStatus;
 import com.loopers.domain.product.Product;
 import com.loopers.domain.product.ProductOption;
 import com.loopers.domain.product.ProductRepository;
+import com.loopers.domain.queue.QueueTokenService;
 import com.loopers.support.error.CoreException;
 import com.loopers.utils.DatabaseCleanUp;
+import com.loopers.utils.RedisCleanUp;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -62,7 +64,13 @@ class OrderCancelConcurrencyTest {
     private PasswordEncoder passwordEncoder;
 
     @Autowired
+    private QueueTokenService queueTokenService;
+
+    @Autowired
     private DatabaseCleanUp databaseCleanUp;
+
+    @Autowired
+    private RedisCleanUp redisCleanUp;
 
     private static final String LOGIN_ID = "testuser";
     private static final String PASSWORD = "Password123!";
@@ -71,6 +79,7 @@ class OrderCancelConcurrencyTest {
     @AfterEach
     void tearDown() {
         databaseCleanUp.truncateAllTables();
+        redisCleanUp.truncateAll();
     }
 
     @Test
@@ -97,7 +106,7 @@ class OrderCancelConcurrencyTest {
             List.of(new OrderCommand.OrderItem(product.getId(), productOptionId, orderQuantity)),
             null
         );
-        OrderDetailInfo createdOrder = orderFacade.createOrder(LOGIN_ID, PASSWORD, createCommand);
+        OrderDetailInfo createdOrder = orderFacade.createOrder(LOGIN_ID, PASSWORD, queueTokenService.issueToken("order", member.getId()), createCommand);
         Long orderId = createdOrder.id();
 
         // 재고 차감 확인 (initialStock - orderQuantity)
@@ -162,7 +171,7 @@ class OrderCancelConcurrencyTest {
             List.of(new OrderCommand.OrderItem(product.getId(), productOptionId, orderQuantity)),
             null
         );
-        OrderDetailInfo createdOrder = orderFacade.createOrder(LOGIN_ID, PASSWORD, createCommand);
+        OrderDetailInfo createdOrder = orderFacade.createOrder(LOGIN_ID, PASSWORD, queueTokenService.issueToken("order", member.getId()), createCommand);
         Long orderId = createdOrder.id();
 
         ExecutorService executorService = Executors.newFixedThreadPool(threadCount);

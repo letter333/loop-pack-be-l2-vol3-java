@@ -79,6 +79,13 @@ resilience4j:
         ignore-exceptions:
           - org.springframework.web.client.HttpClientErrorException
 
+queue:
+  admission:
+    batch-size: 10
+    interval-ms: 1000
+  token:
+    ttl-minutes: 5
+
 ---
 spring:
   config:

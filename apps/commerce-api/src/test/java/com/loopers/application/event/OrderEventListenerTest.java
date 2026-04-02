@@ -1,54 +1,58 @@
 package com.loopers.application.event;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.loopers.domain.actionlog.UserActionLog;
+import com.loopers.domain.actionlog.UserActionLogRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
+import org.springframework.transaction.TransactionStatus;
 
 import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 @DisplayName("OrderEventListener 단위 테스트")
 @ExtendWith(MockitoExtension.class)
 class OrderEventListenerTest {
 
-    @InjectMocks
-    private OrderEventListener listener;
-
     @Mock
-    private ApplicationEventPublisher applicationEventPublisher;
-
-    @Spy
-    private ObjectMapper objectMapper;
+    private UserActionLogRepository userActionLogRepository;
 
     @Test
-    @DisplayName("OrderCompletedEvent 수신 시 UserActionEvent(ORDER)를 발행한다")
-    void publishesUserActionEvent_whenOrderCompleted() {
+    @DisplayName("OrderCompletedEvent 수신 시 UserActionLog(ORDER)를 직접 저장한다")
+    void savesUserActionLog_whenOrderCompleted() {
         // Arrange
-        OrderCompletedEvent event = new OrderCompletedEvent(
-            1L, 10L, Set.of(100L, 200L), 50000L
+        PlatformTransactionManager txManager = mock(PlatformTransactionManager.class);
+        when(txManager.getTransaction(any(TransactionDefinition.class)))
+            .thenReturn(mock(TransactionStatus.class));
+
+        OrderEventListener listener = new OrderEventListener(
+            userActionLogRepository, new ObjectMapper(), txManager
         );
+        OrderCompletedEvent event = new OrderCompletedEvent(1L, 10L, Set.of(100L, 200L), 50000L);
 
         // Act
         listener.handleOrderCompleted(event);
 
         // Assert
-        ArgumentCaptor<UserActionEvent> captor = ArgumentCaptor.forClass(UserActionEvent.class);
-        verify(applicationEventPublisher).publishEvent(captor.capture());
+        ArgumentCaptor<UserActionLog> captor = ArgumentCaptor.forClass(UserActionLog.class);
+        verify(userActionLogRepository).save(captor.capture());
 
-        UserActionEvent actionEvent = captor.getValue();
-        assertThat(actionEvent.memberId()).isEqualTo(10L);
-        assertThat(actionEvent.actionType()).isEqualTo(ActionType.ORDER);
-        assertThat(actionEvent.targetId()).isEqualTo(1L);
-        assertThat(actionEvent.targetType()).isEqualTo("ORDER");
-        assertThat(actionEvent.metadata()).contains("50000");
+        UserActionLog log = captor.getValue();
+        assertThat(log.getMemberId()).isEqualTo(10L);
+        assertThat(log.getActionType()).isEqualTo("ORDER");
+        assertThat(log.getTargetId()).isEqualTo(1L);
+        assertThat(log.getTargetType()).isEqualTo("ORDER");
+        assertThat(log.getMetadata()).contains("50000");
     }
 }
