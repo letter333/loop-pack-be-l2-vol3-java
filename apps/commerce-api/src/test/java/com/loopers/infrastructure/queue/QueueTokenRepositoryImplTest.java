@@ -2,6 +2,7 @@ package com.loopers.infrastructure.queue;
 
 import com.loopers.domain.queue.QueueTokenRepository;
 import com.loopers.domain.queue.TokenConsumeResult;
+import com.loopers.domain.queue.TokenConsumeResult.ConsumeStatus;
 import com.loopers.utils.RedisCleanUp;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
@@ -59,111 +60,62 @@ class QueueTokenRepositoryImplTest {
         }
     }
 
-    @DisplayName("getAndDelete (GETDEL)")
+    @DisplayName("consumeIfMatches (Lua Script 원자적 토큰 검증 + 삭제)")
     @Nested
-    class GetAndDelete {
+    class ConsumeIfMatches {
 
         @Test
-        @DisplayName("토큰을 읽고 삭제한다")
-        void returnsTokenAndDeletes() {
+        @DisplayName("토큰이 일치하면 CONSUMED 상태와 잔여 TTL을 반환하고 키를 삭제한다")
+        void returnsConsumedWithTtl_whenTokenMatches() {
             // arrange
             queueTokenRepository.save(EVENT_TYPE, USER_ID, TOKEN, Duration.ofMinutes(5));
 
             // act
-            String result = queueTokenRepository.getAndDelete(EVENT_TYPE, USER_ID);
+            TokenConsumeResult result = queueTokenRepository.consumeIfMatches(EVENT_TYPE, USER_ID, TOKEN);
 
             // assert
-            assertThat(result).isEqualTo(TOKEN);
-            assertThat(queueTokenRepository.get(EVENT_TYPE, USER_ID)).isNull();
-        }
-
-        @Test
-        @DisplayName("두 번 호출 시 첫 번째만 값을 반환한다 (원자성)")
-        void returnsNullOnSecondCall() {
-            // arrange
-            queueTokenRepository.save(EVENT_TYPE, USER_ID, TOKEN, Duration.ofMinutes(5));
-
-            // act
-            String first = queueTokenRepository.getAndDelete(EVENT_TYPE, USER_ID);
-            String second = queueTokenRepository.getAndDelete(EVENT_TYPE, USER_ID);
-
-            // assert
-            assertThat(first).isEqualTo(TOKEN);
-            assertThat(second).isNull();
-        }
-
-        @Test
-        @DisplayName("존재하지 않는 토큰에 대해 null을 반환한다")
-        void returnsNull_whenNotExists() {
-            // act
-            String result = queueTokenRepository.getAndDelete(EVENT_TYPE, 999L);
-
-            // assert
-            assertThat(result).isNull();
-        }
-    }
-
-    @DisplayName("getExpire (TTL)")
-    @Nested
-    class GetExpire {
-
-        @Test
-        @DisplayName("저장 시 설정한 TTL의 잔여 시간을 반환한다")
-        void returnsTtlInSeconds() {
-            // arrange
-            queueTokenRepository.save(EVENT_TYPE, USER_ID, TOKEN, Duration.ofMinutes(5));
-
-            // act
-            Long ttl = queueTokenRepository.getExpire(EVENT_TYPE, USER_ID);
-
-            // assert — 5분 = 300초, 저장 직후이므로 299~300초 사이
-            assertThat(ttl).isNotNull();
-            assertThat(ttl).isBetween(295L, 300L);
-        }
-    }
-
-    @DisplayName("getAndDeleteWithTtl (Lua Script 원자적 TTL+GETDEL)")
-    @Nested
-    class GetAndDeleteWithTtl {
-
-        @Test
-        @DisplayName("토큰과 잔여 TTL을 원자적으로 반환하고 키를 삭제한다")
-        void returnsTokenAndTtlAtomically() {
-            // arrange
-            queueTokenRepository.save(EVENT_TYPE, USER_ID, TOKEN, Duration.ofMinutes(5));
-
-            // act
-            TokenConsumeResult result = queueTokenRepository.getAndDeleteWithTtl(EVENT_TYPE, USER_ID);
-
-            // assert
-            assertThat(result.token()).isEqualTo(TOKEN);
+            assertThat(result.status()).isEqualTo(ConsumeStatus.CONSUMED);
             assertThat(result.ttlSeconds()).isBetween(295L, 300L);
             assertThat(queueTokenRepository.get(EVENT_TYPE, USER_ID)).isNull();
         }
 
         @Test
-        @DisplayName("두 번 호출 시 첫 번째만 토큰을 반환한다 (원자성)")
-        void returnsNullTokenOnSecondCall() {
+        @DisplayName("토큰이 일치하지 않으면 MISMATCH 상태를 반환하고 키를 삭제하지 않는다")
+        void returnsMismatch_whenTokenDoesNotMatch() {
             // arrange
             queueTokenRepository.save(EVENT_TYPE, USER_ID, TOKEN, Duration.ofMinutes(5));
 
             // act
-            TokenConsumeResult first = queueTokenRepository.getAndDeleteWithTtl(EVENT_TYPE, USER_ID);
-            TokenConsumeResult second = queueTokenRepository.getAndDeleteWithTtl(EVENT_TYPE, USER_ID);
+            TokenConsumeResult result = queueTokenRepository.consumeIfMatches(EVENT_TYPE, USER_ID, "wrong-token");
 
             // assert
-            assertThat(first.token()).isEqualTo(TOKEN);
-            assertThat(second.token()).isNull();
+            assertThat(result.status()).isEqualTo(ConsumeStatus.MISMATCH);
+            assertThat(queueTokenRepository.get(EVENT_TYPE, USER_ID)).isEqualTo(TOKEN);
         }
 
         @Test
-        @DisplayName("존재하지 않는 키에 대해 null 토큰을 반환한다")
-        void returnsNullToken_whenNotExists() {
+        @DisplayName("두 번 호출 시 첫 번째만 CONSUMED를 반환한다 (원자성)")
+        void returnsNotFoundOnSecondCall() {
+            // arrange
+            queueTokenRepository.save(EVENT_TYPE, USER_ID, TOKEN, Duration.ofMinutes(5));
+
             // act
-            TokenConsumeResult result = queueTokenRepository.getAndDeleteWithTtl(EVENT_TYPE, 999L);
+            TokenConsumeResult first = queueTokenRepository.consumeIfMatches(EVENT_TYPE, USER_ID, TOKEN);
+            TokenConsumeResult second = queueTokenRepository.consumeIfMatches(EVENT_TYPE, USER_ID, TOKEN);
 
             // assert
-            assertThat(result.token()).isNull();
+            assertThat(first.status()).isEqualTo(ConsumeStatus.CONSUMED);
+            assertThat(second.status()).isEqualTo(ConsumeStatus.NOT_FOUND);
+        }
+
+        @Test
+        @DisplayName("존재하지 않는 키에 대해 NOT_FOUND 상태를 반환한다")
+        void returnsNotFound_whenNotExists() {
+            // act
+            TokenConsumeResult result = queueTokenRepository.consumeIfMatches(EVENT_TYPE, 999L, TOKEN);
+
+            // assert
+            assertThat(result.status()).isEqualTo(ConsumeStatus.NOT_FOUND);
             assertThat(result.ttlSeconds()).isEqualTo(0L);
         }
     }

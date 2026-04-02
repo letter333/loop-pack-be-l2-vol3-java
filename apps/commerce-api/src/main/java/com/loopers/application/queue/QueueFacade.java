@@ -2,8 +2,10 @@ package com.loopers.application.queue;
 
 import com.loopers.domain.member.Member;
 import com.loopers.domain.member.MemberService;
+import com.loopers.domain.queue.QueueEventType;
 import com.loopers.domain.queue.QueueInfo;
 import com.loopers.domain.queue.QueuePositionInfo;
+import com.loopers.domain.queue.QueuePositionStatus;
 import com.loopers.domain.queue.QueueService;
 import com.loopers.domain.queue.QueueTokenService;
 import com.loopers.support.auth.AdminValidator;
@@ -14,8 +16,6 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class QueueFacade {
 
-    private static final String ORDER_EVENT_TYPE = "order";
-
     private final MemberService memberService;
     private final QueueService queueService;
     private final QueueTokenService queueTokenService;
@@ -23,37 +23,37 @@ public class QueueFacade {
 
     public QueueInfo enter(String loginId, String password) {
         Member member = memberService.authenticate(loginId, password);
-        return queueService.enter(ORDER_EVENT_TYPE, member.getId());
+        return queueService.enter(QueueEventType.ORDER, member.getId());
     }
 
     public QueuePositionInfo getPosition(String loginId, String password) {
         Member member = memberService.authenticate(loginId, password);
         Long userId = member.getId();
 
-        String token = queueTokenService.getToken(ORDER_EVENT_TYPE, userId);
+        String token = queueTokenService.getToken(QueueEventType.ORDER, userId);
         if (token != null) {
-            long totalWaiting = queueService.getTotalWaiting(ORDER_EVENT_TYPE);
-            return new QueuePositionInfo("ADMITTED", 0, totalWaiting, 0, 0, token);
+            long totalWaiting = queueService.getTotalWaiting(QueueEventType.ORDER);
+            return new QueuePositionInfo(QueuePositionStatus.ADMITTED, 0, totalWaiting, 0, 0, token);
         }
 
-        QueueInfo queueInfo = queueService.getQueueInfo(ORDER_EVENT_TYPE, userId);
+        QueueInfo queueInfo = queueService.getQueueInfo(QueueEventType.ORDER, userId);
         long estimatedWait = queueService.calculateEstimatedWaitSeconds(queueInfo.position());
         long pollInterval = queueService.suggestPollIntervalMs(queueInfo.position());
-        return new QueuePositionInfo("WAITING", queueInfo.position(), queueInfo.totalWaiting(), estimatedWait, pollInterval, null);
+        return new QueuePositionInfo(QueuePositionStatus.WAITING, queueInfo.position(), queueInfo.totalWaiting(), estimatedWait, pollInterval, null);
     }
 
     public void activateQueue(String ldap) {
         adminValidator.validate(ldap);
-        queueService.activateQueue(ORDER_EVENT_TYPE);
+        queueService.activateQueue(QueueEventType.ORDER);
     }
 
     public void deactivateQueue(String ldap) {
         adminValidator.validate(ldap);
-        queueService.deactivateQueue(ORDER_EVENT_TYPE);
+        queueService.deactivateQueue(QueueEventType.ORDER);
     }
 
     public boolean isQueueActive(String ldap) {
         adminValidator.validate(ldap);
-        return queueService.isQueueActive(ORDER_EVENT_TYPE);
+        return queueService.isQueueActive(QueueEventType.ORDER);
     }
 }

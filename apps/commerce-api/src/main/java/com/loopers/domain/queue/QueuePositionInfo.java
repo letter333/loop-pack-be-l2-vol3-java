@@ -1,7 +1,7 @@
 package com.loopers.domain.queue;
 
 public record QueuePositionInfo(
-    String status,
+    QueuePositionStatus status,
     long position,
     long totalWaiting,
     long estimatedWaitSeconds,

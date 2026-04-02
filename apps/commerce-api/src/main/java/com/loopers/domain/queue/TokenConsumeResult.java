@@ -1,7 +1,12 @@
 package com.loopers.domain.queue;
 
 public record TokenConsumeResult(
-    String token,
+    ConsumeStatus status,
     long ttlSeconds
 ) {
+    public enum ConsumeStatus {
+        CONSUMED,
+        NOT_FOUND,
+        MISMATCH
+    }
 }

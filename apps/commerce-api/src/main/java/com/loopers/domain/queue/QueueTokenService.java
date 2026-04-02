@@ -6,6 +6,9 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Service
@@ -28,21 +31,26 @@ public class QueueTokenService {
         return token;
     }
 
+    public void issueTokensBatch(String eventType, List<Long> userIds) {
+        Map<Long, String> userTokens = new LinkedHashMap<>();
+        for (Long userId : userIds) {
+            userTokens.put(userId, UUID.randomUUID().toString());
+        }
+        queueTokenRepository.saveBatch(eventType, userTokens, Duration.ofMinutes(ttlMinutes));
+    }
+
     public String getToken(String eventType, Long userId) {
         return queueTokenRepository.get(eventType, userId);
     }
 
     public long validateAndConsume(String eventType, Long userId, String token) {
-        TokenConsumeResult result = queueTokenRepository.getAndDeleteWithTtl(eventType, userId);
+        TokenConsumeResult result = queueTokenRepository.consumeIfMatches(eventType, userId, token);
 
-        if (result.token() == null) {
-            throw new CoreException(ErrorType.UNAUTHORIZED, "유효한 대기열 토큰이 없습니다.");
-        }
-        if (!result.token().equals(token)) {
-            throw new CoreException(ErrorType.UNAUTHORIZED, "토큰이 일치하지 않습니다.");
-        }
-
-        return result.ttlSeconds();
+        return switch (result.status()) {
+            case CONSUMED -> result.ttlSeconds();
+            case NOT_FOUND -> throw new CoreException(ErrorType.UNAUTHORIZED, "유효한 대기열 토큰이 없습니다.");
+            case MISMATCH -> throw new CoreException(ErrorType.UNAUTHORIZED, "토큰이 일치하지 않습니다.");
+        };
     }
 
     public void restoreToken(String eventType, Long userId, String token, long ttlSeconds) {

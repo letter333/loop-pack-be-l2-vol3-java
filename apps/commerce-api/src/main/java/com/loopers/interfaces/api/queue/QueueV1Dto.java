@@ -24,7 +24,7 @@ public class QueueV1Dto {
     ) {
         public static PositionResponse from(QueuePositionInfo info) {
             return new PositionResponse(
-                info.status(), info.position(), info.totalWaiting(),
+                info.status().name(), info.position(), info.totalWaiting(),
                 info.estimatedWaitSeconds(), info.suggestedPollIntervalMs(), info.token()
             );
         }

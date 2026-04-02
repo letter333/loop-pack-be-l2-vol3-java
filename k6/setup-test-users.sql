@@ -3,7 +3,7 @@
 -- 실행: mysql -h 127.0.0.1 -P 3306 -u application -papplication loopers < k6/setup-test-users.sql
 
 -- 비밀번호: Test1234! (BCrypt 해시)
-SET @bcrypt_password = '$2a$10$sAnakCfU3z39kVEvUnSLr.o1rM5wnRvXa0BRvK8XDKElySbetO5FG';
+SET @bcrypt_password = '$2a$10$euwhMFwNggPRy2BYBFmIhu9wY/ABQh7ySydiFn43/dIEc.xhCH/fW';
 
 -- 기존 테스트 유저 정리
 DELETE FROM member_addresses WHERE member_id IN (SELECT id FROM members WHERE login_id LIKE 'k6user%');

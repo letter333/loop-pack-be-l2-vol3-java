@@ -2,6 +2,7 @@ package com.loopers.infrastructure.queue;
 
 import com.loopers.domain.queue.QueueRepository;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.data.redis.core.RedisCallback;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ZSetOperations;
 import org.springframework.stereotype.Repository;
@@ -16,6 +17,7 @@ public class QueueRepositoryImpl implements QueueRepository {
     private static final String KEY_PREFIX = "queue:";
     private static final String KEY_SUFFIX = ":waiting";
     private static final String ACTIVE_KEY_SUFFIX = ":active";
+    private static final double REQUEUE_PRIORITY_SCORE = 0;
 
     private final RedisTemplate<String, String> defaultRedisTemplate;
     private final RedisTemplate<String, String> masterRedisTemplate;
@@ -73,6 +75,18 @@ public class QueueRepositoryImpl implements QueueRepository {
     @Override
     public boolean isActive(String eventType) {
         return Boolean.TRUE.equals(defaultRedisTemplate.hasKey(generateActiveKey(eventType)));
+    }
+
+    @Override
+    public void requeueAll(String eventType, List<Long> userIds) {
+        String key = generateKey(eventType);
+        byte[] rawKey = key.getBytes();
+        masterRedisTemplate.executePipelined((RedisCallback<Object>) connection -> {
+            for (Long userId : userIds) {
+                connection.zSetCommands().zAdd(rawKey, REQUEUE_PRIORITY_SCORE, String.valueOf(userId).getBytes());
+            }
+            return null;
+        });
     }
 
     private String generateKey(String eventType) {

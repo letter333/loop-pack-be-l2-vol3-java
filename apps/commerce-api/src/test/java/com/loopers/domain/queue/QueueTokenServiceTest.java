@@ -10,6 +10,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import com.loopers.domain.queue.TokenConsumeResult.ConsumeStatus;
+
 import java.time.Duration;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -63,8 +65,8 @@ class QueueTokenServiceTest {
         void returnsRemainingTtl_whenTokenValid() {
             // arrange
             String token = "valid-token";
-            given(queueTokenRepository.getAndDeleteWithTtl(EVENT_TYPE, USER_ID))
-                .willReturn(new TokenConsumeResult(token, 180L));
+            given(queueTokenRepository.consumeIfMatches(EVENT_TYPE, USER_ID, token))
+                .willReturn(new TokenConsumeResult(ConsumeStatus.CONSUMED, 180L));
 
             // act
             long ttl = queueTokenService.validateAndConsume(EVENT_TYPE, USER_ID, token);
@@ -77,11 +79,12 @@ class QueueTokenServiceTest {
         @DisplayName("토큰이 없으면 UNAUTHORIZED 예외가 발생한다")
         void throwsUnauthorized_whenNoToken() {
             // arrange
-            given(queueTokenRepository.getAndDeleteWithTtl(EVENT_TYPE, USER_ID))
-                .willReturn(new TokenConsumeResult(null, 0));
+            String token = "any-token";
+            given(queueTokenRepository.consumeIfMatches(EVENT_TYPE, USER_ID, token))
+                .willReturn(new TokenConsumeResult(ConsumeStatus.NOT_FOUND, 0));
 
             // act & assert
-            assertThatThrownBy(() -> queueTokenService.validateAndConsume(EVENT_TYPE, USER_ID, "any-token"))
+            assertThatThrownBy(() -> queueTokenService.validateAndConsume(EVENT_TYPE, USER_ID, token))
                 .isInstanceOf(CoreException.class)
                 .satisfies(e -> assertThat(((CoreException) e).getErrorType()).isEqualTo(ErrorType.UNAUTHORIZED));
         }
@@ -90,11 +93,12 @@ class QueueTokenServiceTest {
         @DisplayName("토큰이 일치하지 않으면 UNAUTHORIZED 예외가 발생한다")
         void throwsUnauthorized_whenTokenMismatch() {
             // arrange
-            given(queueTokenRepository.getAndDeleteWithTtl(EVENT_TYPE, USER_ID))
-                .willReturn(new TokenConsumeResult("stored-token", 180L));
+            String token = "wrong-token";
+            given(queueTokenRepository.consumeIfMatches(EVENT_TYPE, USER_ID, token))
+                .willReturn(new TokenConsumeResult(ConsumeStatus.MISMATCH, 0));
 
             // act & assert
-            assertThatThrownBy(() -> queueTokenService.validateAndConsume(EVENT_TYPE, USER_ID, "wrong-token"))
+            assertThatThrownBy(() -> queueTokenService.validateAndConsume(EVENT_TYPE, USER_ID, token))
                 .isInstanceOf(CoreException.class)
                 .satisfies(e -> assertThat(((CoreException) e).getErrorType()).isEqualTo(ErrorType.UNAUTHORIZED));
         }

@@ -14,7 +14,7 @@ import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
-import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 
 @ExtendWith(MockitoExtension.class)
@@ -26,18 +26,17 @@ class QueueAdmissionSchedulerTest {
     private final QueueAdmissionScheduler scheduler = new QueueAdmissionScheduler(queueService, queueTokenService, 50);
 
     @Test
-    @DisplayName("대기열에 유저가 있으면 각 유저에게 토큰을 발급한다")
-    void issuesTokensForDequeuedUsers() {
+    @DisplayName("대기열에 유저가 있으면 배치로 토큰을 발급한다")
+    void issuesTokensBatchForDequeuedUsers() {
         // arrange
-        given(queueService.dequeueBatch("order", 50)).willReturn(List.of(1L, 2L, 3L));
+        List<Long> userIds = List.of(1L, 2L, 3L);
+        given(queueService.dequeueBatch("order", 50)).willReturn(userIds);
 
         // act
         scheduler.processAdmission();
 
         // assert
-        verify(queueTokenService).issueToken("order", 1L);
-        verify(queueTokenService).issueToken("order", 2L);
-        verify(queueTokenService).issueToken("order", 3L);
+        verify(queueTokenService).issueTokensBatch("order", userIds);
     }
 
     @Test
@@ -50,6 +49,6 @@ class QueueAdmissionSchedulerTest {
         scheduler.processAdmission();
 
         // assert
-        verify(queueTokenService, never()).issueToken(anyString(), anyLong());
+        verify(queueTokenService, never()).issueTokensBatch(anyString(), any());
     }
 }

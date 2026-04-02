@@ -18,6 +18,7 @@ import com.loopers.domain.product.Product;
 import com.loopers.domain.product.ProductImage;
 import com.loopers.domain.product.ProductOption;
 import com.loopers.domain.product.ProductService;
+import com.loopers.domain.queue.QueueEventType;
 import com.loopers.domain.queue.QueueService;
 import com.loopers.domain.queue.QueueTokenService;
 import com.loopers.support.auth.AdminValidator;
@@ -54,8 +55,6 @@ public class OrderFacade {
     @Lazy @Autowired
     private OrderFacade self;
 
-    private static final String ORDER_EVENT_TYPE = "order";
-
     public OrderFacade(
         OrderService orderService,
         MemberService memberService,
@@ -81,21 +80,21 @@ public class OrderFacade {
     public OrderDetailInfo createOrder(String loginId, String password, String queueToken, OrderCommand.Create command) {
         Member member = memberService.authenticate(loginId, password);
 
-        boolean queueActive = queueService.isQueueActive(ORDER_EVENT_TYPE);
+        boolean queueActive = queueService.isQueueActive(QueueEventType.ORDER);
         if (queueActive) {
             if (queueToken == null || queueToken.isBlank()) {
                 throw new CoreException(ErrorType.FORBIDDEN, "대기열 진입이 필요합니다.");
             }
-            long tokenTtl = queueTokenService.validateAndConsume(ORDER_EVENT_TYPE, member.getId(), queueToken);
+            long tokenTtl = queueTokenService.validateAndConsume(QueueEventType.ORDER, member.getId(), queueToken);
             try {
-                return self.executeCreateOrderWithRetry(member, command);
+                return self.executeCreateOrder(member, command);
             } catch (Exception e) {
-                queueTokenService.restoreToken(ORDER_EVENT_TYPE, member.getId(), queueToken, tokenTtl);
+                queueTokenService.restoreToken(QueueEventType.ORDER, member.getId(), queueToken, tokenTtl);
                 throw e;
             }
         }
 
-        return self.executeCreateOrderWithRetry(member, command);
+        return self.executeCreateOrder(member, command);
     }
 
     @Retryable(
@@ -104,11 +103,7 @@ public class OrderFacade {
         backoff = @Backoff(delay = 50, multiplier = 2)
     )
     @Transactional
-    public OrderDetailInfo executeCreateOrderWithRetry(Member member, OrderCommand.Create command) {
-        return executeCreateOrder(member, command);
-    }
-
-    private OrderDetailInfo executeCreateOrder(Member member, OrderCommand.Create command) {
+    public OrderDetailInfo executeCreateOrder(Member member, OrderCommand.Create command) {
         Address address = findAddressForMember(member.getId(), command.addressId());
 
         Order order = new Order(

@@ -1,16 +1,15 @@
 package com.loopers.domain.queue;
 
 import java.time.Duration;
+import java.util.Map;
 
 public interface QueueTokenRepository {
 
     void save(String eventType, Long userId, String token, Duration ttl);
 
-    String getAndDelete(String eventType, Long userId);
+    void saveBatch(String eventType, Map<Long, String> userTokens, Duration ttl);
 
     String get(String eventType, Long userId);
 
-    Long getExpire(String eventType, Long userId);
-
-    TokenConsumeResult getAndDeleteWithTtl(String eventType, Long userId);
+    TokenConsumeResult consumeIfMatches(String eventType, Long userId, String expectedToken);
 }

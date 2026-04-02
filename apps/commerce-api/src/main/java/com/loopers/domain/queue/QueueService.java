@@ -75,6 +75,10 @@ public class QueueService {
         return 5000;
     }
 
+    public void requeueAll(String eventType, List<Long> userIds) {
+        queueRepository.requeueAll(eventType, userIds);
+    }
+
     public void activateQueue(String eventType) {
         queueRepository.activate(eventType);
     }

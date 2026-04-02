@@ -17,4 +17,6 @@ public interface QueueRepository {
     void deactivate(String eventType);
 
     boolean isActive(String eventType);
+
+    void requeueAll(String eventType, List<Long> userIds);
 }
