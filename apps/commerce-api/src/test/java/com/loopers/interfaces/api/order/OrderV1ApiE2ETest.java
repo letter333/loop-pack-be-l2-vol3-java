@@ -13,8 +13,10 @@ import com.loopers.domain.product.Product;
 import com.loopers.domain.product.ProductOption;
 import com.loopers.domain.product.ProductRepository;
 import com.loopers.domain.product.ProductStatus;
+import com.loopers.domain.queue.QueueTokenService;
 import com.loopers.interfaces.api.ApiResponse;
 import com.loopers.utils.DatabaseCleanUp;
+import com.loopers.utils.RedisCleanUp;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -50,7 +52,9 @@ class OrderV1ApiE2ETest {
     private final BrandRepository brandRepository;
     private final CategoryRepository categoryRepository;
     private final PasswordEncoder passwordEncoder;
+    private final QueueTokenService queueTokenService;
     private final DatabaseCleanUp databaseCleanUp;
+    private final RedisCleanUp redisCleanUp;
     private final EntityManager entityManager;
 
     @Autowired
@@ -62,7 +66,9 @@ class OrderV1ApiE2ETest {
         BrandRepository brandRepository,
         CategoryRepository categoryRepository,
         PasswordEncoder passwordEncoder,
+        QueueTokenService queueTokenService,
         DatabaseCleanUp databaseCleanUp,
+        RedisCleanUp redisCleanUp,
         EntityManager entityManager
     ) {
         this.testRestTemplate = testRestTemplate;
@@ -72,13 +78,16 @@ class OrderV1ApiE2ETest {
         this.brandRepository = brandRepository;
         this.categoryRepository = categoryRepository;
         this.passwordEncoder = passwordEncoder;
+        this.queueTokenService = queueTokenService;
         this.databaseCleanUp = databaseCleanUp;
+        this.redisCleanUp = redisCleanUp;
         this.entityManager = entityManager;
     }
 
     @AfterEach
     void tearDown() {
         databaseCleanUp.truncateAllTables();
+        redisCleanUp.truncateAll();
     }
 
     @DisplayName("POST /api/v1/orders - 주문 생성")
@@ -184,7 +193,7 @@ class OrderV1ApiE2ETest {
         private ResponseEntity<ApiResponse<OrderV1Dto.OrderDetailResponse>> createOrder(
             String loginId, String password, OrderV1Dto.CreateOrderRequest request
         ) {
-            HttpHeaders headers = createAuthHeaders(loginId, password);
+            HttpHeaders headers = createOrderHeaders(loginId, password, member.getId());
             headers.setContentType(MediaType.APPLICATION_JSON);
             return testRestTemplate.exchange(
                 "/api/v1/orders",
@@ -197,7 +206,7 @@ class OrderV1ApiE2ETest {
         private ResponseEntity<ApiResponse<Object>> createOrderWithError(
             String loginId, String password, OrderV1Dto.CreateOrderRequest request
         ) {
-            HttpHeaders headers = createAuthHeaders(loginId, password);
+            HttpHeaders headers = createOrderHeaders(loginId, password, member.getId());
             headers.setContentType(MediaType.APPLICATION_JSON);
             return testRestTemplate.exchange(
                 "/api/v1/orders",
@@ -260,7 +269,7 @@ class OrderV1ApiE2ETest {
         }
 
         private void createOrderForTest() {
-            HttpHeaders headers = createAuthHeaders(member.getLoginId(), "Password123!");
+            HttpHeaders headers = createOrderHeaders(member.getLoginId(), "Password123!", member.getId());
             headers.setContentType(MediaType.APPLICATION_JSON);
             OrderV1Dto.CreateOrderRequest request = new OrderV1Dto.CreateOrderRequest(
                 address.getId(), null,
@@ -349,7 +358,7 @@ class OrderV1ApiE2ETest {
         }
 
         private Long createOrderAndGetId() {
-            HttpHeaders headers = createAuthHeaders(member.getLoginId(), "Password123!");
+            HttpHeaders headers = createOrderHeaders(member.getLoginId(), "Password123!", member.getId());
             headers.setContentType(MediaType.APPLICATION_JSON);
             OrderV1Dto.CreateOrderRequest request = new OrderV1Dto.CreateOrderRequest(
                 address.getId(), null,
@@ -434,7 +443,7 @@ class OrderV1ApiE2ETest {
             int stockBeforeNewOrder = currentProduct.getOptions().get(0).getStockQuantity();
             int orderedQuantity = 5;
 
-            HttpHeaders headers = createAuthHeaders(member.getLoginId(), "Password123!");
+            HttpHeaders headers = createOrderHeaders(member.getLoginId(), "Password123!", member.getId());
             headers.setContentType(MediaType.APPLICATION_JSON);
             OrderV1Dto.CreateOrderRequest request = new OrderV1Dto.CreateOrderRequest(
                 address.getId(), null,
@@ -464,7 +473,7 @@ class OrderV1ApiE2ETest {
         }
 
         private Long createOrderAndGetId() {
-            HttpHeaders headers = createAuthHeaders(member.getLoginId(), "Password123!");
+            HttpHeaders headers = createOrderHeaders(member.getLoginId(), "Password123!", member.getId());
             headers.setContentType(MediaType.APPLICATION_JSON);
             OrderV1Dto.CreateOrderRequest request = new OrderV1Dto.CreateOrderRequest(
                 address.getId(), null,
@@ -529,7 +538,7 @@ class OrderV1ApiE2ETest {
                 null
             );
 
-            HttpHeaders headers = createAuthHeaders(member.getLoginId(), "Password123!");
+            HttpHeaders headers = createOrderHeaders(member.getLoginId(), "Password123!", member.getId());
             headers.setContentType(MediaType.APPLICATION_JSON);
             testRestTemplate.exchange(
                 "/api/v1/orders",
@@ -573,7 +582,7 @@ class OrderV1ApiE2ETest {
                 List.of(new OrderV1Dto.OrderItemRequest(product.getId(), optionMId, 3)),
                 null
             );
-            HttpHeaders headers = createAuthHeaders(member.getLoginId(), "Password123!");
+            HttpHeaders headers = createOrderHeaders(member.getLoginId(), "Password123!", member.getId());
             headers.setContentType(MediaType.APPLICATION_JSON);
             testRestTemplate.exchange(
                 "/api/v1/orders",
@@ -587,16 +596,18 @@ class OrderV1ApiE2ETest {
             Product afterMOrder = productRepository.findById(product.getId()).orElseThrow();
             assertThat(afterMOrder.getStatus()).isEqualTo(ProductStatus.SALE);
 
-            // Act: L 사이즈 전체 주문
+            // Act: L 사이즈 전체 주문 (새 토큰 발급)
             OrderV1Dto.CreateOrderRequest requestL = new OrderV1Dto.CreateOrderRequest(
                 address.getId(), null,
                 List.of(new OrderV1Dto.OrderItemRequest(product.getId(), optionLId, 2)),
                 null
             );
+            HttpHeaders headersL = createOrderHeaders(member.getLoginId(), "Password123!", member.getId());
+            headersL.setContentType(MediaType.APPLICATION_JSON);
             testRestTemplate.exchange(
                 "/api/v1/orders",
                 HttpMethod.POST,
-                new HttpEntity<>(requestL, headers),
+                new HttpEntity<>(requestL, headersL),
                 new ParameterizedTypeReference<ApiResponse<OrderV1Dto.OrderDetailResponse>>() {}
             );
 
@@ -624,7 +635,7 @@ class OrderV1ApiE2ETest {
                 null
             );
 
-            HttpHeaders headers = createAuthHeaders(member.getLoginId(), "Password123!");
+            HttpHeaders headers = createOrderHeaders(member.getLoginId(), "Password123!", member.getId());
             headers.setContentType(MediaType.APPLICATION_JSON);
             testRestTemplate.exchange(
                 "/api/v1/orders",
@@ -657,7 +668,7 @@ class OrderV1ApiE2ETest {
                 null
             );
 
-            HttpHeaders headers = createAuthHeaders(member.getLoginId(), "Password123!");
+            HttpHeaders headers = createOrderHeaders(member.getLoginId(), "Password123!", member.getId());
             headers.setContentType(MediaType.APPLICATION_JSON);
             ResponseEntity<ApiResponse<OrderV1Dto.OrderDetailResponse>> createResponse = testRestTemplate.exchange(
                 "/api/v1/orders",
@@ -694,6 +705,13 @@ class OrderV1ApiE2ETest {
         HttpHeaders headers = new HttpHeaders();
         headers.set("X-Loopers-LoginId", loginId);
         headers.set("X-Loopers-LoginPw", password);
+        return headers;
+    }
+
+    private HttpHeaders createOrderHeaders(String loginId, String password, Long memberId) {
+        HttpHeaders headers = createAuthHeaders(loginId, password);
+        String token = queueTokenService.issueToken("order", memberId);
+        headers.set("X-Queue-Token", token);
         return headers;
     }
 

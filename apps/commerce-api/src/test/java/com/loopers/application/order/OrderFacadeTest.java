@@ -19,12 +19,16 @@ import com.loopers.domain.product.Product;
 import com.loopers.domain.product.ProductOption;
 import com.loopers.domain.product.ProductService;
 import com.loopers.domain.product.ProductStatus;
+import com.loopers.domain.queue.QueueService;
+import com.loopers.domain.queue.QueueTokenService;
 import com.loopers.support.auth.AdminValidator;
 import com.loopers.support.error.CoreException;
 import com.loopers.support.error.ErrorType;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.springframework.context.ApplicationEventPublisher;
 import org.junit.jupiter.api.Nested;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -66,6 +70,12 @@ class OrderFacadeTest {
     private MemberCouponService memberCouponService;
 
     @Mock
+    private QueueService queueService;
+
+    @Mock
+    private QueueTokenService queueTokenService;
+
+    @Mock
     private AdminValidator adminValidator;
 
     @Mock
@@ -74,11 +84,17 @@ class OrderFacadeTest {
     @InjectMocks
     private OrderFacade orderFacade;
 
+    @BeforeEach
+    void setUp() {
+        ReflectionTestUtils.setField(orderFacade, "self", orderFacade);
+    }
+
     private static final String LOGIN_ID = "testuser";
     private static final String PASSWORD = "Password123!";
     private static final Long MEMBER_ID = 1L;
     private static final Long ADDRESS_ID = 1L;
     private static final Long ORDER_ID = 1L;
+    private static final String QUEUE_TOKEN = "test-queue-token";
 
     @DisplayName("주문 생성")
     @Nested
@@ -108,7 +124,7 @@ class OrderFacadeTest {
             given(orderService.createOrder(any(Order.class))).willReturn(savedOrder);
 
             // act
-            OrderDetailInfo result = orderFacade.createOrder(LOGIN_ID, PASSWORD, command);
+            OrderDetailInfo result = orderFacade.createOrder(LOGIN_ID, PASSWORD, QUEUE_TOKEN, command);
 
             // assert
             assertAll(
@@ -130,7 +146,7 @@ class OrderFacadeTest {
             given(addressService.getAddresses(MEMBER_ID)).willReturn(List.of());
 
             // act & assert
-            assertThatThrownBy(() -> orderFacade.createOrder(LOGIN_ID, PASSWORD, command))
+            assertThatThrownBy(() -> orderFacade.createOrder(LOGIN_ID, PASSWORD, QUEUE_TOKEN, command))
                 .isInstanceOf(CoreException.class)
                 .extracting("errorType")
                 .isEqualTo(ErrorType.NOT_FOUND);
@@ -152,7 +168,7 @@ class OrderFacadeTest {
                 .willThrow(new CoreException(ErrorType.BAD_REQUEST, "판매중지된 상품입니다."));
 
             // act & assert
-            assertThatThrownBy(() -> orderFacade.createOrder(LOGIN_ID, PASSWORD, command))
+            assertThatThrownBy(() -> orderFacade.createOrder(LOGIN_ID, PASSWORD, QUEUE_TOKEN, command))
                 .isInstanceOf(CoreException.class)
                 .extracting("errorType")
                 .isEqualTo(ErrorType.BAD_REQUEST);
@@ -195,7 +211,7 @@ class OrderFacadeTest {
             given(orderService.createOrder(any(Order.class))).willReturn(savedOrder);
 
             // act
-            OrderDetailInfo result = orderFacade.createOrder(LOGIN_ID, PASSWORD, command);
+            OrderDetailInfo result = orderFacade.createOrder(LOGIN_ID, PASSWORD, QUEUE_TOKEN, command);
 
             // assert
             assertAll(
@@ -230,7 +246,7 @@ class OrderFacadeTest {
                 .willThrow(new CoreException(ErrorType.FORBIDDEN, "해당 쿠폰에 대한 권한이 없습니다."));
 
             // act & assert
-            assertThatThrownBy(() -> orderFacade.createOrder(LOGIN_ID, PASSWORD, command))
+            assertThatThrownBy(() -> orderFacade.createOrder(LOGIN_ID, PASSWORD, QUEUE_TOKEN, command))
                 .isInstanceOf(CoreException.class)
                 .extracting("errorType")
                 .isEqualTo(ErrorType.FORBIDDEN);
@@ -261,7 +277,7 @@ class OrderFacadeTest {
                 .willThrow(new CoreException(ErrorType.BAD_REQUEST, "사용할 수 없는 쿠폰입니다."));
 
             // act & assert
-            assertThatThrownBy(() -> orderFacade.createOrder(LOGIN_ID, PASSWORD, command))
+            assertThatThrownBy(() -> orderFacade.createOrder(LOGIN_ID, PASSWORD, QUEUE_TOKEN, command))
                 .isInstanceOf(CoreException.class)
                 .extracting("errorType")
                 .isEqualTo(ErrorType.BAD_REQUEST);
@@ -287,7 +303,7 @@ class OrderFacadeTest {
                 .when(productService).decreaseStock(eq(1L), eq(10L), anyInt());
 
             // act & assert
-            assertThatThrownBy(() -> orderFacade.createOrder(LOGIN_ID, PASSWORD, command))
+            assertThatThrownBy(() -> orderFacade.createOrder(LOGIN_ID, PASSWORD, QUEUE_TOKEN, command))
                 .isInstanceOf(CoreException.class)
                 .extracting("errorType")
                 .isEqualTo(ErrorType.BAD_REQUEST);

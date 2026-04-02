@@ -34,9 +34,10 @@ public class OrderV1Controller implements OrderV1ApiSpec {
     public ApiResponse<OrderV1Dto.OrderDetailResponse> createOrder(
         @RequestHeader("X-Loopers-LoginId") String loginId,
         @RequestHeader("X-Loopers-LoginPw") String password,
+        @RequestHeader(value = "X-Queue-Token", required = false) String queueToken,
         @Valid @RequestBody OrderV1Dto.CreateOrderRequest request
     ) {
-        OrderDetailInfo info = orderFacade.createOrder(loginId, password, request.toCommand());
+        OrderDetailInfo info = orderFacade.createOrder(loginId, password, queueToken, request.toCommand());
         return ApiResponse.success(OrderV1Dto.OrderDetailResponse.from(info));
     }
 
