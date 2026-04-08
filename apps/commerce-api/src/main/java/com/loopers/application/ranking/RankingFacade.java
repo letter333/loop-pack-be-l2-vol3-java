@@ -57,13 +57,16 @@ public class RankingFacade {
         Map<Long, Brand> brandMap = brandService.getActiveBrandsByIds(brandIds);
 
         List<RankingInfo> rankingInfos = rankings.stream()
-            .filter(r -> productMap.containsKey(r.productId()))
             .map(r -> {
                 Product product = productMap.get(r.productId());
+                if (product == null) {
+                    return null;
+                }
                 Brand brand = brandMap.get(product.getBrandId());
                 String brandName = brand != null ? brand.getName() : null;
                 return RankingInfo.from(r, product, brandName);
             })
+            .filter(java.util.Objects::nonNull)
             .toList();
 
         return new PageImpl<>(rankingInfos, PageRequest.of(page, size), totalCount);
