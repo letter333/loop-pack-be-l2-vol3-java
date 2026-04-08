@@ -94,4 +94,54 @@ class RankingRedisRepositoryTest {
         assertThat(scoreYesterday).isEqualTo(100.0);
         assertThat(scoreToday).isEqualTo(50.0);
     }
+
+    @Test
+    @DisplayName("Score Carry-Over 시 가중치가 적용되어 이월된다")
+    void carriesOverScoresWithWeight() {
+        // Arrange
+        rankingRedisRepository.incrementScore("20260409", 1L, 30000.0);
+        rankingRedisRepository.incrementScore("20260409", 2L, 500.0);
+        rankingRedisRepository.incrementScore("20260409", 3L, 1.0);
+
+        // Act
+        rankingRedisRepository.carryOverScores("20260409", "20260410", 0.1);
+
+        // Assert
+        Double score1 = masterRedisTemplate.opsForZSet().score("ranking:all:20260410", "1");
+        Double score2 = masterRedisTemplate.opsForZSet().score("ranking:all:20260410", "2");
+        Double score3 = masterRedisTemplate.opsForZSet().score("ranking:all:20260410", "3");
+        assertThat(score1).isCloseTo(3000.0, org.assertj.core.data.Offset.offset(0.01));
+        assertThat(score2).isCloseTo(50.0, org.assertj.core.data.Offset.offset(0.01));
+        assertThat(score3).isCloseTo(0.1, org.assertj.core.data.Offset.offset(0.01));
+    }
+
+    @Test
+    @DisplayName("Score Carry-Over 후 TTL이 설정된다")
+    void setsTtlAfterCarryOver() {
+        // Arrange
+        rankingRedisRepository.incrementScore("20260409", 1L, 100.0);
+
+        // Act
+        rankingRedisRepository.carryOverScores("20260409", "20260410", 0.1);
+
+        // Assert
+        Long ttl = masterRedisTemplate.getExpire("ranking:all:20260410", TimeUnit.SECONDS);
+        assertThat(ttl).isNotNull();
+        assertThat(ttl).isGreaterThan(0);
+        assertThat(ttl).isLessThanOrEqualTo(2 * 24 * 60 * 60);
+    }
+
+    @Test
+    @DisplayName("원본 키의 점수는 변하지 않는다")
+    void doesNotModifySourceKey() {
+        // Arrange
+        rankingRedisRepository.incrementScore("20260409", 1L, 100.0);
+
+        // Act
+        rankingRedisRepository.carryOverScores("20260409", "20260410", 0.1);
+
+        // Assert
+        Double originalScore = masterRedisTemplate.opsForZSet().score("ranking:all:20260409", "1");
+        assertThat(originalScore).isEqualTo(100.0);
+    }
 }
