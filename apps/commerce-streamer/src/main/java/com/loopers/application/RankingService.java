@@ -16,9 +16,13 @@ public class RankingService {
 
     private final RankingRepository rankingRepository;
 
+    private static final double TIE_BREAKER_DIVISOR = 1e13;
+
     public void addScore(String eventType, Long productId, ZonedDateTime eventCreatedAt, double rawScore) {
         String dateKey = eventCreatedAt.format(DATE_KEY_FORMATTER);
         RankingWeight weight = RankingWeight.fromEventType(eventType);
-        rankingRepository.incrementScore(dateKey, productId, weight.calculate(rawScore));
+        double weightedScore = weight.calculate(rawScore);
+        double tieBreaker = eventCreatedAt.toEpochSecond() / TIE_BREAKER_DIVISOR;
+        rankingRepository.incrementScore(dateKey, productId, weightedScore + tieBreaker);
     }
 }
