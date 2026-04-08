@@ -2,10 +2,13 @@ package com.loopers.infrastructure.ranking;
 
 import com.loopers.domain.ranking.ProductRankingInfo;
 import com.loopers.domain.ranking.ProductRankingRepository;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ZSetOperations;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -15,11 +18,17 @@ import java.util.Set;
 public class ProductRankingRedisRepository implements ProductRankingRepository {
 
     private static final String KEY_PREFIX = "ranking:all:";
+    private static final DateTimeFormatter DATE_KEY_FORMATTER = DateTimeFormatter.ofPattern("yyyyMMdd");
 
     private final RedisTemplate<String, String> defaultRedisTemplate;
+    private final RedisTemplate<String, String> masterRedisTemplate;
 
-    public ProductRankingRedisRepository(RedisTemplate<String, String> defaultRedisTemplate) {
+    public ProductRankingRedisRepository(
+        RedisTemplate<String, String> defaultRedisTemplate,
+        @Qualifier("redisTemplateMaster") RedisTemplate<String, String> masterRedisTemplate
+    ) {
         this.defaultRedisTemplate = defaultRedisTemplate;
+        this.masterRedisTemplate = masterRedisTemplate;
     }
 
     @Override
@@ -63,5 +72,15 @@ public class ProductRankingRedisRepository implements ProductRankingRepository {
         String key = KEY_PREFIX + dateKey;
         Long count = defaultRedisTemplate.opsForZSet().zCard(key);
         return count != null ? count : 0L;
+    }
+
+    @Override
+    public void removeProduct(Long productId) {
+        String member = String.valueOf(productId);
+        String today = LocalDate.now().format(DATE_KEY_FORMATTER);
+        String yesterday = LocalDate.now().minusDays(1).format(DATE_KEY_FORMATTER);
+
+        masterRedisTemplate.opsForZSet().remove(KEY_PREFIX + today, member);
+        masterRedisTemplate.opsForZSet().remove(KEY_PREFIX + yesterday, member);
     }
 }

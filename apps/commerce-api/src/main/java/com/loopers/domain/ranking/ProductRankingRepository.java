@@ -11,4 +11,6 @@ public interface ProductRankingRepository {
     Double getScore(String dateKey, Long productId);
 
     Long getTotalCount(String dateKey);
+
+    void removeProduct(Long productId);
 }
