@@ -91,17 +91,18 @@ class ProductFacadeTest {
             );
 
             // Act
-            ProductDetailInfo result = productFacade.getProduct(product.getId());
+            ProductDetailWithRankingInfo result = productFacade.getProduct(product.getId());
 
             // Assert
+            ProductDetailInfo detail = result.productDetail();
             assertAll(
-                () -> assertThat(result.id()).isEqualTo(product.getId()),
-                () -> assertThat(result.name()).isEqualTo("아이폰 15"),
-                () -> assertThat(result.brand()).isNotNull(),
-                () -> assertThat(result.brand().name()).isEqualTo("Apple"),
-                () -> assertThat(result.likeCount()).isEqualTo(0L),
-                () -> assertThat(result.options()).isEmpty(),
-                () -> assertThat(result.images()).isEmpty()
+                () -> assertThat(detail.id()).isEqualTo(product.getId()),
+                () -> assertThat(detail.name()).isEqualTo("아이폰 15"),
+                () -> assertThat(detail.brand()).isNotNull(),
+                () -> assertThat(detail.brand().name()).isEqualTo("Apple"),
+                () -> assertThat(detail.likeCount()).isEqualTo(0L),
+                () -> assertThat(detail.options()).isEmpty(),
+                () -> assertThat(detail.images()).isEmpty()
             );
         }
 
@@ -121,15 +122,16 @@ class ProductFacadeTest {
             );
 
             // Act
-            ProductDetailInfo result = productFacade.getProduct(product.getId());
+            ProductDetailWithRankingInfo result = productFacade.getProduct(product.getId());
 
             // Assert
+            ProductDetailInfo detail = result.productDetail();
             assertAll(
-                () -> assertThat(result.options()).hasSize(2),
-                () -> assertThat(result.options()).extracting(ProductOptionInfo::optionValue)
+                () -> assertThat(detail.options()).hasSize(2),
+                () -> assertThat(detail.options()).extracting(ProductOptionInfo::optionValue)
                     .containsExactlyInAnyOrder("256GB", "512GB"),
-                () -> assertThat(result.images()).hasSize(1),
-                () -> assertThat(result.images()).extracting(ProductImageInfo::type)
+                () -> assertThat(detail.images()).hasSize(1),
+                () -> assertThat(detail.images()).extracting(ProductImageInfo::type)
                     .containsExactly(ImageType.MAIN)
             );
         }
@@ -209,10 +211,10 @@ class ProductFacadeTest {
             productFacade.getProduct(product.getId());
 
             // Act - 두 번째 호출은 캐시에서 반환
-            ProductDetailInfo result = productFacade.getProduct(product.getId());
+            ProductDetailWithRankingInfo result = productFacade.getProduct(product.getId());
 
             // Assert
-            assertThat(result.name()).isEqualTo("아이폰 15");
+            assertThat(result.productDetail().name()).isEqualTo("아이폰 15");
         }
     }
 
