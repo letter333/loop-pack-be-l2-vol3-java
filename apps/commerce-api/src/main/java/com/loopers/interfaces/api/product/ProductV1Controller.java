@@ -3,6 +3,8 @@ package com.loopers.interfaces.api.product;
 import com.loopers.application.product.ProductDetailInfo;
 import com.loopers.application.product.ProductFacade;
 import com.loopers.application.product.ProductInfo;
+import com.loopers.application.ranking.RankingDetailInfo;
+import com.loopers.application.ranking.RankingFacade;
 import com.loopers.domain.product.ProductSortType;
 import com.loopers.interfaces.api.ApiResponse;
 import lombok.RequiredArgsConstructor;
@@ -21,6 +23,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class ProductV1Controller implements ProductV1ApiSpec {
 
     private final ProductFacade productFacade;
+    private final RankingFacade rankingFacade;
 
     @GetMapping
     @Override
@@ -40,7 +43,8 @@ public class ProductV1Controller implements ProductV1ApiSpec {
     @Override
     public ApiResponse<ProductV1Dto.ProductDetailResponse> getProduct(@PathVariable Long productId) {
         ProductDetailInfo info = productFacade.getProduct(productId);
-        ProductV1Dto.ProductDetailResponse response = ProductV1Dto.ProductDetailResponse.from(info);
+        RankingDetailInfo ranking = rankingFacade.getProductRanking(productId);
+        ProductV1Dto.ProductDetailResponse response = ProductV1Dto.ProductDetailResponse.from(info, ranking);
         return ApiResponse.success(response);
     }
 }
