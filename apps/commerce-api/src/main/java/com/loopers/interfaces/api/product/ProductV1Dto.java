@@ -1,6 +1,7 @@
 package com.loopers.interfaces.api.product;
 
 import com.loopers.application.product.ProductDetailInfo;
+import com.loopers.application.product.ProductDetailWithRankingInfo;
 import com.loopers.application.product.ProductImageInfo;
 import com.loopers.application.product.ProductInfo;
 import com.loopers.application.product.ProductOptionInfo;
@@ -116,21 +117,22 @@ public class ProductV1Dto {
         List<ImageResponse> images,
         RankingResponse ranking
     ) {
-        public static ProductDetailResponse from(ProductDetailInfo info, RankingDetailInfo rankingDetailInfo) {
+        public static ProductDetailResponse from(ProductDetailWithRankingInfo info) {
+            ProductDetailInfo detail = info.productDetail();
             return new ProductDetailResponse(
-                info.id(),
-                info.name(),
-                info.productCode(),
-                info.basePrice(),
-                info.discountedPrice(),
-                info.status(),
-                info.discount(),
-                info.discountType(),
-                info.brand() != null ? BrandResponse.from(info.brand()) : null,
-                info.likeCount(),
-                info.options().stream().map(OptionResponse::from).toList(),
-                info.images().stream().map(ImageResponse::from).toList(),
-                RankingResponse.from(rankingDetailInfo)
+                detail.id(),
+                detail.name(),
+                detail.productCode(),
+                detail.basePrice(),
+                detail.discountedPrice(),
+                detail.status(),
+                detail.discount(),
+                detail.discountType(),
+                detail.brand() != null ? BrandResponse.from(detail.brand()) : null,
+                detail.likeCount(),
+                detail.options().stream().map(OptionResponse::from).toList(),
+                detail.images().stream().map(ImageResponse::from).toList(),
+                RankingResponse.from(info.ranking())
             );
         }
     }

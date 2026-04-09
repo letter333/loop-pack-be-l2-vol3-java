@@ -1,6 +1,8 @@
 package com.loopers.application.product;
 
 import com.loopers.application.brand.BrandInfo;
+import com.loopers.application.ranking.RankingDetailInfo;
+import com.loopers.application.ranking.RankingFacade;
 import com.loopers.domain.brand.Brand;
 import com.loopers.domain.brand.BrandService;
 import com.loopers.domain.category.CategoryService;
@@ -30,12 +32,13 @@ public class ProductFacade {
     private final AdminValidator adminValidator;
     private final ProductDetailCacheRepository productDetailCacheRepository;
     private final ProductListCacheRepository productListCacheRepository;
+    private final RankingFacade rankingFacade;
     private final ApplicationEventPublisher applicationEventPublisher;
 
     @Transactional
-    public ProductDetailInfo getProduct(Long productId) {
+    public ProductDetailWithRankingInfo getProduct(Long productId) {
         applicationEventPublisher.publishEvent(new ProductViewedEvent(productId));
-        return productDetailCacheRepository.get(productId)
+        ProductDetailInfo productDetail = productDetailCacheRepository.get(productId)
             .orElseGet(() -> {
                 Product product = productService.getActiveProduct(productId);
                 Brand brand = brandService.getActiveBrand(product.getBrandId());
@@ -43,6 +46,8 @@ public class ProductFacade {
                 productDetailCacheRepository.put(productId, info);
                 return info;
             });
+        RankingDetailInfo ranking = rankingFacade.getProductRanking(productId);
+        return new ProductDetailWithRankingInfo(productDetail, ranking);
     }
 
     @Transactional(readOnly = true)
