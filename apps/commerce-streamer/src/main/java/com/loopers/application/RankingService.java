@@ -12,11 +12,10 @@ import java.time.format.DateTimeFormatter;
 @RequiredArgsConstructor
 public class RankingService {
 
-    private static final DateTimeFormatter DATE_KEY_FORMATTER = DateTimeFormatter.ofPattern("yyyyMMdd");
+    static final DateTimeFormatter DATE_KEY_FORMATTER = DateTimeFormatter.ofPattern("yyyyMMdd");
+    private static final double TIE_BREAKER_DIVISOR = 1e13;
 
     private final RankingRepository rankingRepository;
-
-    private static final double TIE_BREAKER_DIVISOR = 1e13;
 
     public void addScore(String eventType, Long productId, ZonedDateTime eventCreatedAt, double rawScore) {
         String dateKey = eventCreatedAt.format(DATE_KEY_FORMATTER);

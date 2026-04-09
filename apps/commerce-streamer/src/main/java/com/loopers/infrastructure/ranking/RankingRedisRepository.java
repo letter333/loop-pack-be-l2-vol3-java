@@ -2,11 +2,11 @@ package com.loopers.infrastructure.ranking;
 
 import com.loopers.domain.ranking.RankingRepository;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.data.redis.core.RedisCallback;
 import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.data.redis.core.ZSetOperations;
 import org.springframework.stereotype.Repository;
 
-import java.util.Set;
+import java.nio.charset.StandardCharsets;
 import java.util.concurrent.TimeUnit;
 
 @Repository
@@ -35,16 +35,16 @@ public class RankingRedisRepository implements RankingRepository {
         String fromKey = KEY_PREFIX + fromDateKey;
         String toKey = KEY_PREFIX + toDateKey;
 
-        Set<ZSetOperations.TypedTuple<String>> tuples =
-            masterRedisTemplate.opsForZSet().rangeWithScores(fromKey, 0, -1);
+        byte[] destKey = toKey.getBytes(StandardCharsets.UTF_8);
+        byte[] srcKey = fromKey.getBytes(StandardCharsets.UTF_8);
+        byte[] weightsArg = String.valueOf(weight).getBytes(StandardCharsets.UTF_8);
 
-        if (tuples != null && !tuples.isEmpty()) {
-            for (ZSetOperations.TypedTuple<String> tuple : tuples) {
-                masterRedisTemplate.opsForZSet().incrementScore(
-                    toKey, tuple.getValue(), tuple.getScore() * weight
-                );
-            }
-        }
+        masterRedisTemplate.execute((RedisCallback<Object>) connection -> {
+            connection.execute("ZUNIONSTORE", destKey,
+                "1".getBytes(StandardCharsets.UTF_8), srcKey,
+                "WEIGHTS".getBytes(StandardCharsets.UTF_8), weightsArg);
+            return null;
+        });
 
         masterRedisTemplate.expire(toKey, TTL_DAYS, TimeUnit.DAYS);
     }
