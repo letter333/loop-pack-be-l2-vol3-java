@@ -18,11 +18,15 @@ import com.loopers.domain.product.Product;
 import com.loopers.domain.product.ProductImage;
 import com.loopers.domain.product.ProductOption;
 import com.loopers.domain.product.ProductService;
+import com.loopers.domain.queue.QueueEventType;
+import com.loopers.domain.queue.QueueService;
+import com.loopers.domain.queue.QueueTokenService;
 import com.loopers.support.auth.AdminValidator;
 import com.loopers.support.error.CoreException;
 import com.loopers.support.error.ErrorType;
-import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.retry.annotation.Backoff;
 import org.springframework.retry.annotation.Retryable;
@@ -36,7 +40,6 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 @Component
-@RequiredArgsConstructor
 public class OrderFacade {
 
     private final OrderService orderService;
@@ -44,8 +47,55 @@ public class OrderFacade {
     private final AddressService addressService;
     private final ProductService productService;
     private final MemberCouponService memberCouponService;
+    private final QueueService queueService;
+    private final QueueTokenService queueTokenService;
     private final AdminValidator adminValidator;
     private final ApplicationEventPublisher applicationEventPublisher;
+
+    @Lazy @Autowired
+    private OrderFacade self;
+
+    public OrderFacade(
+        OrderService orderService,
+        MemberService memberService,
+        AddressService addressService,
+        ProductService productService,
+        MemberCouponService memberCouponService,
+        QueueService queueService,
+        QueueTokenService queueTokenService,
+        AdminValidator adminValidator,
+        ApplicationEventPublisher applicationEventPublisher
+    ) {
+        this.orderService = orderService;
+        this.memberService = memberService;
+        this.addressService = addressService;
+        this.productService = productService;
+        this.memberCouponService = memberCouponService;
+        this.queueService = queueService;
+        this.queueTokenService = queueTokenService;
+        this.adminValidator = adminValidator;
+        this.applicationEventPublisher = applicationEventPublisher;
+    }
+
+    public OrderDetailInfo createOrder(String loginId, String password, String queueToken, OrderCommand.Create command) {
+        Member member = memberService.authenticate(loginId, password);
+
+        boolean queueActive = queueService.isQueueActive(QueueEventType.ORDER);
+        if (queueActive) {
+            if (queueToken == null || queueToken.isBlank()) {
+                throw new CoreException(ErrorType.FORBIDDEN, "대기열 진입이 필요합니다.");
+            }
+            long tokenTtl = queueTokenService.validateAndConsume(QueueEventType.ORDER, member.getId(), queueToken);
+            try {
+                return self.executeCreateOrder(member, command);
+            } catch (Exception e) {
+                queueTokenService.restoreToken(QueueEventType.ORDER, member.getId(), queueToken, tokenTtl);
+                throw e;
+            }
+        }
+
+        return self.executeCreateOrder(member, command);
+    }
 
     @Retryable(
         retryFor = ObjectOptimisticLockingFailureException.class,
@@ -53,9 +103,7 @@ public class OrderFacade {
         backoff = @Backoff(delay = 50, multiplier = 2)
     )
     @Transactional
-    public OrderDetailInfo createOrder(String loginId, String password, OrderCommand.Create command) {
-        Member member = memberService.authenticate(loginId, password);
-
+    public OrderDetailInfo executeCreateOrder(Member member, OrderCommand.Create command) {
         Address address = findAddressForMember(member.getId(), command.addressId());
 
         Order order = new Order(

@@ -4,6 +4,7 @@ import com.loopers.application.product.ProductDetailInfo;
 import com.loopers.application.product.ProductImageInfo;
 import com.loopers.application.product.ProductInfo;
 import com.loopers.application.product.ProductOptionInfo;
+import com.loopers.application.ranking.RankingDetailInfo;
 import com.loopers.domain.product.DiscountType;
 import com.loopers.domain.product.ImageType;
 import com.loopers.domain.product.ProductStatus;
@@ -88,6 +89,18 @@ public class ProductV1Dto {
         }
     }
 
+    public record RankingResponse(
+        Long rank,
+        Double score
+    ) {
+        public static RankingResponse from(RankingDetailInfo info) {
+            if (info == null) {
+                return null;
+            }
+            return new RankingResponse(info.rank(), info.score());
+        }
+    }
+
     public record ProductDetailResponse(
         Long id,
         String name,
@@ -100,9 +113,10 @@ public class ProductV1Dto {
         BrandResponse brand,
         Long likeCount,
         List<OptionResponse> options,
-        List<ImageResponse> images
+        List<ImageResponse> images,
+        RankingResponse ranking
     ) {
-        public static ProductDetailResponse from(ProductDetailInfo info) {
+        public static ProductDetailResponse from(ProductDetailInfo info, RankingDetailInfo rankingDetailInfo) {
             return new ProductDetailResponse(
                 info.id(),
                 info.name(),
@@ -115,7 +129,8 @@ public class ProductV1Dto {
                 info.brand() != null ? BrandResponse.from(info.brand()) : null,
                 info.likeCount(),
                 info.options().stream().map(OptionResponse::from).toList(),
-                info.images().stream().map(ImageResponse::from).toList()
+                info.images().stream().map(ImageResponse::from).toList(),
+                RankingResponse.from(rankingDetailInfo)
             );
         }
     }
