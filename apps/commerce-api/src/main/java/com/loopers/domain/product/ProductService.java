@@ -33,11 +33,6 @@ public class ProductService {
     }
 
     @Transactional(readOnly = true, propagation = Propagation.SUPPORTS)
-    public List<Product> getProductsByIds(List<Long> ids) {
-        return productRepository.findByIds(ids);
-    }
-
-    @Transactional(readOnly = true, propagation = Propagation.SUPPORTS)
     public List<Product> getAllActiveProducts() {
         return productRepository.findAllActive();
     }

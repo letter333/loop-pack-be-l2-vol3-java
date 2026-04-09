@@ -33,13 +33,6 @@ public class ProductRepositoryImpl implements ProductRepository {
     }
 
     @Override
-    public List<Product> findByIds(List<Long> ids) {
-        return productJpaRepository.findAllByIdInAndDeletedAtIsNull(ids).stream()
-            .map(ProductEntity::toDomain)
-            .toList();
-    }
-
-    @Override
     public List<Product> findAllActive() {
         return productJpaRepository.findAllByDeletedAtIsNull().stream()
             .map(ProductEntity::toDomain)
