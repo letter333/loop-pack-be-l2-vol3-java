@@ -22,8 +22,6 @@ public interface ProductRepository {
 
     Page<Product> findProducts(Long categoryId, Long brandId, String keyword, ProductSortType sort, Pageable pageable);
 
-    List<Product> findByIds(List<Long> ids);
-
     Product save(Product product);
 
     void delete(Long id);

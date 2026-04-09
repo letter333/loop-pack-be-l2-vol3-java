@@ -5,7 +5,6 @@ import com.loopers.domain.brand.Brand;
 import com.loopers.domain.brand.BrandService;
 import com.loopers.domain.category.CategoryService;
 import com.loopers.domain.product.Product;
-import com.loopers.application.event.ProductViewedEvent;
 import com.loopers.domain.product.ProductService;
 import com.loopers.domain.product.ProductSortType;
 import com.loopers.support.auth.AdminValidator;
@@ -32,9 +31,8 @@ public class ProductFacade {
     private final ProductListCacheRepository productListCacheRepository;
     private final ApplicationEventPublisher applicationEventPublisher;
 
-    @Transactional
+    @Transactional(readOnly = true)
     public ProductDetailInfo getProduct(Long productId) {
-        applicationEventPublisher.publishEvent(new ProductViewedEvent(productId));
         return productDetailCacheRepository.get(productId)
             .orElseGet(() -> {
                 Product product = productService.getActiveProduct(productId);
