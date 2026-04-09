@@ -7,22 +7,20 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
 
 @Slf4j
 @Component
 @RequiredArgsConstructor
 public class ScoreCarryOverScheduler {
 
-    private static final DateTimeFormatter DATE_KEY_FORMATTER = DateTimeFormatter.ofPattern("yyyyMMdd");
     private static final double CARRY_OVER_WEIGHT = 0.1;
 
     private final RankingRepository rankingRepository;
 
     @Scheduled(cron = "0 50 23 * * *")
     public void carryOverScores() {
-        String todayKey = LocalDate.now().format(DATE_KEY_FORMATTER);
-        String tomorrowKey = LocalDate.now().plusDays(1).format(DATE_KEY_FORMATTER);
+        String todayKey = LocalDate.now().format(RankingService.DATE_KEY_FORMATTER);
+        String tomorrowKey = LocalDate.now().plusDays(1).format(RankingService.DATE_KEY_FORMATTER);
 
         try {
             rankingRepository.carryOverScores(todayKey, tomorrowKey, CARRY_OVER_WEIGHT);

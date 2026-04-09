@@ -18,6 +18,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -66,7 +67,7 @@ public class RankingFacade {
                 String brandName = brand != null ? brand.getName() : null;
                 return RankingInfo.from(r, product, brandName);
             })
-            .filter(java.util.Objects::nonNull)
+            .filter(Objects::nonNull)
             .toList();
 
         return new PageImpl<>(rankingInfos, PageRequest.of(page, size), totalCount);
