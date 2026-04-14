@@ -34,17 +34,17 @@ public class ProductRankingRepositoryImpl implements ProductRankingRepository {
     }
 
     @Override
-    public List<RankingInfo> getDailyRankings(String dateKey, int offset, int size) {
+    public List<RankingInfo> getDailyRankings(String dateKey, int cursor, int size) {
         String key = RANKING_KEY_PREFIX + dateKey;
         Set<ZSetOperations.TypedTuple<String>> tuples =
-            redisTemplate.opsForZSet().reverseRangeWithScores(key, offset, (long) offset + size - 1);
+            redisTemplate.opsForZSet().reverseRangeWithScores(key, cursor, (long) cursor + size - 1);
 
         if (tuples == null || tuples.isEmpty()) {
             return List.of();
         }
 
         List<RankingInfo> rankings = new ArrayList<>();
-        int rank = offset + 1;
+        int rank = cursor + 1;
         for (ZSetOperations.TypedTuple<String> tuple : tuples) {
             rankings.add(new RankingInfo(
                 Long.parseLong(tuple.getValue()),
@@ -68,8 +68,10 @@ public class ProductRankingRepositoryImpl implements ProductRankingRepository {
     }
 
     @Override
-    public List<RankingInfo> getWeeklyRankings(String yearWeek, int offset, int size) {
-        return weeklyRepository.findByYearWeekOrderByRankAsc(yearWeek, PageRequest.of(0, size)).stream()
+    public List<RankingInfo> getWeeklyRankings(String yearWeek, int cursor, int size) {
+        return weeklyRepository.findByYearWeekAndRankGreaterThanOrderByRankAsc(
+            yearWeek, cursor, PageRequest.of(0, size)
+        ).stream()
             .map(entity -> new RankingInfo(
                 entity.getProductId(),
                 entity.getRank(),
@@ -83,8 +85,10 @@ public class ProductRankingRepositoryImpl implements ProductRankingRepository {
     }
 
     @Override
-    public List<RankingInfo> getMonthlyRankings(String yearMonth, int offset, int size) {
-        return monthlyRepository.findByYearMonthOrderByRankAsc(yearMonth, PageRequest.of(0, size)).stream()
+    public List<RankingInfo> getMonthlyRankings(String yearMonth, int cursor, int size) {
+        return monthlyRepository.findByYearMonthAndRankGreaterThanOrderByRankAsc(
+            yearMonth, cursor, PageRequest.of(0, size)
+        ).stream()
             .map(entity -> new RankingInfo(
                 entity.getProductId(),
                 entity.getRank(),

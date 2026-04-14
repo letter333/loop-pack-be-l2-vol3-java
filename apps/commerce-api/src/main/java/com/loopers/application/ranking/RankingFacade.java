@@ -25,20 +25,20 @@ public class RankingFacade {
     }
 
     public List<RankingInfo> getRankings(RankingPeriod period, String date, int page, int size) {
-        int offset = (page - 1) * size;
+        int cursor = (page - 1) * size;
 
         return switch (period) {
             case DAILY -> {
                 String dateKey = date != null ? date : LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
-                yield productRankingRepository.getDailyRankings(dateKey, offset, size);
+                yield productRankingRepository.getDailyRankings(dateKey, cursor, size);
             }
             case WEEKLY -> {
                 String yearWeek = toYearWeek(date);
-                yield productRankingRepository.getWeeklyRankings(yearWeek, offset, size);
+                yield productRankingRepository.getWeeklyRankings(yearWeek, cursor, size);
             }
             case MONTHLY -> {
                 String yearMonth = toYearMonth(date);
-                yield productRankingRepository.getMonthlyRankings(yearMonth, offset, size);
+                yield productRankingRepository.getMonthlyRankings(yearMonth, cursor, size);
             }
         };
     }

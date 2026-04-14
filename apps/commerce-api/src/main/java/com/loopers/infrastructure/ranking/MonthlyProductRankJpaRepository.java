@@ -7,5 +7,7 @@ import java.util.List;
 
 public interface MonthlyProductRankJpaRepository extends JpaRepository<MonthlyProductRankEntity, Long> {
 
-    List<MonthlyProductRankEntity> findByYearMonthOrderByRankAsc(String yearMonth, Pageable pageable);
+    List<MonthlyProductRankEntity> findByYearMonthAndRankGreaterThanOrderByRankAsc(
+        String yearMonth, Integer rankCursor, Pageable pageable
+    );
 }

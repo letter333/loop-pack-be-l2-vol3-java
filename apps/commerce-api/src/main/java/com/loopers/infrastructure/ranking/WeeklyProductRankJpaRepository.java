@@ -7,5 +7,7 @@ import java.util.List;
 
 public interface WeeklyProductRankJpaRepository extends JpaRepository<WeeklyProductRankEntity, Long> {
 
-    List<WeeklyProductRankEntity> findByYearWeekOrderByRankAsc(String yearWeek, Pageable pageable);
+    List<WeeklyProductRankEntity> findByYearWeekAndRankGreaterThanOrderByRankAsc(
+        String yearWeek, Integer rankCursor, Pageable pageable
+    );
 }
