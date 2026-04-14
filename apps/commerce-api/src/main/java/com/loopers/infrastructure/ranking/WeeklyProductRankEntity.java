@@ -46,6 +46,6 @@ public class WeeklyProductRankEntity {
     @Column(name = "score", nullable = false)
     private Double score;
 
-    @Column(name = "rank", nullable = false)
+    @Column(name = "`rank`", nullable = false)
     private Integer rank;
 }

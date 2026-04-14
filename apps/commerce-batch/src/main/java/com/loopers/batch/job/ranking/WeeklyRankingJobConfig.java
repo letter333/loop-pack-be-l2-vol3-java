@@ -28,9 +28,7 @@ import org.springframework.transaction.PlatformTransactionManager;
 import javax.sql.DataSource;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
 import java.time.temporal.WeekFields;
-import java.util.Locale;
 import java.util.concurrent.atomic.AtomicInteger;
 
 @Slf4j
@@ -116,7 +114,7 @@ public class WeeklyRankingJobConfig {
         @Value("#{jobParameters['targetDate']}") String targetDateStr
     ) {
         LocalDate targetDate = LocalDate.parse(targetDateStr);
-        WeekFields weekFields = WeekFields.of(Locale.getDefault());
+        WeekFields weekFields = WeekFields.ISO;
         int weekNumber = targetDate.get(weekFields.weekOfWeekBasedYear());
         int year = targetDate.get(weekFields.weekBasedYear());
         String yearWeek = String.format("%d-W%02d", year, weekNumber);

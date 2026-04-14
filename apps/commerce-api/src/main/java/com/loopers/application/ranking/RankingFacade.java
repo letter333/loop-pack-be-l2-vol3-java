@@ -5,12 +5,10 @@ import com.loopers.domain.ranking.RankingPeriod;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
-import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.WeekFields;
 import java.util.List;
-import java.util.Locale;
 
 @Component
 @RequiredArgsConstructor
@@ -26,33 +24,35 @@ public class RankingFacade {
 
     public List<RankingInfo> getRankings(RankingPeriod period, String date, int page, int size) {
         int cursor = (page - 1) * size;
+        LocalDate targetDate = resolveDate(date);
 
         return switch (period) {
             case DAILY -> {
-                String dateKey = date != null ? date : LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
+                String dateKey = targetDate.format(DateTimeFormatter.ofPattern("yyyyMMdd"));
                 yield productRankingRepository.getDailyRankings(dateKey, cursor, size);
             }
             case WEEKLY -> {
-                String yearWeek = toYearWeek(date);
+                String yearWeek = toYearWeek(targetDate);
                 yield productRankingRepository.getWeeklyRankings(yearWeek, cursor, size);
             }
             case MONTHLY -> {
-                String yearMonth = toYearMonth(date);
+                String yearMonth = targetDate.format(DateTimeFormatter.ofPattern("yyyy-MM"));
                 yield productRankingRepository.getMonthlyRankings(yearMonth, cursor, size);
             }
         };
     }
 
-    private String toYearWeek(String dateStr) {
-        LocalDate date = LocalDate.parse(dateStr, DateTimeFormatter.ofPattern("yyyyMMdd"));
-        WeekFields weekFields = WeekFields.of(Locale.getDefault());
+    private LocalDate resolveDate(String dateStr) {
+        if (dateStr == null || dateStr.isBlank()) {
+            return LocalDate.now();
+        }
+        return LocalDate.parse(dateStr, DateTimeFormatter.ofPattern("yyyyMMdd"));
+    }
+
+    private String toYearWeek(LocalDate date) {
+        WeekFields weekFields = WeekFields.ISO;
         int weekNumber = date.get(weekFields.weekOfWeekBasedYear());
         int year = date.get(weekFields.weekBasedYear());
         return String.format("%d-W%02d", year, weekNumber);
-    }
-
-    private String toYearMonth(String dateStr) {
-        LocalDate date = LocalDate.parse(dateStr, DateTimeFormatter.ofPattern("yyyyMMdd"));
-        return date.format(DateTimeFormatter.ofPattern("yyyy-MM"));
     }
 }

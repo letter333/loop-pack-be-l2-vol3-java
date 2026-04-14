@@ -146,6 +146,21 @@ class MetricsServiceTest {
     }
 
     @Test
+    @DisplayName("PRODUCT_VIEWED 이벤트 수신 시 viewCount를 +1 한다")
+    void incrementsViewCount_whenProductViewed() {
+        // Arrange
+        doNothing().when(eventHandledRepository).save("10");
+
+        // Act
+        metricsService.processEvent("10", "PRODUCT_VIEWED", "100", EVENT_CREATED_AT);
+
+        // Assert
+        verify(productMetricsRepository).incrementViewCount(100L, 1);
+        verify(eventHandledRepository).save("10");
+        verify(aggregateEventTrackerRepository).upsert("100", "PRODUCT_VIEWED", EVENT_CREATED_AT);
+    }
+
+    @Test
     @DisplayName("ORDER_COMPLETED 첫 이벤트는 항상 처리된다")
     void processesFirstOrderCompletedEvent() {
         // Arrange

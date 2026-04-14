@@ -84,6 +84,51 @@ class RankingFacadeTest {
         }
 
         @Test
+        @DisplayName("date가 null이면 오늘 날짜로 조회한다 (DAILY)")
+        void usesTodayWhenDateIsNull_daily() {
+            // Arrange
+            when(productRankingRepository.getDailyRankings(anyString(), eq(0), eq(20)))
+                .thenReturn(List.of());
+
+            // Act
+            List<RankingInfo> result = rankingFacade.getRankings(RankingPeriod.DAILY, null, 1, 20);
+
+            // Assert
+            assertThat(result).isEmpty();
+            verify(productRankingRepository).getDailyRankings(anyString(), eq(0), eq(20));
+        }
+
+        @Test
+        @DisplayName("date가 null이면 오늘 날짜 기준 주간 랭킹을 조회한다")
+        void usesTodayWhenDateIsNull_weekly() {
+            // Arrange
+            when(productRankingRepository.getWeeklyRankings(anyString(), eq(0), eq(20)))
+                .thenReturn(List.of());
+
+            // Act
+            List<RankingInfo> result = rankingFacade.getRankings(RankingPeriod.WEEKLY, null, 1, 20);
+
+            // Assert
+            assertThat(result).isEmpty();
+            verify(productRankingRepository).getWeeklyRankings(anyString(), eq(0), eq(20));
+        }
+
+        @Test
+        @DisplayName("date가 null이면 오늘 날짜 기준 월간 랭킹을 조회한다")
+        void usesTodayWhenDateIsNull_monthly() {
+            // Arrange
+            when(productRankingRepository.getMonthlyRankings(anyString(), eq(0), eq(20)))
+                .thenReturn(List.of());
+
+            // Act
+            List<RankingInfo> result = rankingFacade.getRankings(RankingPeriod.MONTHLY, null, 1, 20);
+
+            // Assert
+            assertThat(result).isEmpty();
+            verify(productRankingRepository).getMonthlyRankings(anyString(), eq(0), eq(20));
+        }
+
+        @Test
         @DisplayName("page 2 요청 시 cursor이 올바르게 계산된다")
         void calculatesOffsetCorrectly() {
             // Arrange

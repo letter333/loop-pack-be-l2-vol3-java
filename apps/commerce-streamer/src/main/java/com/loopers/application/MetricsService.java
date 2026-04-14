@@ -41,6 +41,10 @@ public class MetricsService {
         Long targetId = Long.parseLong(aggregateId);
 
         switch (eventType) {
+            case "PRODUCT_VIEWED" -> {
+                productMetricsRepository.incrementViewCount(targetId, 1);
+                aggregateEventTrackerRepository.upsert(aggregateId, eventType, eventCreatedAt);
+            }
             case "PRODUCT_LIKED" -> {
                 productMetricsRepository.incrementLikeCount(targetId, 1);
                 aggregateEventTrackerRepository.upsert(aggregateId, eventType, eventCreatedAt);
