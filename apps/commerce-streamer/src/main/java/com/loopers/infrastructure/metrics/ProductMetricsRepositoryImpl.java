@@ -5,7 +5,7 @@ import com.loopers.domain.metrics.ProductMetricsRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
-import java.util.Optional;
+import java.util.List;
 
 @Repository
 @RequiredArgsConstructor
@@ -14,9 +14,10 @@ public class ProductMetricsRepositoryImpl implements ProductMetricsRepository {
     private final ProductMetricsJpaRepository productMetricsJpaRepository;
 
     @Override
-    public Optional<ProductMetrics> findByProductId(Long productId) {
-        return productMetricsJpaRepository.findById(productId)
-            .map(ProductMetricsEntity::toDomain);
+    public List<ProductMetrics> findByProductId(Long productId) {
+        return productMetricsJpaRepository.findByProductId(productId).stream()
+            .map(ProductMetricsEntity::toDomain)
+            .toList();
     }
 
     @Override

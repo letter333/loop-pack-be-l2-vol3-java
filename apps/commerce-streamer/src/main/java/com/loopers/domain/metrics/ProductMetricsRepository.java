@@ -1,10 +1,10 @@
 package com.loopers.domain.metrics;
 
-import java.util.Optional;
+import java.util.List;
 
 public interface ProductMetricsRepository {
 
-    Optional<ProductMetrics> findByProductId(Long productId);
+    List<ProductMetrics> findByProductId(Long productId);
 
     ProductMetrics save(ProductMetrics metrics);
 
