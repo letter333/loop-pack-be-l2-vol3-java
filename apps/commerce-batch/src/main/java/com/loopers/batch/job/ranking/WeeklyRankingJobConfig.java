@@ -4,7 +4,6 @@ import com.loopers.batch.listener.JobListener;
 import com.loopers.batch.listener.StepMonitorListener;
 import com.loopers.domain.ranking.ProductMetricsAggregation;
 import com.loopers.domain.ranking.ProductRankMv;
-import com.loopers.infrastructure.ranking.WeeklyProductRankJpaRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.batch.core.Job;
@@ -16,8 +15,9 @@ import org.springframework.batch.core.launch.support.RunIdIncrementer;
 import org.springframework.batch.core.repository.JobRepository;
 import org.springframework.batch.core.step.builder.StepBuilder;
 import org.springframework.batch.item.ItemProcessor;
-import org.springframework.batch.item.ItemWriter;
+import org.springframework.batch.item.database.JdbcBatchItemWriter;
 import org.springframework.batch.item.database.JdbcCursorItemReader;
+import org.springframework.batch.item.database.builder.JdbcBatchItemWriterBuilder;
 import org.springframework.batch.item.database.builder.JdbcCursorItemReaderBuilder;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -127,19 +127,24 @@ public class WeeklyRankingJobConfig {
 
     @StepScope
     @Bean
-    public ItemWriter<ProductRankMv> weeklyRankingWriter(
-        WeeklyProductRankJpaRepository repository
-    ) {
-        return items -> {
-            for (ProductRankMv mv : items) {
-                repository.upsert(
-                    mv.getProductId(), mv.getPeriodKey(),
-                    mv.getLikeCount(), mv.getViewCount(),
-                    mv.getSalesCount(), mv.getSalesAmount(),
-                    mv.getScore(), mv.getRank()
-                );
-            }
-            log.info("주간 랭킹 {} 건 저장 완료", items.size());
-        };
+    public JdbcBatchItemWriter<ProductRankMv> weeklyRankingWriter(DataSource dataSource) {
+        return new JdbcBatchItemWriterBuilder<ProductRankMv>()
+            .dataSource(dataSource)
+            .sql("""
+                INSERT INTO mv_product_rank_weekly
+                    (product_id, year_week, like_count, view_count, sales_count, sales_amount, score, `rank`, created_at, updated_at)
+                VALUES
+                    (:productId, :periodKey, :likeCount, :viewCount, :salesCount, :salesAmount, :score, :rank, NOW(), NOW())
+                ON DUPLICATE KEY UPDATE
+                    like_count = VALUES(like_count),
+                    view_count = VALUES(view_count),
+                    sales_count = VALUES(sales_count),
+                    sales_amount = VALUES(sales_amount),
+                    score = VALUES(score),
+                    `rank` = VALUES(`rank`),
+                    updated_at = NOW()
+                """)
+            .beanMapped()
+            .build();
     }
 }
