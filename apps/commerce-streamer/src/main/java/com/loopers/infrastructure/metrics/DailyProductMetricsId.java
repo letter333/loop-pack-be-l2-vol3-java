@@ -9,12 +9,12 @@ import java.time.LocalDate;
 
 @EqualsAndHashCode
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class ProductMetricsId implements Serializable {
+public class DailyProductMetricsId implements Serializable {
 
     private Long productId;
     private LocalDate metricDate;
 
-    public ProductMetricsId(Long productId, LocalDate metricDate) {
+    public DailyProductMetricsId(Long productId, LocalDate metricDate) {
         this.productId = productId;
         this.metricDate = metricDate;
     }

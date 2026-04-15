@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.loopers.domain.eventhandled.EventHandledRepository;
 import com.loopers.domain.eventtracker.AggregateEventTrackerRepository;
+import com.loopers.domain.metrics.DailyProductMetricsRepository;
 import com.loopers.domain.metrics.ProductMetricsRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -19,6 +20,7 @@ import java.time.ZonedDateTime;
 public class MetricsService {
 
     private final ProductMetricsRepository productMetricsRepository;
+    private final DailyProductMetricsRepository dailyProductMetricsRepository;
     private final EventHandledRepository eventHandledRepository;
     private final AggregateEventTrackerRepository aggregateEventTrackerRepository;
     private final ObjectMapper objectMapper;
@@ -43,14 +45,17 @@ public class MetricsService {
         switch (eventType) {
             case "PRODUCT_VIEWED" -> {
                 productMetricsRepository.incrementViewCount(targetId, 1);
+                dailyProductMetricsRepository.incrementViewCount(targetId, 1);
                 aggregateEventTrackerRepository.upsert(aggregateId, eventType, eventCreatedAt);
             }
             case "PRODUCT_LIKED" -> {
                 productMetricsRepository.incrementLikeCount(targetId, 1);
+                dailyProductMetricsRepository.incrementLikeCount(targetId, 1);
                 aggregateEventTrackerRepository.upsert(aggregateId, eventType, eventCreatedAt);
             }
             case "PRODUCT_UNLIKED" -> {
                 productMetricsRepository.incrementLikeCount(targetId, -1);
+                dailyProductMetricsRepository.incrementLikeCount(targetId, -1);
                 aggregateEventTrackerRepository.upsert(aggregateId, eventType, eventCreatedAt);
             }
             case "ORDER_COMPLETED" -> processOrderCompleted(aggregateId, eventType, eventCreatedAt, payload);
@@ -81,7 +86,9 @@ public class MetricsService {
             if (productIdsNode != null && productIdsNode.isArray() && !productIdsNode.isEmpty()) {
                 long amountPerProduct = totalAmount / productIdsNode.size();
                 for (JsonNode productIdNode : productIdsNode) {
-                    productMetricsRepository.incrementSalesCount(productIdNode.asLong(), 1, amountPerProduct);
+                    long productId = productIdNode.asLong();
+                    productMetricsRepository.incrementSalesCount(productId, 1, amountPerProduct);
+                    dailyProductMetricsRepository.incrementSalesCount(productId, 1, amountPerProduct);
                 }
             }
 

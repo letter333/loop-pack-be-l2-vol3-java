@@ -85,7 +85,7 @@ public class MonthlyRankingJobConfig {
                        SUM(view_count) AS view_count,
                        SUM(sales_count) AS sales_count,
                        SUM(sales_amount) AS sales_amount
-                FROM product_metrics
+                FROM product_metrics_daily
                 WHERE metric_date BETWEEN ? AND ?
                 GROUP BY product_id
                 ORDER BY (SUM(view_count) * 0.1 + SUM(like_count) * 0.2 + SUM(sales_amount) * 0.6) DESC

@@ -3,6 +3,7 @@ package com.loopers.application;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.loopers.domain.eventhandled.EventHandledRepository;
 import com.loopers.domain.eventtracker.AggregateEventTrackerRepository;
+import com.loopers.domain.metrics.DailyProductMetricsRepository;
 import com.loopers.domain.metrics.ProductMetricsRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -34,6 +35,9 @@ class MetricsServiceTest {
     private ProductMetricsRepository productMetricsRepository;
 
     @Mock
+    private DailyProductMetricsRepository dailyProductMetricsRepository;
+
+    @Mock
     private EventHandledRepository eventHandledRepository;
 
     @Mock
@@ -55,6 +59,7 @@ class MetricsServiceTest {
 
         // Assert
         verify(productMetricsRepository).incrementLikeCount(100L, 1);
+        verify(dailyProductMetricsRepository).incrementLikeCount(100L, 1);
         verify(eventHandledRepository).save("1");
         verify(aggregateEventTrackerRepository).upsert("100", "PRODUCT_LIKED", EVENT_CREATED_AT);
     }
@@ -70,6 +75,7 @@ class MetricsServiceTest {
 
         // Assert
         verify(productMetricsRepository).incrementLikeCount(100L, -1);
+        verify(dailyProductMetricsRepository).incrementLikeCount(100L, -1);
         verify(eventHandledRepository).save("2");
         verify(aggregateEventTrackerRepository).upsert("100", "PRODUCT_UNLIKED", EVENT_CREATED_AT);
     }
@@ -121,6 +127,8 @@ class MetricsServiceTest {
         // Assert
         verify(productMetricsRepository).incrementSalesCount(10L, 1, 25000);
         verify(productMetricsRepository).incrementSalesCount(20L, 1, 25000);
+        verify(dailyProductMetricsRepository).incrementSalesCount(10L, 1, 25000);
+        verify(dailyProductMetricsRepository).incrementSalesCount(20L, 1, 25000);
         verify(aggregateEventTrackerRepository).upsert("200", "ORDER_COMPLETED", EVENT_CREATED_AT);
     }
 
@@ -156,6 +164,7 @@ class MetricsServiceTest {
 
         // Assert
         verify(productMetricsRepository).incrementViewCount(100L, 1);
+        verify(dailyProductMetricsRepository).incrementViewCount(100L, 1);
         verify(eventHandledRepository).save("10");
         verify(aggregateEventTrackerRepository).upsert("100", "PRODUCT_VIEWED", EVENT_CREATED_AT);
     }
@@ -176,5 +185,6 @@ class MetricsServiceTest {
 
         // Assert
         verify(productMetricsRepository).incrementSalesCount(10L, 1, 30000);
+        verify(dailyProductMetricsRepository).incrementSalesCount(10L, 1, 30000);
     }
 }
