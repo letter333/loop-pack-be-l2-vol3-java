@@ -18,7 +18,7 @@ class ProductMetricsAggregationTest {
 
         // Act
         ProductMetricsAggregation aggregation = new ProductMetricsAggregation(
-            1L, likeCount, viewCount, 5L, salesAmount
+            1L, likeCount, viewCount, 5L, salesAmount, 1
         );
 
         // Assert
@@ -31,7 +31,7 @@ class ProductMetricsAggregationTest {
     void scoreIsZeroWhenAllMetricsAreZero() {
         // Arrange & Act
         ProductMetricsAggregation aggregation = new ProductMetricsAggregation(
-            1L, 0L, 0L, 0L, 0L
+            1L, 0L, 0L, 0L, 0L, 1
         );
 
         // Assert
@@ -43,11 +43,11 @@ class ProductMetricsAggregationTest {
     void convertsToProductRankMv() {
         // Arrange
         ProductMetricsAggregation aggregation = new ProductMetricsAggregation(
-            42L, 10L, 100L, 5L, 50000L
+            42L, 10L, 100L, 5L, 50000L, 3
         );
 
         // Act
-        ProductRankMv mv = ProductRankMv.from(aggregation, "2026-W16", 3);
+        ProductRankMv mv = ProductRankMv.from(aggregation, "2026-W16");
 
         // Assert
         assertThat(mv.getProductId()).isEqualTo(42L);

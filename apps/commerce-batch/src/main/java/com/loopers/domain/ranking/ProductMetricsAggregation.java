@@ -11,14 +11,16 @@ public class ProductMetricsAggregation {
     private final Long salesCount;
     private final Long salesAmount;
     private final Double score;
+    private final Integer rank;
 
     public ProductMetricsAggregation(Long productId, Long likeCount, Long viewCount,
-                                     Long salesCount, Long salesAmount) {
+                                     Long salesCount, Long salesAmount, Integer rank) {
         this.productId = productId;
         this.likeCount = likeCount;
         this.viewCount = viewCount;
         this.salesCount = salesCount;
         this.salesAmount = salesAmount;
         this.score = viewCount * 0.1 + likeCount * 0.2 + salesAmount * 0.6;
+        this.rank = rank;
     }
 }

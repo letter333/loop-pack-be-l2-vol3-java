@@ -26,7 +26,7 @@ public class ProductRankMv {
         this.rank = rank;
     }
 
-    public static ProductRankMv from(ProductMetricsAggregation aggregation, String periodKey, Integer rank) {
+    public static ProductRankMv from(ProductMetricsAggregation aggregation, String periodKey) {
         return new ProductRankMv(
             aggregation.getProductId(),
             periodKey,
@@ -35,7 +35,7 @@ public class ProductRankMv {
             aggregation.getSalesCount(),
             aggregation.getSalesAmount(),
             aggregation.getScore(),
-            rank
+            aggregation.getRank()
         );
     }
 }

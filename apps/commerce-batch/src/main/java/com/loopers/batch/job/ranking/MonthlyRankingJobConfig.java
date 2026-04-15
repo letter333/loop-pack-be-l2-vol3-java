@@ -27,7 +27,6 @@ import org.springframework.transaction.PlatformTransactionManager;
 import javax.sql.DataSource;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
-import java.util.concurrent.atomic.AtomicInteger;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -84,11 +83,14 @@ public class MonthlyRankingJobConfig {
                        SUM(like_count) AS like_count,
                        SUM(view_count) AS view_count,
                        SUM(sales_count) AS sales_count,
-                       SUM(sales_amount) AS sales_amount
+                       SUM(sales_amount) AS sales_amount,
+                       ROW_NUMBER() OVER(
+                           ORDER BY (SUM(view_count) * 0.1 + SUM(like_count) * 0.2 + SUM(sales_amount) * 0.6) DESC
+                       ) AS `rank`
                 FROM product_metrics_daily
                 WHERE metric_date BETWEEN ? AND ?
                 GROUP BY product_id
-                ORDER BY (SUM(view_count) * 0.1 + SUM(like_count) * 0.2 + SUM(sales_amount) * 0.6) DESC
+                ORDER BY `rank`
                 LIMIT 100
                 """)
             .preparedStatementSetter(ps -> {
@@ -100,7 +102,8 @@ public class MonthlyRankingJobConfig {
                 rs.getLong("like_count"),
                 rs.getLong("view_count"),
                 rs.getLong("sales_count"),
-                rs.getLong("sales_amount")
+                rs.getLong("sales_amount"),
+                rs.getInt("rank")
             ))
             .build();
     }
@@ -113,12 +116,7 @@ public class MonthlyRankingJobConfig {
         LocalDate targetDate = LocalDate.parse(targetDateStr);
         String yearMonth = targetDate.format(DateTimeFormatter.ofPattern("yyyy-MM"));
 
-        AtomicInteger rankCounter = new AtomicInteger(0);
-
-        return aggregation -> {
-            int rank = rankCounter.incrementAndGet();
-            return ProductRankMv.from(aggregation, yearMonth, rank);
-        };
+        return aggregation -> ProductRankMv.from(aggregation, yearMonth);
     }
 
     @StepScope

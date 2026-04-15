@@ -28,7 +28,6 @@ import javax.sql.DataSource;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.temporal.WeekFields;
-import java.util.concurrent.atomic.AtomicInteger;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -85,11 +84,14 @@ public class WeeklyRankingJobConfig {
                        SUM(like_count) AS like_count,
                        SUM(view_count) AS view_count,
                        SUM(sales_count) AS sales_count,
-                       SUM(sales_amount) AS sales_amount
+                       SUM(sales_amount) AS sales_amount,
+                       ROW_NUMBER() OVER(
+                           ORDER BY (SUM(view_count) * 0.1 + SUM(like_count) * 0.2 + SUM(sales_amount) * 0.6) DESC
+                       ) AS `rank`
                 FROM product_metrics_daily
                 WHERE metric_date BETWEEN ? AND ?
                 GROUP BY product_id
-                ORDER BY (SUM(view_count) * 0.1 + SUM(like_count) * 0.2 + SUM(sales_amount) * 0.6) DESC
+                ORDER BY `rank`
                 LIMIT 100
                 """)
             .preparedStatementSetter(ps -> {
@@ -101,7 +103,8 @@ public class WeeklyRankingJobConfig {
                 rs.getLong("like_count"),
                 rs.getLong("view_count"),
                 rs.getLong("sales_count"),
-                rs.getLong("sales_amount")
+                rs.getLong("sales_amount"),
+                rs.getInt("rank")
             ))
             .build();
     }
@@ -117,12 +120,7 @@ public class WeeklyRankingJobConfig {
         int year = targetDate.get(weekFields.weekBasedYear());
         String yearWeek = String.format("%d-W%02d", year, weekNumber);
 
-        AtomicInteger rankCounter = new AtomicInteger(0);
-
-        return aggregation -> {
-            int rank = rankCounter.incrementAndGet();
-            return ProductRankMv.from(aggregation, yearWeek, rank);
-        };
+        return aggregation -> ProductRankMv.from(aggregation, yearWeek);
     }
 
     @StepScope
