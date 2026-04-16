@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.loopers.domain.eventhandled.EventHandledRepository;
 import com.loopers.domain.eventtracker.AggregateEventTrackerRepository;
+import com.loopers.domain.metrics.DailyProductMetricsRepository;
 import com.loopers.domain.metrics.ProductMetricsRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -11,6 +12,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.time.ZonedDateTime;
 
 @Slf4j
@@ -19,6 +21,7 @@ import java.time.ZonedDateTime;
 public class MetricsService {
 
     private final ProductMetricsRepository productMetricsRepository;
+    private final DailyProductMetricsRepository dailyProductMetricsRepository;
     private final EventHandledRepository eventHandledRepository;
     private final AggregateEventTrackerRepository aggregateEventTrackerRepository;
     private final ObjectMapper objectMapper;
@@ -39,14 +42,22 @@ public class MetricsService {
         }
 
         Long targetId = Long.parseLong(aggregateId);
+        LocalDate metricDate = eventCreatedAt.toLocalDate();
 
         switch (eventType) {
+            case "PRODUCT_VIEWED" -> {
+                productMetricsRepository.incrementViewCount(targetId, 1);
+                recordDailyMetrics(() -> dailyProductMetricsRepository.incrementViewCount(targetId, 1, metricDate));
+                aggregateEventTrackerRepository.upsert(aggregateId, eventType, eventCreatedAt);
+            }
             case "PRODUCT_LIKED" -> {
                 productMetricsRepository.incrementLikeCount(targetId, 1);
+                recordDailyMetrics(() -> dailyProductMetricsRepository.incrementLikeCount(targetId, 1, metricDate));
                 aggregateEventTrackerRepository.upsert(aggregateId, eventType, eventCreatedAt);
             }
             case "PRODUCT_UNLIKED" -> {
                 productMetricsRepository.incrementLikeCount(targetId, -1);
+                recordDailyMetrics(() -> dailyProductMetricsRepository.incrementLikeCount(targetId, -1, metricDate));
                 aggregateEventTrackerRepository.upsert(aggregateId, eventType, eventCreatedAt);
             }
             case "ORDER_COMPLETED" -> processOrderCompleted(aggregateId, eventType, eventCreatedAt, payload);
@@ -56,6 +67,7 @@ public class MetricsService {
 
     private void processOrderCompleted(String aggregateId, String eventType,
                                        ZonedDateTime eventCreatedAt, String payload) {
+        LocalDate metricDate = eventCreatedAt.toLocalDate();
         if (!aggregateEventTrackerRepository.isNewerEvent(aggregateId, eventType, eventCreatedAt)) {
             log.debug("이미 최신 이벤트가 처리됨: aggregateId={}, eventType={}", aggregateId, eventType);
             aggregateEventTrackerRepository.upsert(aggregateId, eventType, eventCreatedAt);
@@ -77,7 +89,9 @@ public class MetricsService {
             if (productIdsNode != null && productIdsNode.isArray() && !productIdsNode.isEmpty()) {
                 long amountPerProduct = totalAmount / productIdsNode.size();
                 for (JsonNode productIdNode : productIdsNode) {
-                    productMetricsRepository.incrementSalesCount(productIdNode.asLong(), 1, amountPerProduct);
+                    long productId = productIdNode.asLong();
+                    productMetricsRepository.incrementSalesCount(productId, 1, amountPerProduct);
+                    recordDailyMetrics(() -> dailyProductMetricsRepository.incrementSalesCount(productId, 1, amountPerProduct, metricDate));
                 }
             }
 
@@ -85,6 +99,14 @@ public class MetricsService {
                 aggregateId, productIdsNode != null ? productIdsNode.size() : 0, totalAmount);
         } catch (Exception e) {
             log.error("ORDER_COMPLETED payload 파싱 실패: aggregateId={}, error={}", aggregateId, e.getMessage());
+        }
+    }
+
+    private void recordDailyMetrics(Runnable action) {
+        try {
+            action.run();
+        } catch (Exception e) {
+            log.warn("일별 메트릭 기록 실패 (누적 메트릭에는 영향 없음): {}", e.getMessage());
         }
     }
 }
