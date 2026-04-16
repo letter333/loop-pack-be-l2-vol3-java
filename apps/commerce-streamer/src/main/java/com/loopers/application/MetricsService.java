@@ -45,17 +45,17 @@ public class MetricsService {
         switch (eventType) {
             case "PRODUCT_VIEWED" -> {
                 productMetricsRepository.incrementViewCount(targetId, 1);
-                dailyProductMetricsRepository.incrementViewCount(targetId, 1);
+                recordDailyMetrics(() -> dailyProductMetricsRepository.incrementViewCount(targetId, 1));
                 aggregateEventTrackerRepository.upsert(aggregateId, eventType, eventCreatedAt);
             }
             case "PRODUCT_LIKED" -> {
                 productMetricsRepository.incrementLikeCount(targetId, 1);
-                dailyProductMetricsRepository.incrementLikeCount(targetId, 1);
+                recordDailyMetrics(() -> dailyProductMetricsRepository.incrementLikeCount(targetId, 1));
                 aggregateEventTrackerRepository.upsert(aggregateId, eventType, eventCreatedAt);
             }
             case "PRODUCT_UNLIKED" -> {
                 productMetricsRepository.incrementLikeCount(targetId, -1);
-                dailyProductMetricsRepository.incrementLikeCount(targetId, -1);
+                recordDailyMetrics(() -> dailyProductMetricsRepository.incrementLikeCount(targetId, -1));
                 aggregateEventTrackerRepository.upsert(aggregateId, eventType, eventCreatedAt);
             }
             case "ORDER_COMPLETED" -> processOrderCompleted(aggregateId, eventType, eventCreatedAt, payload);
@@ -88,7 +88,7 @@ public class MetricsService {
                 for (JsonNode productIdNode : productIdsNode) {
                     long productId = productIdNode.asLong();
                     productMetricsRepository.incrementSalesCount(productId, 1, amountPerProduct);
-                    dailyProductMetricsRepository.incrementSalesCount(productId, 1, amountPerProduct);
+                    recordDailyMetrics(() -> dailyProductMetricsRepository.incrementSalesCount(productId, 1, amountPerProduct));
                 }
             }
 
@@ -96,6 +96,14 @@ public class MetricsService {
                 aggregateId, productIdsNode != null ? productIdsNode.size() : 0, totalAmount);
         } catch (Exception e) {
             log.error("ORDER_COMPLETED payload 파싱 실패: aggregateId={}, error={}", aggregateId, e.getMessage());
+        }
+    }
+
+    private void recordDailyMetrics(Runnable action) {
+        try {
+            action.run();
+        } catch (Exception e) {
+            log.warn("일별 메트릭 기록 실패 (누적 메트릭에는 영향 없음): {}", e.getMessage());
         }
     }
 }

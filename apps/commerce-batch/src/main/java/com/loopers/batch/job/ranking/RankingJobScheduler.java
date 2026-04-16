@@ -49,7 +49,6 @@ public class RankingJobScheduler {
         try {
             JobParameters params = new JobParametersBuilder()
                 .addString("targetDate", targetDate)
-                .addLong("run.id", System.currentTimeMillis())
                 .toJobParameters();
             jobLauncher.run(job, params);
         } catch (Exception e) {
