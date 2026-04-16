@@ -3,8 +3,8 @@ package com.loopers.infrastructure.metrics;
 import com.loopers.domain.metrics.DailyProductMetricsRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
-import org.springframework.transaction.annotation.Propagation;
-import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDate;
 
 @Repository
 @RequiredArgsConstructor
@@ -13,20 +13,17 @@ public class DailyProductMetricsRepositoryImpl implements DailyProductMetricsRep
     private final DailyProductMetricsJpaRepository dailyProductMetricsJpaRepository;
 
     @Override
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void incrementLikeCount(Long productId, long delta) {
-        dailyProductMetricsJpaRepository.incrementLikeCount(productId, delta);
+    public void incrementLikeCount(Long productId, long delta, LocalDate metricDate) {
+        dailyProductMetricsJpaRepository.incrementLikeCount(productId, delta, metricDate);
     }
 
     @Override
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void incrementViewCount(Long productId, long delta) {
-        dailyProductMetricsJpaRepository.incrementViewCount(productId, delta);
+    public void incrementViewCount(Long productId, long delta, LocalDate metricDate) {
+        dailyProductMetricsJpaRepository.incrementViewCount(productId, delta, metricDate);
     }
 
     @Override
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void incrementSalesCount(Long productId, long count, long amount) {
-        dailyProductMetricsJpaRepository.incrementSalesCount(productId, count, amount);
+    public void incrementSalesCount(Long productId, long count, long amount, LocalDate metricDate) {
+        dailyProductMetricsJpaRepository.incrementSalesCount(productId, count, amount, metricDate);
     }
 }

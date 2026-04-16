@@ -47,6 +47,7 @@ class MetricsServiceTest {
     private ObjectMapper objectMapper = new ObjectMapper();
 
     private static final ZonedDateTime EVENT_CREATED_AT = ZonedDateTime.parse("2026-03-27T10:00:00+09:00");
+    private static final java.time.LocalDate EVENT_DATE = EVENT_CREATED_AT.toLocalDate();
 
     @Test
     @DisplayName("PRODUCT_LIKED 이벤트 수신 시 likeCount를 +1 한다")
@@ -59,7 +60,7 @@ class MetricsServiceTest {
 
         // Assert
         verify(productMetricsRepository).incrementLikeCount(100L, 1);
-        verify(dailyProductMetricsRepository).incrementLikeCount(100L, 1);
+        verify(dailyProductMetricsRepository).incrementLikeCount(100L, 1, EVENT_DATE);
         verify(eventHandledRepository).save("1");
         verify(aggregateEventTrackerRepository).upsert("100", "PRODUCT_LIKED", EVENT_CREATED_AT);
     }
@@ -75,7 +76,7 @@ class MetricsServiceTest {
 
         // Assert
         verify(productMetricsRepository).incrementLikeCount(100L, -1);
-        verify(dailyProductMetricsRepository).incrementLikeCount(100L, -1);
+        verify(dailyProductMetricsRepository).incrementLikeCount(100L, -1, EVENT_DATE);
         verify(eventHandledRepository).save("2");
         verify(aggregateEventTrackerRepository).upsert("100", "PRODUCT_UNLIKED", EVENT_CREATED_AT);
     }
@@ -127,8 +128,8 @@ class MetricsServiceTest {
         // Assert
         verify(productMetricsRepository).incrementSalesCount(10L, 1, 25000);
         verify(productMetricsRepository).incrementSalesCount(20L, 1, 25000);
-        verify(dailyProductMetricsRepository).incrementSalesCount(10L, 1, 25000);
-        verify(dailyProductMetricsRepository).incrementSalesCount(20L, 1, 25000);
+        verify(dailyProductMetricsRepository).incrementSalesCount(10L, 1, 25000, EVENT_DATE);
+        verify(dailyProductMetricsRepository).incrementSalesCount(20L, 1, 25000, EVENT_DATE);
         verify(aggregateEventTrackerRepository).upsert("200", "ORDER_COMPLETED", EVENT_CREATED_AT);
     }
 
@@ -164,7 +165,7 @@ class MetricsServiceTest {
 
         // Assert
         verify(productMetricsRepository).incrementViewCount(100L, 1);
-        verify(dailyProductMetricsRepository).incrementViewCount(100L, 1);
+        verify(dailyProductMetricsRepository).incrementViewCount(100L, 1, EVENT_DATE);
         verify(eventHandledRepository).save("10");
         verify(aggregateEventTrackerRepository).upsert("100", "PRODUCT_VIEWED", EVENT_CREATED_AT);
     }
@@ -185,6 +186,6 @@ class MetricsServiceTest {
 
         // Assert
         verify(productMetricsRepository).incrementSalesCount(10L, 1, 30000);
-        verify(dailyProductMetricsRepository).incrementSalesCount(10L, 1, 30000);
+        verify(dailyProductMetricsRepository).incrementSalesCount(10L, 1, 30000, EVENT_DATE);
     }
 }

@@ -12,6 +12,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.time.ZonedDateTime;
 
 @Slf4j
@@ -41,21 +42,22 @@ public class MetricsService {
         }
 
         Long targetId = Long.parseLong(aggregateId);
+        LocalDate metricDate = eventCreatedAt.toLocalDate();
 
         switch (eventType) {
             case "PRODUCT_VIEWED" -> {
                 productMetricsRepository.incrementViewCount(targetId, 1);
-                recordDailyMetrics(() -> dailyProductMetricsRepository.incrementViewCount(targetId, 1));
+                recordDailyMetrics(() -> dailyProductMetricsRepository.incrementViewCount(targetId, 1, metricDate));
                 aggregateEventTrackerRepository.upsert(aggregateId, eventType, eventCreatedAt);
             }
             case "PRODUCT_LIKED" -> {
                 productMetricsRepository.incrementLikeCount(targetId, 1);
-                recordDailyMetrics(() -> dailyProductMetricsRepository.incrementLikeCount(targetId, 1));
+                recordDailyMetrics(() -> dailyProductMetricsRepository.incrementLikeCount(targetId, 1, metricDate));
                 aggregateEventTrackerRepository.upsert(aggregateId, eventType, eventCreatedAt);
             }
             case "PRODUCT_UNLIKED" -> {
                 productMetricsRepository.incrementLikeCount(targetId, -1);
-                recordDailyMetrics(() -> dailyProductMetricsRepository.incrementLikeCount(targetId, -1));
+                recordDailyMetrics(() -> dailyProductMetricsRepository.incrementLikeCount(targetId, -1, metricDate));
                 aggregateEventTrackerRepository.upsert(aggregateId, eventType, eventCreatedAt);
             }
             case "ORDER_COMPLETED" -> processOrderCompleted(aggregateId, eventType, eventCreatedAt, payload);
@@ -65,6 +67,7 @@ public class MetricsService {
 
     private void processOrderCompleted(String aggregateId, String eventType,
                                        ZonedDateTime eventCreatedAt, String payload) {
+        LocalDate metricDate = eventCreatedAt.toLocalDate();
         if (!aggregateEventTrackerRepository.isNewerEvent(aggregateId, eventType, eventCreatedAt)) {
             log.debug("이미 최신 이벤트가 처리됨: aggregateId={}, eventType={}", aggregateId, eventType);
             aggregateEventTrackerRepository.upsert(aggregateId, eventType, eventCreatedAt);
@@ -88,7 +91,7 @@ public class MetricsService {
                 for (JsonNode productIdNode : productIdsNode) {
                     long productId = productIdNode.asLong();
                     productMetricsRepository.incrementSalesCount(productId, 1, amountPerProduct);
-                    recordDailyMetrics(() -> dailyProductMetricsRepository.incrementSalesCount(productId, 1, amountPerProduct));
+                    recordDailyMetrics(() -> dailyProductMetricsRepository.incrementSalesCount(productId, 1, amountPerProduct, metricDate));
                 }
             }
 
