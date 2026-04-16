@@ -1,8 +1,5 @@
 package com.loopers.domain.ranking;
 
-import com.loopers.application.ranking.RankingDetailInfo;
-import com.loopers.application.ranking.RankingInfo;
-
 import java.util.List;
 import java.util.Optional;
 

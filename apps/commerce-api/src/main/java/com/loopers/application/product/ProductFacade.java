@@ -1,7 +1,7 @@
 package com.loopers.application.product;
 
 import com.loopers.application.brand.BrandInfo;
-import com.loopers.application.ranking.RankingDetailInfo;
+import com.loopers.domain.ranking.RankingDetailInfo;
 import com.loopers.application.ranking.RankingFacade;
 import com.loopers.domain.brand.Brand;
 import com.loopers.domain.brand.BrandService;

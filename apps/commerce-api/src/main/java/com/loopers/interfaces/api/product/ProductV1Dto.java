@@ -5,7 +5,7 @@ import com.loopers.application.product.ProductDetailWithRankingInfo;
 import com.loopers.application.product.ProductImageInfo;
 import com.loopers.application.product.ProductInfo;
 import com.loopers.application.product.ProductOptionInfo;
-import com.loopers.application.ranking.RankingDetailInfo;
+import com.loopers.domain.ranking.RankingDetailInfo;
 import com.loopers.domain.product.DiscountType;
 import com.loopers.domain.product.ImageType;
 import com.loopers.domain.product.ProductStatus;

@@ -1,6 +1,6 @@
 package com.loopers.application.product;
 
-import com.loopers.application.ranking.RankingDetailInfo;
+import com.loopers.domain.ranking.RankingDetailInfo;
 
 public record ProductDetailWithRankingInfo(
     ProductDetailInfo productDetail,

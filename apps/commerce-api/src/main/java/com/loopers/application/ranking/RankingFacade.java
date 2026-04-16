@@ -1,6 +1,8 @@
 package com.loopers.application.ranking;
 
 import com.loopers.domain.ranking.ProductRankingRepository;
+import com.loopers.domain.ranking.RankingDetailInfo;
+import com.loopers.domain.ranking.RankingInfo;
 import com.loopers.domain.ranking.RankingPeriod;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;

@@ -1,7 +1,7 @@
 package com.loopers.infrastructure.ranking;
 
-import com.loopers.application.ranking.RankingDetailInfo;
-import com.loopers.application.ranking.RankingInfo;
+import com.loopers.domain.ranking.RankingDetailInfo;
+import com.loopers.domain.ranking.RankingInfo;
 import com.loopers.domain.ranking.ProductRankingRepository;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.domain.PageRequest;

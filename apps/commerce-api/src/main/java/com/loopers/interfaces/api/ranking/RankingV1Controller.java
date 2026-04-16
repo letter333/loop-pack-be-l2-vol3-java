@@ -1,7 +1,7 @@
 package com.loopers.interfaces.api.ranking;
 
 import com.loopers.application.ranking.RankingFacade;
-import com.loopers.application.ranking.RankingInfo;
+import com.loopers.domain.ranking.RankingInfo;
 import com.loopers.domain.ranking.RankingPeriod;
 import com.loopers.interfaces.api.ApiResponse;
 import lombok.RequiredArgsConstructor;

@@ -1,6 +1,6 @@
 package com.loopers.interfaces.api.ranking;
 
-import com.loopers.application.ranking.RankingInfo;
+import com.loopers.domain.ranking.RankingInfo;
 
 public class RankingV1Dto {
 

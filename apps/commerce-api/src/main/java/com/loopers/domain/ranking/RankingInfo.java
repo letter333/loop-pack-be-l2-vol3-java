@@ -1,4 +1,4 @@
-package com.loopers.application.ranking;
+package com.loopers.domain.ranking;
 
 public record RankingInfo(
     Long productId,
